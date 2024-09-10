@@ -5,10 +5,10 @@
 #include <math.h>
 #include <chrono>
 #include <unistd.h>
-#include "matplotlibcpp.h"
+// #include "matplotlibcpp.h"
 
 using namespace Eigen;
-namespace plt = matplotlibcpp;
+// namespace plt = matplotlibcpp;
 
 /* Interesting Initial Parameters:
 	x_init = 0 y_init = 0 theta_init = 45 vel_init = 11.0875e3 dt = 10 //eliptic orbit around earth and moon
@@ -80,7 +80,7 @@ void plotCircle(double x_center, double y_center, double radius, char *label){
 		x.push_back(x_center+radius*cos(theta*M_PI / 180));
 		y.push_back(y_center+radius*sin(theta*M_PI / 180));
 	}
-	plt::named_plot(label, x, y);
+	// plt::named_plot(label, x, y);
 }
 
 int main() {
@@ -104,24 +104,24 @@ int main() {
 		ax.add_patch(earth_surface);
 	*/
 
-	plt::named_plot("Satellite Trajectory", x_pos_arr, y_pos_arr);
-	plotCircle(x_earth, y_earth, R_e, "Earth");
-	plotCircle(x_moon, y_moon, R_m, "Moon");
+	// plt::named_plot("Satellite Trajectory", x_pos_arr, y_pos_arr);
+	// plotCircle(x_earth, y_earth, R_e, "Earth");
+	// plotCircle(x_moon, y_moon, R_m, "Moon");
 
-	plt::legend();
-	plt::grid(true);
+	// plt::legend();
+	// plt::grid(true);
 
-	double xmin = *min_element(x_pos_arr.begin(), x_pos_arr.end());
-	double xmax = *max_element(x_pos_arr.begin(), x_pos_arr.end());
-	double ymin = *min_element(y_pos_arr.begin(), y_pos_arr.end());
-	double ymax = *max_element(y_pos_arr.begin(), y_pos_arr.end());
+	// double xmin = *min_element(x_pos_arr.begin(), x_pos_arr.end());
+	// double xmax = *max_element(x_pos_arr.begin(), x_pos_arr.end());
+	// double ymin = *min_element(y_pos_arr.begin(), y_pos_arr.end());
+	// double ymax = *max_element(y_pos_arr.begin(), y_pos_arr.end());
 
 	//plt::xlim(xmin - 0.1 * (xmax - xmin), xmax + 0.1 * (xmax - xmin));
 	//plt::ylim(ymin - 0.1 * (ymax - ymin), ymax + 0.1 * (ymax - ymin));
-	plt::xlim(-0.5e8, 4e8);
-	plt::ylim(-1e8, 1e8);
+	// plt::xlim(-0.5e8, 4e8);
+	// plt::ylim(-1e8, 1e8);
 	//plt::axis("equal");
 
-	plt::show();
+	// plt::show();
 	return 0;
 }

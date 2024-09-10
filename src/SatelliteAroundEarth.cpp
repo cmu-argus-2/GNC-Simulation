@@ -6,10 +6,10 @@
 #include <chrono>
 #include <unistd.h>
 #include <eigen3/Eigen/Dense>
-#include "matplotlibcpp.h"
+// #include "matplotlibcpp.h"
 
 using namespace Eigen;
-namespace plt = matplotlibcpp;
+// namespace plt = matplotlibcpp;
 
 
 double G = 6.67430e-11; //Gravitational constant
@@ -79,18 +79,18 @@ int main() {
 		ax.add_patch(earth_surface);
 	*/
 
-	plt::named_plot("Satellite Trajectory", x_pos_arr, y_pos_arr);
-	plt::legend();
-	plt::grid(true);
+	// plt::named_plot("Satellite Trajectory", x_pos_arr, y_pos_arr);
+	// plt::legend();
+	// plt::grid(true);
 
 	double xmin = *min_element(x_pos_arr.begin(), x_pos_arr.end());
 	double xmax = *max_element(x_pos_arr.begin(), x_pos_arr.end());
 	double ymin = *min_element(y_pos_arr.begin(), y_pos_arr.end());
 	double ymax = *max_element(y_pos_arr.begin(), y_pos_arr.end());
 
-	plt::xlim(xmin - 0.1 * (xmax - xmin), xmax + 0.1 * (xmax - xmin));
-	plt::ylim(ymin - 0.1 * (ymax - ymin), ymax + 0.1 * (ymax - ymin));
+	// plt::xlim(xmin - 0.1 * (xmax - xmin), xmax + 0.1 * (xmax - xmin));
+	// plt::ylim(ymin - 0.1 * (ymax - ymin), ymax + 0.1 * (ymax - ymin));
 
-	plt::show();
+	// plt::show();
 	return 0;
 }
