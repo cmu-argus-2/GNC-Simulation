@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Dense>
+#include <fstream>
 #include <iostream>
 
 using namespace Eigen;
@@ -71,10 +72,12 @@ int main() {
     std::cout << "Elapsed time to Simulate: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
 
-    double xmin = *min_element(x_pos_arr.begin(), x_pos_arr.end());
-    double xmax = *max_element(x_pos_arr.begin(), x_pos_arr.end());
-    double ymin = *min_element(y_pos_arr.begin(), y_pos_arr.end());
-    double ymax = *max_element(y_pos_arr.begin(), y_pos_arr.end());
-
+    std::ofstream logFile;
+    logFile.open("SatelliteAroundEarth.txt");
+    auto N = x_pos_arr.size();
+    for (long i = 0; i < N; i++) {
+        logFile << x_pos_arr[i] << "\t" << y_pos_arr[i] << "\n";
+    }
+    logFile.close();
     return 0;
 }

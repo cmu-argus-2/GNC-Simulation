@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Dense>
+#include <fstream>
 #include <iostream>
 
 using namespace Eigen;
@@ -88,5 +89,12 @@ int main() {
     std::cout << "Elapsed time to Simulate: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
 
+    std::ofstream logFile;
+    logFile.open("SatelliteAroundEarthAndMoon.txt");
+    auto N = x_pos_arr.size();
+    for (long i = 0; i < N; i++) {
+        logFile << x_pos_arr[i] << "\t" << y_pos_arr[i] << "\n";
+    }
+    logFile.close();
     return 0;
 }
