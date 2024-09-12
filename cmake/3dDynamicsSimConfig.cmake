@@ -1,3 +1,0 @@
-include(CMakeFindDependencyMacro)
-find_dependency(Eigen3)
-find_dependency(matplotlib_cpp)

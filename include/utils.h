@@ -4,4 +4,4 @@
 double deg(double);
 double rad(double);
 
-#endif //C___RIGIDBODYUTILS_H
+#endif   // C___RIGIDBODYUTILS_H

@@ -17,7 +17,7 @@ maxZ = -np.inf
 timestamps = []
 rotations = []
 translations  = []
-inputFile = "3dAnimationData.txt"
+inputFile = "build/3dAnimationData.txt"
 linesOfDataPerTimestep = 8 #number of lines recorded at each timestep in the log
 with open(inputFile, 'r') as f:
     lines = f.readlines()
@@ -44,18 +44,18 @@ with open(inputFile, 'r') as f:
             roation_matrix_row_1,
             roation_matrix_row_2,
             roation_matrix_row_3
-        ]).astype(np.float))
+        ]).astype(float))
 
         translations.append(np.asarray([
             translation_vector_x,
             translation_vector_y,
             translation_vector_z
-        ]).astype(np.float))
+        ]).astype(float))
 dt = timestamps[1]-timestamps[0]
 
 
 fig = plt.figure()
-ax = fig.gca(projection='3d')
+ax = fig.add_subplot(projection = '3d')
 ax.set_title('3D Test')
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
