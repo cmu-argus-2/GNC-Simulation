@@ -8,7 +8,6 @@ This Repo contians C++ code for simulating the 3d Dynamics of a Rigid Body from 
 - `cmake ..`
 - `make`
 - `./3dDynamicsSim_main`
-- `cd ../`
 
 ## Visualization
 - `python3 animate.py`
