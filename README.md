@@ -12,3 +12,11 @@ This Repo contians C++ code for simulating the 3d Dynamics of a Rigid Body from 
 - `./3dDynamicsSim_main`
 - `cd ../`
 - `python3 animate.py`
+
+# satellite orbit demo
+- `mkdir build`
+- `cd build`
+- `cmake ..`
+- `make`
+- `./SatelliteAroundEarth`
+- `./SatelliteAroundEarthAndMoon`
