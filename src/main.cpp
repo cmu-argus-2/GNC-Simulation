@@ -35,11 +35,11 @@ int main() {
 
     while (currTime <= maxTime) {
         rigidBody1.clearAppliedForcesAndMoments();
-        rigidBody1.applyForce(rigidBody1.getRotationGtoB() * Vector3d(0, 0, 9.7 * mass), Vector3d(0, 0, 0));
+        rigidBody1.applyForce(rigidBody1.get_b_R_g() * Vector3d(0, 0, 9.7 * mass), Vector3d(0, 0, 0));
 
         // Gyroscopic effect:(make sure ang_vel_inital = [0,1000,0].T )
-        // rigidBody1.applyForce(rigidBody1.getRotationGtoB()*Vector3d(0, 0, -0.2), Vector3d(0, .03, 0));
-        // rigidBody1.applyForce(rigidBody1.getRotationGtoB()*Vector3d(0, 0, 0.2), Vector3d(0, 0, 0));
+        // rigidBody1.applyForce(rigidBody1.get_b_R_g()*Vector3d(0, 0, -0.2), Vector3d(0, .03, 0));
+        // rigidBody1.applyForce(rigidBody1.get_b_R_g()*Vector3d(0, 0, 0.2), Vector3d(0, 0, 0));
 
         // couple about an axis that is not through the center of mass:
         rigidBody1.applyForce(Vector3d(0, 0.001, 0), Vector3d(0.24, 0, 0));

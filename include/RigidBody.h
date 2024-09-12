@@ -9,20 +9,20 @@ typedef Matrix<double, 13, 1> Vector13d;
 typedef Matrix<double, 6, 1> Vector6d;
 
 /*
-        Assumption used by this class: the body-frame's origin is located at the Rigid-Body's center-of-mass
+    Assumption used by this class: the body-frame's origin is located at the Rigid-Body's center-of-mass
 */
 class RigidBody {
    public:
     /*
-            "w_b_initial" is the initial angular velocity expressed in the body coordinates
-            "P_g_initial" is the initial linear position expressed in the global coordinates
-            "V_g_initial" is the initial linear velocity expressed in the global coordinates
+        "w_b_initial" is the initial angular velocity expressed in the body coordinates
+        "P_g_initial" is the initial linear position expressed in the global coordinates
+        "V_g_initial" is the initial linear velocity expressed in the global coordinates
     */
     RigidBody(double mass, Matrix3d InertiaTensor, Quaternion<double> rotation_initial, Vector3d w_b_initial,
               Vector3d P_g_initial, Vector3d V_g_initial);
 
     /*
-             set the gravity vector expressed in the global frame
+        set the gravity vector expressed in the global frame
     */
     void setGravity(Vector3d g_const);
 
@@ -36,49 +36,47 @@ class RigidBody {
 
     Vector3d getGlobalAngularVelocity();
 
-    Quaternion<double>
-    getRotationGtoB();   // return the quaternion representing the rotation from the global to body frame
+    Quaternion<double> get_b_R_g();   // return the quaternion representing the rotation from the global to body frame
 
-    Quaternion<double>
-    getRotationBtoG();   // return the quaternion representing the rotation from the body to global frame
+    Quaternion<double> get_g_R_b();   // return the quaternion representing the rotation from the body to global frame
 
     /*
-            "force" is expressed in the body coordinates
-            "pointOfApplication" is expressed in the body coordinates
+        "force" is expressed in the body coordinates
+        "pointOfApplication" is expressed in the body coordinates
     */
     void applyForce(Vector3d force, Vector3d pointOfApplication);
 
     /*
-            "moment" is expressed in the body coordinates
+        "moment" is expressed in the body coordinates
     */
     void applyMoment(Vector3d moment);
 
     void clearAppliedForcesAndMoments();
 
     /*
-            returns the derivative of the state vector
+        returns the derivative of the state vector
     */
     Vector13d f(Vector13d x,
                 Vector6d u);   // consulted this for help: https://www.cs.cmu.edu/~baraff/sigcourse/notesd1.pdf
 
     /*Fourth order Runge-Kutta integration.
-            Keyword arguments:
-            x -- vector of states
-            u -- vector of inputs (constant for dt)
-            dt -- time for which to integrate
+        Keyword arguments:
+        x -- vector of states
+        u -- vector of inputs (constant for dt)
+        dt -- time for which to integrate
     */
     VectorXd rk4(const VectorXd& x, const VectorXd& u, double dt);
 
     /*
-            updates the state by
-                    1. calculating the state dynamics (xdot)
-                    2. integrating the state dynamics with an ode integrator with a timestep of "dt"
-            logs the updated state data to the private vector variables
+        updates the state by
+            1. calculating the state dynamics (xdot)
+            2. integrating the state dynamics with an ode integrator with a timestep of "dt"
+        logs the updated state data to the private vector variables
     */
     void update(double dt);
 
     /*
-            writes the rotation matrix and linear position private vectors to a file for a python script to use for an
+        writes the rotation matrix and linear position private vectors to a file for a python script to use for an
        animation
     */
     void logDataToFile();
@@ -92,16 +90,16 @@ class RigidBody {
     Matrix3d InertiaTensorInverse;
 
     /*
-            position vector (global frame)
-            velocity vector (global frame)
-            quaternion representing rotation from global frame to body frame
-            angular momentum vector (Body frame)
+        position vector (global frame)
+        velocity vector (global frame)
+        quaternion representing rotation from global frame to body frame
+        angular momentum vector (Body frame)
     */
     Vector13d x;   // state
 
     /*
-            Net force vector (body frame)
-            Net torque vector (body frame)
+        Net force vector (body frame)
+        Net torque vector (body frame)
     */
     Vector6d u;   // inputs (applied forces [N] and torques [Nm])
 

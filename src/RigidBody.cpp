@@ -44,7 +44,7 @@ RigidBody::RigidBody(double mass, Matrix3d InertiaTensor, Quaternion<double> rot
 
 // void RigidBody::SimulateIMU(Vector3d &body_Acc, Vector3d &body_ang_vel) {
 // 	Vector3d FAppNet_b = u.segment(0, 3);//net applied force in body frame
-// 	body_Acc = (FAppNet_b / m + getRotationGtoB() * g); //also taking into
+// 	body_Acc = (FAppNet_b / m + get_b_R_g() * g); //also taking into
 // account gravity
 
 // 	body_ang_vel = getBodyAngularVelocity();
@@ -71,32 +71,30 @@ Vector3d RigidBody::getBodyAngularVelocity() {
 }
 
 Vector3d RigidBody::getGlobalAngularVelocity() {
-    return getRotationBtoG() * getBodyAngularVelocity();
+    return get_g_R_b() * getBodyAngularVelocity();
 }
 
-Quaternion<double> RigidBody::getRotationGtoB() {
+Quaternion<double> RigidBody::get_b_R_g() {
     return Quaternion<double>(x(9), x(6), x(7),
                               x(8));   // returning the quaternion that is represented by the 4 quaternion
                                        // coefficents that are embedded in indexes 6,7,8,9 of the state
                                        // vector, x
 }
 
-Quaternion<double> RigidBody::getRotationBtoG() {
-    return getRotationGtoB().inverse();
+Quaternion<double> RigidBody::get_g_R_b() {
+    return get_b_R_g().inverse();
 }
 
 void RigidBody::applyMoment(Vector3d moment) {
-    u.segment(3,
-              3) += moment;   // using a block operation to add the 3 components of
-                              // the applied-body-moment-vector to indexes 3,4,5 of
-                              // the overall input vector, u
+    // using a block operation to add the 3 components of the applied-body-moment-vector to indexes 3,4,5 of the overall
+    // input vector, u
+    u.segment(3, 3) += moment;
 }
 
 void RigidBody::applyForce(Vector3d force, Vector3d pointOfApplication) {
-    u.segment(0,
-              3) += force;                          // using a block operation to add the 3 components of
-                                                    // the applied-body-force-vector to indexes 0,1,2 of
-                                                    // the overall input vector, u
+    // using a block operation to add the 3 components of the applied-body-force-vector to indexes 0,1,2 of the overall
+    // input vector, u
+    u.segment(0, 3) += force;
     applyMoment(pointOfApplication.cross(force));   // accounting for the applied-body-force's resulting moment
 }
 
@@ -107,45 +105,36 @@ void RigidBody::clearAppliedForcesAndMoments() {
 Vector13d RigidBody::f(Vector13d x, Vector6d u) {
     Vector13d xdot;   // derivative of the state vector
 
-    xdot.segment(0, 3) = x.segment(3,
-                                   3);   // using a block operation to copy the 3 components of the
-                                         // state-vector at indexes 3,4,5 (which represent
-                                         // global-linear-velocity) into indexes 0,1,2 of the
-                                         // derivative-of-the-overall-state-vector
-    Vector3d FAppNet_b = u.segment(0,
-                                   3);   // using a block operation to copy the 3 components of the
-                                         // input-vector at indexes 0,1,2 (which represent
-                                         // net-body-applied-force) into the
-                                         // net-body-applied-force-vector, FAppNet_b
-    Vector3d Anet_g =
-        (getRotationBtoG() * FAppNet_b) / m + g;   // finding the net-global-linear-acceleration after taking into
-                                                   // account the applied forces and the effect of gravity
-    xdot.segment(3,
-                 3) = Anet_g;   // using a block operation to embed the 3 components of the
-                                // net-global-linear-acceleration-vector (derivative of
-                                // global-linear-velocity) into indexes 3,4,5 of the
-                                // derivative-of-the-overall-state-vector
+    // using a block operation to copy the 3 components of the state-vector at indexes 3,4,5 (which represent
+    // global-linear-velocity) into indexes 0,1,2 of the derivative-of-the-overall-state-vector
+    xdot.segment(0, 3) = x.segment(3, 3);
 
-    Vector3d w_b = getBodyAngularVelocity();
-    Quaternion<double> w_b_quaternion_form =
-        Quaternion<double>(0, w_b(0), w_b(1),
-                           w_b(2));   // converting the 3-component vector-representation of the
-                                      // body-angular-velocity into an equivalent quaternion form
-    Quaternion<double> qdot = Quaternion<double>(
-        0.5 * (getRotationGtoB() * w_b_quaternion_form).coeffs());   // calculating the derivative of the
-                                                                     // orientation-qauternion (formula 14 from pg.7 of
-                                                                     // https://arxiv.org/pdf/0811.2889.pdf)
-    xdot.segment(6,
-                 4) = qdot.coeffs();   // using a block operation to embed the 4 components of the
-                                       // derivative-of-the-orientation-quaternion, qdot, into
-                                       // indexes 6,7,8,9 of the
-                                       // derivative-of-the-overall-state-vector
+    // using a block operation to copy the 3 components of the input-vector at indexes 0,1,2 (which represent
+    // net-body-applied-force) into the net-body-applied-force-vector, FAppNet_b
+    Vector3d FAppNet_b = u.segment(0, 3);
 
-    xdot.segment(10, 3) = u.segment(3,
-                                    3);   // using a block operation to copy the 3 components of the
-                                          // input-vector at indexes 3,4,5 (which represent
-                                          // net-body-applied-torque) into indexes 10,11,12 of the
-                                          // derivative-of-the-overall-state-vector
+    // finding the net-global-linear-acceleration after taking into account the applied forces and the effect of gravity
+    Vector3d Anet_g = (get_g_R_b() * FAppNet_b) / m + g;
+
+    // using a block operation to embed the 3 components of the net-global-linear-acceleration-vector (derivative of
+    // global-linear-velocity) into indexes 3,4,5 of the derivative-of-the-overall-state-vector
+    xdot.segment(3, 3) = Anet_g;
+
+    // converting the 3-component vector-representation of the body-angular-velocity into an equivalent quaternion form
+    Vector3d w_b                           = getBodyAngularVelocity();
+    Quaternion<double> w_b_quaternion_form = Quaternion<double>(0, w_b(0), w_b(1), w_b(2));
+
+    // calculating the derivative of the orientation-qauternion (formula 14 from pg.7 of
+    // https://arxiv.org/pdf/0811.2889.pdf)
+    Quaternion<double> qdot = Quaternion<double>(0.5 * (get_b_R_g() * w_b_quaternion_form).coeffs());
+
+    // using a block operation to embed the 4 components of the derivative-of-the-orientation-quaternion, qdot, into
+    // indexes 6,7,8,9 of the derivative-of-the-overall-state-vector
+    xdot.segment(6, 4) = qdot.coeffs();
+
+    // using a block operation to copy the 3 components of the input-vector at indexes 3,4,5 (which represent
+    // net-body-applied-torque) into indexes 10,11,12 of the derivative-of-the-overall-state-vector
+    xdot.segment(10, 3) = u.segment(3, 3);
 
     return xdot;
 }
@@ -160,24 +149,23 @@ VectorXd RigidBody::rk4(const VectorXd& x, const VectorXd& u, double dt) {
 }
 
 void RigidBody::update(double dt) {
-    Quaternion<double> q = getRotationGtoB();
-    Matrix3d R           = q.toRotationMatrix();
-    orientations.push_back(R);
+    Matrix3d b_R_g = get_b_R_g().toRotationMatrix();
+    Matrix3d g_R_b = b_R_g.transpose();
+    orientations.push_back(b_R_g);
 
-    Vector3d euler = R.eulerAngles(0, 1, 2);
+    Vector3d euler = b_R_g.eulerAngles(0, 1, 2);
     thetaX.push_back(euler(0));
     thetaY.push_back(euler(1));
     thetaZ.push_back(euler(2));
 
-    Vector3d H_b = x.segment(10,
-                             3);   // using a block operation to copy the 3 components of the
-                                   // state-vector at indexes 10,11,12 (which represent
-                                   // body-angular-momentum) into the body-angular-momentum-vector, H_b
+    // using a block operation to copy the 3 components of the state-vector at indexes 10,11,12 (which represent
+    // body-angular-momentum) into the body-angular-momentum-vector, H_b
+    Vector3d H_b = x.segment(10, 3);
     H_bX.push_back(H_b(0));
     H_bY.push_back(H_b(1));
     H_bZ.push_back(H_b(2));
 
-    Vector3d H_g = q.inverse() * H_b;
+    Vector3d H_g = g_R_b * H_b;
     H_gX.push_back(H_g(0));
     H_gY.push_back(H_g(1));
     H_gZ.push_back(H_g(2));
@@ -187,23 +175,21 @@ void RigidBody::update(double dt) {
     w_bY.push_back(w_b(1));
     w_bZ.push_back(w_b(2));
 
-    Vector3d w_g = q.inverse() * w_b;
+    Vector3d w_g = g_R_b * w_b;
     w_gX.push_back(w_g(0));
     w_gY.push_back(w_g(1));
     w_gZ.push_back(w_g(2));
 
-    Vector3d V_g = x.segment(3,
-                             3);   // using a block operation to copy the 3 components of the
-                                   // state-vector at indexes 3,4,5 (which represent
-                                   // global-linear-velocity) into the global-linear-velocity-vector, V_g
+    // using a block operation to copy the 3 components of the state-vector at indexes 3,4,5 (which represent
+    // global-linear-velocity) into the global-linear-velocity-vector, V_g
+    Vector3d V_g = x.segment(3, 3);
     velX_global_arr.push_back(V_g(0));
     velY_global_arr.push_back(V_g(1));
     velZ_global_arr.push_back(V_g(2));
 
-    Vector3d P_g = x.segment(0,
-                             3);   // using a block operation to copy the 3 components of the
-                                   // state-vector at indexes 0,1,2 (which represent
-                                   // global-linear-position) into the global-linear-position-vector, P_g
+    // using a block operation to copy the 3 components of the state-vector at indexes 0,1,2 (which represent
+    // global-linear-position) into the global-linear-position-vector, P_g
+    Vector3d P_g = x.segment(0, 3);
     posX_global_arr.push_back(P_g(0));
     posY_global_arr.push_back(P_g(1));
     posZ_global_arr.push_back(P_g(2));
@@ -214,7 +200,7 @@ void RigidBody::update(double dt) {
 
     // numerically integrating the quaternion makes its length "drift" away from having a unit norm. Need to
     // renormalize:
-    double q_length = getRotationGtoB().norm();
+    double q_length = get_b_R_g().norm();
 
     // using a block operation to renormalize the 4 components of the state vector at indexes 6,7,8,9 which makeup the
     // Rigid Body's orientation-quaternion
