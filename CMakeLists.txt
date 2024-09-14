@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
 project(3dDynamicsSim LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-include_directories("include/")
-
 find_package(Eigen3 REQUIRED)
 
+include_directories("include/")
 
 add_compile_options(
+    -O3
+    -g
     -pedantic               # Issue all the warnings demanded by strict ISO C
     -Wall                   # Warn about most questionable operations
     -Wextra                 # Even more warnings
@@ -33,14 +33,24 @@ add_compile_options(
     # -Wno-unused-parameter   # Happens more frequently than you would think and it's generally ok
 )
 
+add_subdirectory(dependencies)
 
-#library creation
-add_library(${PROJECT_NAME} SHARED src/RigidBody.cpp src/utils_and_transforms.cpp) # Create shared library
-target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen )
+include_directories("dependencies/")
+
+# Shared library creation
+add_library(${PROJECT_NAME} SHARED 
+    src/ExpressionEvaluation.cpp
+    src/ParameterParser.cpp 
+    src/RigidBody.cpp 
+    src/simulate_trial.cpp
+    src/utils_and_transforms.cpp
+    src/IO.cpp
+)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen IMULib tjLib)
 
 #building the executable targets of this library
-add_executable(3dDynamicsSim_main src/main.cpp)
-target_link_libraries(3dDynamicsSim_main PRIVATE 3dDynamicsSim)
+add_executable(main src/main.cpp)
+target_link_libraries(main PRIVATE 3dDynamicsSim)
 
 add_executable(SatelliteAroundEarth src/SatelliteAroundEarth.cpp)
 target_link_libraries(SatelliteAroundEarth Eigen3::Eigen)

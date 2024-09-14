@@ -94,12 +94,6 @@ void RigidBody::rk4(double dt) {
     set_g_q_b(get_g_q_b());
 }
 
-void RigidBody::update(double dt) {
-    // TODO(tushaar): call logger
-
-    rk4(dt);
-}
-
 void RigidBody::set_pos_b_wrt_g_in_g(const Vector3& new_pos_b_wrt_g_in_g) {
     ::set_pos_b_wrt_g_in_g(x_, new_pos_b_wrt_g_in_g);
 }

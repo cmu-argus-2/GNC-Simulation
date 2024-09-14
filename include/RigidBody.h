@@ -56,30 +56,11 @@ class RigidBody {
     void clearAppliedForcesAndMoments();
 
     /**
-     * @brief State dynamics
-     *
-     * @param x state
-     * @param u applied forces and torques in body frame
-     * @return StateVector state derivative
-     */
-    StateVector f(const StateVector& x, const Vector6& u);
-
-    /**
      * @brief Fourth order Runge-Kutta integration
      *
      * @param dt integration time [s]
      */
     void rk4(double dt);
-
-    /**
-     * @brief Updates the state by:
-     *        1. calculating the state dynamics (xdot)
-     *        2. integrating the state dynamics with an ode integrator with a timestep of "dt"
-     * also logs the updated state data
-     *
-     * @param dt integration time [s]
-     */
-    void update(double dt);
 
    private:
     /**
@@ -110,6 +91,15 @@ class RigidBody {
     void set_b_q_g(const Quaternion& new_b_q_g);
     void set_vel_b_wrt_g_in_b(const Vector3& new_vel_b_wrt_g_in_b);
     void set_omega_b_wrt_g_in_b(const Vector3& new_omega_b_wrt_g_in_b);
+
+    /**
+     * @brief State dynamics
+     *
+     * @param x state
+     * @param u applied forces and torques in body frame
+     * @return StateVector state derivative
+     */
+    StateVector f(const StateVector& x, const Vector6& u);
 };
 
 Vector3 get_net_force_b(const Vector6& u);

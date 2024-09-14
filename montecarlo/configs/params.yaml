@@ -1,0 +1,25 @@
+MAX_TIME: 2*90*60 # [s]
+dt: 0.02             # [s]
+
+RAAN: DEG_2_RAD(0)                    # [rad]
+init_altitute: 600e3                  # [m]
+orbital_velocity: 7.56e3              # [m/s]
+orbital_incliniation: DEG_2_RAD(98.0) # [rad]
+
+satellite_mass: 1.5    # [kg]
+Ixx: 2e-3 # [kg*m^2]
+Iyy: 2e-3 # [kg*m^2]
+Izz: 3e-3 # [kg*m^2]
+Ixy: 0 # [kg*m^2]
+Ixz: 0 # [kg*m^2]
+Iyz: 0 # [kg*m^2]
+
+
+earliest_sim_start_time_UTC: 2027-01-01 12:00:00
+latest_sim_start_time_UTC: 2027-02-28 23:59:59
+
+
+# =======================================================
+# =================== Earth Constants ===================
+# =======================================================
+EARTH_RADIUS: 6371e3   # [m]
