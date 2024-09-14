@@ -3,10 +3,6 @@
 
 #include "EigenWrapper.h"
 
-/*
-
-*/
-
 /**
  * @brief Assumes body-frame origin coincides with the center-of-mass
  *

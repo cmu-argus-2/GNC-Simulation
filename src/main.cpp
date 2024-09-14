@@ -26,7 +26,7 @@ int main() {
     double init_altitute        = 1000 * init_altitute_km;               // [m]
     double orbital_velocity     = 1000 * orbital_velocity_km_per_sec;    // [m/s]
 
-    // TODO(tushaar): verify ME
+    // TODO(tushaar): verify math here
     Vector3 orbital_plane_normal{sin(orbital_incliniation) * sin(RAAN),    //
                                  -sin(orbital_incliniation) * cos(RAAN),   //
                                  cos(orbital_incliniation)};

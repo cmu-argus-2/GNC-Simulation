@@ -1,7 +1,5 @@
 param parsing
-
 logging
-
 plotting
 
 verify, format, cleanup param doc strings
