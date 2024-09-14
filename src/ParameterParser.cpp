@@ -145,6 +145,10 @@ void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filena
         assert(0 < earliest_sim_start_unix);
         assert(0 < latest_sim_start_unix);
         assert(0 < EARTH_RADIUS);
+
+        // TODO(tushaar): more rigorous check to ensure it is PSD
+        assert(InertiaTensor.determinant() > 0.0);
+
     }   // clang-format on
 
     // TODO(tushaar): verify math here

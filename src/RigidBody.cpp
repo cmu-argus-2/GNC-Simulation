@@ -8,9 +8,6 @@ RigidBody::RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3
     : mass_(mass), InertiaTensor_(InertiaTensor) {
     InertiaTensorInverse_ = InertiaTensor.inverse();
 
-    // TODO(tushaar): more rigorous check to ensure it is PSD?
-    assert(InertiaTensor.determinant() > 0.0);
-
     set_pos_b_wrt_g_in_g(init_pos_b_wrt_g_in_g);
     set_g_q_b(init_g_q_b);
     set_vel_b_wrt_g_in_b(init_vel_b_wrt_g_in_b);
