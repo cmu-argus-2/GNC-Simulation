@@ -1,17 +1,18 @@
 # 3dDynamicsSim
 
-This Repo contians C++ code for simulating the 3d Dynamics of a Rigid Body from bare bones Newton-Euler Equations I found in a textbook and using RK4 numerical integration. There is also a python file which can show a visualization of the Rogid Body's Dynamics.
+This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in orbit.
 
-## Instructions
-- `mkdir build`
-- `cd build`
-- `cmake ..`
-- `make`
-- `./3dDynamicsSim_main`
-
+## Running the sim
+- `cd montecarlo/`
+- Run `python3 run_job.py`
+- Results are written into the `results/` directory
+ 
 ## Visualization
-- `python3 animate.py`
+- `cd montecarlo/plots_and_analysis/web_visualizer`
+- `python3 job_comparison_tool.py`
 
+## Tweaking parameters
+- Edit `montecarlo/configs/params.yaml`
 
 
 # Satellite orbit demo
