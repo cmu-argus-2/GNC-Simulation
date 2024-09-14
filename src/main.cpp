@@ -1,49 +1,60 @@
-#include <unistd.h>
-
 #include <chrono>
-#include <cmath>
-#include <eigen3/Eigen/Dense>
 #include <iostream>
 
 #include "RigidBody.h"
-#include "utils.h"
+#include "utils_and_transforms.h"
 
-using namespace Eigen;
+// TODO(tushaar): move me to a constants file
+constexpr double EARTH_RADIUS = 63'781'370;   // [m]
+constexpr double mass         = 1.5;          //[kg]
 
 int main() {
     auto start = std::chrono::steady_clock::now();
 
-    double maxTime  = 11;
-    double currTime = 0;
-    double dt       = 0.001;   // timestep between state updates
+    double maxTime  = 2 * 90 * 60;   // [s]
+    double currTime = 0;             // [s]
+    double dt       = 0.02;          // [s]
 
-    Quaternion<double> rotation_initial = AngleAxis<double>(rad(0.0), Vector3d::UnitX()) *
-                                          AngleAxis<double>(rad(0.0), Vector3d::UnitY()) *
-                                          AngleAxis<double>(rad(0.0), Vector3d::UnitZ());
+    // Right Ascension of the Ascending Node
+    double RAAN_deg                    = 0;      // [deg]
+    double orbital_incliniation_deg    = 98.0;   // [deg]
+    double init_altitute_km            = 600;    // [km]
+    double orbital_velocity_km_per_sec = 7.56;   // [km/s]
 
-    Vector3d ang_vel_inital = Vector3d::Zero();   // thetaXdot, thetaYdot, thetaZdot 	[rad/s, rad/s, rad/s]
-    Vector3d lin_pos_inital = Vector3d::Zero();   // posX, psoY, posZ					[m, m, m]
-    Vector3d lin_vel_inital = Vector3d::Zero();   // velX, velY, velZ					[m/s, m/s, m/s]
+    double RAAN                 = DEG_2_RAD(RAAN_deg);                   // [m]
+    double orbital_incliniation = DEG_2_RAD(orbital_incliniation_deg);   // [rad]
+    double init_altitute        = 1000 * init_altitute_km;               // [m]
+    double orbital_velocity     = 1000 * orbital_velocity_km_per_sec;    // [m/s]
 
-    Matrix3d InertiaTensor;
-    InertiaTensor << 90e-6, 0, 0, 0, 45e-6, 0, 0, 0, 45e-6;
+    // TODO(tushaar): verify ME
+    Vector3 orbital_plane_normal{sin(orbital_incliniation) * sin(RAAN),    //
+                                 -sin(orbital_incliniation) * cos(RAAN),   //
+                                 cos(orbital_incliniation)};
 
-    double mass = 1;   //[kg]
-    RigidBody rigidBody1 =
-        RigidBody(mass, InertiaTensor, rotation_initial, ang_vel_inital, lin_pos_inital, lin_vel_inital);
-    rigidBody1.setGravity(Vector3d(0, 0, -9.81));
+    // initial state
+    Vector3 init_pos_b_wrt_ECI_in_ECI{EARTH_RADIUS + init_altitute, 0, 0};   // [m]
+    Quaternion init_ECI_q_b = Quaternion::Identity();
+    Vector3 init_vel_b_wrt_ECI_in_ECI =
+        orbital_velocity * orbital_plane_normal.cross(init_pos_b_wrt_ECI_in_ECI.normalized());   // [m/s]
+    Vector3 init_vel_b_wrt_ECI_in_b   = init_ECI_q_b.inverse() * init_vel_b_wrt_ECI_in_ECI;      // [m/s]
+    Vector3 init_omega_b_wrt_ECI_in_b = DEG_2_RAD(3) * Vector3::UnitZ();                         // [rad/s]
+
+    // assert the initial position vector is orthogonal to the satellite's orbital plane normal vector
+    double angle_between_pos_vector_and_orbital_plane_normal =
+        acos(orbital_plane_normal.dot(init_pos_b_wrt_ECI_in_ECI.normalized()));
+    assert(fabs(angle_between_pos_vector_and_orbital_plane_normal - M_PI_2) < 1e-10);
+
+    Matrix_3x3 InertiaTensor;
+    InertiaTensor << 2e-3, 0, 0, 0, 2e-3, 0, 0, 0, 3e-3;
+
+    RigidBody rigidBody1 = RigidBody(mass, InertiaTensor, init_pos_b_wrt_ECI_in_ECI, init_ECI_q_b,
+                                     init_vel_b_wrt_ECI_in_b, init_omega_b_wrt_ECI_in_b);
 
     while (currTime <= maxTime) {
         rigidBody1.clearAppliedForcesAndMoments();
-        rigidBody1.applyForce(rigidBody1.get_b_R_g() * Vector3d(0, 0, 9.7 * mass), Vector3d(0, 0, 0));
-
-        // Gyroscopic effect:(make sure ang_vel_inital = [0,1000,0].T )
-        // rigidBody1.applyForce(rigidBody1.get_b_R_g()*Vector3d(0, 0, -0.2), Vector3d(0, .03, 0));
-        // rigidBody1.applyForce(rigidBody1.get_b_R_g()*Vector3d(0, 0, 0.2), Vector3d(0, 0, 0));
-
-        // couple about an axis that is not through the center of mass:
-        rigidBody1.applyForce(Vector3d(0, 0.001, 0), Vector3d(0.24, 0, 0));
-        rigidBody1.applyForce(Vector3d(0, -0.001, 0), Vector3d(0.25, 0, 0));
+        // TODO(Pedro) apply your controller's forces and torques here
+        // rigidBody1.applyForce(TODO, TODO);
+        // rigidBody1.applyMoment(TODO);
 
         rigidBody1.update(dt);
         currTime += dt;
@@ -52,7 +63,5 @@ int main() {
     auto end = std::chrono::steady_clock::now();
     std::cout << "Elapsed time to Simulate: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms\n";
-    rigidBody1.logDataToFile();
-
     return 0;
 }

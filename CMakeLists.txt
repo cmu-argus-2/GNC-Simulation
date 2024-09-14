@@ -10,8 +10,32 @@ include_directories("include/")
 
 find_package(Eigen3 REQUIRED)
 
+
+add_compile_options(
+    -pedantic               # Issue all the warnings demanded by strict ISO C
+    -Wall                   # Warn about most questionable operations
+    -Wextra                 # Even more warnings
+    -Wwrite-strings         # Warn if not treating string literals as "const"
+    -Wpointer-arith         # Warn about suspicious pointer operations
+    -Wshadow                # Warn about variable shadowing
+    -Wfloat-equal           # Warn about testing floats with ==
+    -Werror
+    -Wparentheses
+    -Wunused-variable
+    -Wunused-function
+    -Wreturn-type
+    -Wunused-value
+    -Wswitch-default
+    -Wuninitialized
+    -Winit-self
+    -Wno-comment            # Don't warn about /* in comments, it's common in the codebase and seems fine
+    # -Wno-sign-compare       # Don't warn about sign compare; too many false positives even in external libraries
+    # -Wno-unused-parameter   # Happens more frequently than you would think and it's generally ok
+)
+
+
 #library creation
-add_library(${PROJECT_NAME} SHARED src/RigidBody.cpp src/utils.cpp) # Create shared library
+add_library(${PROJECT_NAME} SHARED src/RigidBody.cpp src/utils_and_transforms.cpp) # Create shared library
 target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen )
 
 #building the executable targets of this library

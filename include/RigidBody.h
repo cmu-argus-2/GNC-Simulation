@@ -1,153 +1,135 @@
 #ifndef C___RIGIDBODY_H
 #define C___RIGIDBODY_H
 
-#include <eigen3/Eigen/Dense>
-
-using namespace Eigen;
-
-typedef Matrix<double, 13, 1> Vector13d;
-typedef Matrix<double, 6, 1> Vector6d;
+#include "EigenWrapper.h"
 
 /*
-    Assumption used by this class: the body-frame's origin is located at the Rigid-Body's center-of-mass
+
 */
+
+/**
+ * @brief Assumes body-frame origin coincides with the center-of-mass
+ *
+ */
 class RigidBody {
    public:
-    /*
-        "w_b_initial" is the initial angular velocity expressed in the body coordinates
-        "P_g_initial" is the initial linear position expressed in the global coordinates
-        "V_g_initial" is the initial linear velocity expressed in the global coordinates
-    */
-    RigidBody(double mass, Matrix3d InertiaTensor, Quaternion<double> rotation_initial, Vector3d w_b_initial,
-              Vector3d P_g_initial, Vector3d V_g_initial);
+    /**
+     * @brief Construct a new Rigid Body object
+     *
+     * @param mass // [kg]
+     * @param InertiaTensor in body frame // [kg * m^2]
+     * @param init_pos_b_wrt_g_in_g // [m]
+     * @param init_g_q_b initial rotation
+     * @param init_vel_b_wrt_g_in_b // [m/s]
+     * @param init_omega_b_wrt_g_in_b // [rad/s]
+     */
+    RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3& init_pos_b_wrt_g_in_g,
+              const Quaternion& init_g_q_b, const Vector3& init_vel_b_wrt_g_in_b,
+              const Vector3& init_omega_b_wrt_g_in_b);
 
-    /*
-        set the gravity vector expressed in the global frame
-    */
-    void setGravity(Vector3d g_const);
+    /**
+     * @brief Compute force due to gravity, expressed in body frame
+     *
+     * @return Vector3 [N]
+     */
+    Vector3 get_gravity_b();
 
-    Vector3d getGravity();
+    Vector3 get_net_force_b();
+    Vector3 get_net_moment_b();
+    Vector3 get_pos_b_wrt_g_in_g();
+    Quaternion get_g_q_b();
+    Quaternion get_b_q_g();
+    Vector3 get_vel_b_wrt_g_in_b();
+    Vector3 get_omega_b_wrt_g_in_b();
 
-    Vector3d getGlobalLinearPosition();
+    /**
+     * @brief Applies a force
+     *
+     * @param force_b force to apply [N]
+     * @param pointOfApplication_b body position at which to apply the force // [m]
+     */
+    void applyForce(const Vector3& force_b, const Vector3& pointOfApplication_b);
 
-    Vector3d getGlobalLinearVelocity();
-
-    Vector3d getBodyAngularVelocity();
-
-    Vector3d getGlobalAngularVelocity();
-
-    Quaternion<double> get_b_R_g();   // return the quaternion representing the rotation from the global to body frame
-
-    Quaternion<double> get_g_R_b();   // return the quaternion representing the rotation from the body to global frame
-
-    /*
-        "force" is expressed in the body coordinates
-        "pointOfApplication" is expressed in the body coordinates
-    */
-    void applyForce(Vector3d force, Vector3d pointOfApplication);
-
-    /*
-        "moment" is expressed in the body coordinates
-    */
-    void applyMoment(Vector3d moment);
+    /**
+     * @brief Applies a moment
+     *
+     * @param moment_b moment to apply [N*m]
+     */
+    void applyMoment(const Vector3& moment_b);
 
     void clearAppliedForcesAndMoments();
 
-    /*
-        returns the derivative of the state vector
-    */
-    Vector13d f(Vector13d x,
-                Vector6d u);   // consulted this for help: https://www.cs.cmu.edu/~baraff/sigcourse/notesd1.pdf
+    /**
+     * @brief State dynamics
+     *
+     * @param x state
+     * @param u applied forces and torques in body frame
+     * @return StateVector state derivative
+     */
+    StateVector f(const StateVector& x, const Vector6& u);
 
-    /*Fourth order Runge-Kutta integration.
-        Keyword arguments:
-        x -- vector of states
-        u -- vector of inputs (constant for dt)
-        dt -- time for which to integrate
-    */
-    VectorXd rk4(const VectorXd& x, const VectorXd& u, double dt);
+    /**
+     * @brief Fourth order Runge-Kutta integration
+     *
+     * @param dt integration time [s]
+     */
+    void rk4(double dt);
 
-    /*
-        updates the state by
-            1. calculating the state dynamics (xdot)
-            2. integrating the state dynamics with an ode integrator with a timestep of "dt"
-        logs the updated state data to the private vector variables
-    */
+    /**
+     * @brief Updates the state by:
+     *        1. calculating the state dynamics (xdot)
+     *        2. integrating the state dynamics with an ode integrator with a timestep of "dt"
+     * also logs the updated state data
+     *
+     * @param dt integration time [s]
+     */
     void update(double dt);
 
-    /*
-        writes the rotation matrix and linear position private vectors to a file for a python script to use for an
-       animation
-    */
-    void logDataToFile();
-
-    void showPlots();
-
    private:
-    Vector3d g;               // gravity in global frame: [m/s^2]
-    double m;                 // RigidBody's mass: [kg]
-    Matrix3d InertiaTensor;   // [kg*m^2]
-    Matrix3d InertiaTensorInverse;
+    /**
+     * @brief Comprised of 4 parts:
+     * (3x1) pos_b_wrt_g_in_g  : position of body from global frame, expressed in global frame [m]
+     * (4x1) g_q_b [w,x,y,z]   : rotation that transforms a vector with body coords. into one with global coords.
+     * (3x1) vel_b_wrt_g_in_b  : linear velocity of body with respect to global frame, expressed in body frame [m/s]
+     * (3x1) omega_b_wrt_g_in_b: angular velocity of body with respect to global frame, expressed in body frame [rad/s]
+     */
+    StateVector x_;   // state
 
-    /*
-        position vector (global frame)
-        velocity vector (global frame)
-        quaternion representing rotation from global frame to body frame
-        angular momentum vector (Body frame)
-    */
-    Vector13d x;   // state
+    /**
+     * @brief Net Force & Torque applied:
+     * (3x1) net force in body-frame [N]
+     * (3x1) net torque in body-frame [N*m]
+     */
+    Vector6 u_;
 
-    /*
-        Net force vector (body frame)
-        Net torque vector (body frame)
-    */
-    Vector6d u;   // inputs (applied forces [N] and torques [Nm])
+    Vector3 gravity_b_;                 // force of gravity in body frame: [N]
+    double mass_;                       // mass: [kg]
+    Matrix_3x3 InertiaTensor_;          // in body frame [kg*m^2]
+    Matrix_3x3 InertiaTensorInverse_;   // in body frame [1/(kg*m^2)]
 
-    double currentTime;   // current time into simulation: [s]
-
-    // Vectors for logging data to be plotted
-    long numberOfDatapointsLogged;   // keeps track of how many simulation timesteps logged data
-
-    std::vector<Matrix3d> orientations;   // holds the rotation matrix from the global to body frame at each timestep
-
-    std::vector<double> thetaX;
-    std::vector<double> thetaY;
-    std::vector<double> thetaZ;
-
-    std::vector<double> w_bX;
-    std::vector<double> w_bY;
-    std::vector<double> w_bZ;
-
-    std::vector<double> w_gX;
-    std::vector<double> w_gY;
-    std::vector<double> w_gZ;
-
-    std::vector<double> H_bX;
-    std::vector<double> H_bY;
-    std::vector<double> H_bZ;
-
-    std::vector<double> H_gX;
-    std::vector<double> H_gY;
-    std::vector<double> H_gZ;
-
-    std::vector<double> posX_global_arr;
-    std::vector<double> posY_global_arr;
-    std::vector<double> posZ_global_arr;
-
-    std::vector<double> velX_global_arr;
-    std::vector<double> velY_global_arr;
-    std::vector<double> velZ_global_arr;
-
-    std::vector<double> accelX_global_arr;
-    std::vector<double> accelY_global_arr;
-    std::vector<double> accelZ_global_arr;
-
-    std::vector<double> signal3;
-    std::vector<double> signal5;
-    std::vector<double> signal6;
-    std::vector<double> signal10;
-
-    std::vector<double> time;
+    void set_net_force_b(const Vector3& new_net_force_b);
+    void set_net_moment_b(const Vector3& new_net_moment_b);
+    void set_pos_b_wrt_g_in_g(const Vector3& new_pos_b_wrt_g_in_g);
+    void set_g_q_b(const Quaternion& new_g_q_b);
+    void set_b_q_g(const Quaternion& new_b_q_g);
+    void set_vel_b_wrt_g_in_b(const Vector3& new_vel_b_wrt_g_in_b);
+    void set_omega_b_wrt_g_in_b(const Vector3& new_omega_b_wrt_g_in_b);
 };
+
+Vector3 get_net_force_b(const Vector6& u);
+Vector3 get_net_moment_b(const Vector6& u);
+Vector3 get_pos_b_wrt_g_in_g(const StateVector& x);
+Quaternion get_g_q_b(const StateVector& x);
+Quaternion get_b_q_g(const StateVector& x);
+Vector3 get_vel_b_wrt_g_in_b(const StateVector& x);
+Vector3 get_omega_b_wrt_g_in_b(const StateVector& x);
+
+void set_net_force_b(Vector6& u, const Vector3& new_net_force_b);
+void set_net_moment_b(Vector6& u, const Vector3& new_net_moment_b);
+void set_pos_b_wrt_g_in_g(StateVector& x, const Vector3& new_pos_b_wrt_g_in_g);
+void set_g_q_b(StateVector& x, const Quaternion& new_g_q_b, bool normalize);
+void set_b_q_g(StateVector& x, const Quaternion& new_b_q_g, bool normalize);
+void set_vel_b_wrt_g_in_b(StateVector& x, const Vector3& new_vel_b_wrt_g_in_b);
+void set_omega_b_wrt_g_in_b(StateVector& x, const Vector3& new_omega_b_wrt_g_in_b);
 
 #endif   // C___RIGIDBODY_H

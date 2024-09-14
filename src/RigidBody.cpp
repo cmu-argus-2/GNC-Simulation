@@ -1,226 +1,196 @@
 #include "RigidBody.h"
 
-#include <Eigen/Dense>
-#include <fstream>
+#include "EigenWrapper.h"
 
-#include "utils.h"
+RigidBody::RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3& init_pos_b_wrt_g_in_g,
+                     const Quaternion& init_g_q_b, const Vector3& init_vel_b_wrt_g_in_b,
+                     const Vector3& init_omega_b_wrt_g_in_b)
+    : mass_(mass), InertiaTensor_(InertiaTensor) {
+    InertiaTensorInverse_ = InertiaTensor.inverse();
 
-using namespace Eigen;
+    // TODO(tushaar): more rigorous check to ensure it is PSD?
+    assert(InertiaTensor.determinant() > 0.0);
 
-RigidBody::RigidBody(double mass, Matrix3d InertiaTensor, Quaternion<double> rotation_initial, Vector3d w_b_initial,
-                     Vector3d P_g_initial, Vector3d V_g_initial) {
-    m = mass;   // RigidBody's total mass
+    set_pos_b_wrt_g_in_g(init_pos_b_wrt_g_in_g);
+    set_g_q_b(init_g_q_b);
+    set_vel_b_wrt_g_in_b(init_vel_b_wrt_g_in_b);
+    set_omega_b_wrt_g_in_b(init_omega_b_wrt_g_in_b);
 
-    assert(InertiaTensor.determinant() != 0.0);
-    this->InertiaTensor  = InertiaTensor;   // InertiaTensor along body frame axes
-    InertiaTensorInverse = InertiaTensor.inverse();
-    currentTime          = 0;
-
-    numberOfDatapointsLogged = 0;
-
-    x.segment(0,
-              3) = P_g_initial;   // using a block operation to embed the 3 components of the
-                                  // initial-global-linear-position-vector into indexes 0,1,2
-                                  // of the overall state vector, x
-
-    x.segment(3,
-              3) = V_g_initial;   // using a block operation to embed the 3 components of the
-                                  // initial-global-linear-velocity-vector into indexes 3,4,5
-                                  // of the overall state vector, x
-
-    x.segment(6,
-              4) = rotation_initial.coeffs();   // using a block operation to embed the 4 components of the
-                                                // initial-orientation-quaternion into indexes 6,7,8,9 of
-                                                // the overall state vector, x
-
-    Vector3d H_b_initial = InertiaTensor * w_b_initial;
-    x.segment(10,
-              3)         = H_b_initial;   // using a block operation to embed the 3 components of the
-                                          // initial-body-angular-momentum-vector into indexes 10,11,12
-                                          // of the overall state vector, x
-
-    u << 0, 0, 0, 0, 0, 0;
+    u_ = Vector6::Zero();
 }
 
-// void RigidBody::SimulateIMU(Vector3d &body_Acc, Vector3d &body_ang_vel) {
-// 	Vector3d FAppNet_b = u.segment(0, 3);//net applied force in body frame
-// 	body_Acc = (FAppNet_b / m + get_b_R_g() * g); //also taking into
-// account gravity
-
-// 	body_ang_vel = getBodyAngularVelocity();
-// }
-
-void RigidBody::setGravity(Vector3d g_const) {
-    g = g_const;   // gravity
+Vector3 RigidBody::get_gravity_b() {
+    // TODO(Amaar): gravity and J2 computations here
+    return Vector3::Zero();
 }
 
-Vector3d RigidBody::getGravity() {
-    return g;
+void RigidBody::applyForce(const Vector3& force_b, const Vector3& pointOfApplication_b) {
+    set_net_force_b(get_net_force_b() + force_b);
+
+    // accounting for the applied body force's resulting moment
+    applyMoment(pointOfApplication_b.cross(force_b));
 }
 
-Vector3d RigidBody::getGlobalLinearPosition() {
-    return x.segment(0, 3);
-}
-
-Vector3d RigidBody::getGlobalLinearVelocity() {
-    return x.segment(3, 3);
-}
-
-Vector3d RigidBody::getBodyAngularVelocity() {
-    return InertiaTensorInverse * (x.segment(10, 3));
-}
-
-Vector3d RigidBody::getGlobalAngularVelocity() {
-    return get_g_R_b() * getBodyAngularVelocity();
-}
-
-Quaternion<double> RigidBody::get_b_R_g() {
-    return Quaternion<double>(x(9), x(6), x(7),
-                              x(8));   // returning the quaternion that is represented by the 4 quaternion
-                                       // coefficents that are embedded in indexes 6,7,8,9 of the state
-                                       // vector, x
-}
-
-Quaternion<double> RigidBody::get_g_R_b() {
-    return get_b_R_g().inverse();
-}
-
-void RigidBody::applyMoment(Vector3d moment) {
-    // using a block operation to add the 3 components of the applied-body-moment-vector to indexes 3,4,5 of the overall
-    // input vector, u
-    u.segment(3, 3) += moment;
-}
-
-void RigidBody::applyForce(Vector3d force, Vector3d pointOfApplication) {
-    // using a block operation to add the 3 components of the applied-body-force-vector to indexes 0,1,2 of the overall
-    // input vector, u
-    u.segment(0, 3) += force;
-    applyMoment(pointOfApplication.cross(force));   // accounting for the applied-body-force's resulting moment
+void RigidBody::applyMoment(const Vector3& moment_b) {
+    set_net_moment_b(get_net_moment_b() + moment_b);
 }
 
 void RigidBody::clearAppliedForcesAndMoments() {
-    u << 0, 0, 0, 0, 0, 0;
+    set_net_force_b(Vector3::Zero());
+    set_net_moment_b(Vector3::Zero());
 }
 
-Vector13d RigidBody::f(Vector13d x, Vector6d u) {
-    Vector13d xdot;   // derivative of the state vector
+StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
+    StateVector xdot;   // derivative of the state vector
 
-    // using a block operation to copy the 3 components of the state-vector at indexes 3,4,5 (which represent
-    // global-linear-velocity) into indexes 0,1,2 of the derivative-of-the-overall-state-vector
-    xdot.segment(0, 3) = x.segment(3, 3);
+    // aliases for brevity
 
-    // using a block operation to copy the 3 components of the input-vector at indexes 0,1,2 (which represent
-    // net-body-applied-force) into the net-body-applied-force-vector, FAppNet_b
-    Vector3d FAppNet_b = u.segment(0, 3);
+    auto v     = ::get_vel_b_wrt_g_in_b(x);
+    auto q     = ::get_g_q_b(x);
+    auto f_b   = ::get_net_force_b(u);
+    auto J     = InertiaTensor_;
+    auto Jinv  = InertiaTensorInverse_;
+    auto tau_b = ::get_net_moment_b(u);
+    auto w     = ::get_omega_b_wrt_g_in_b(x);
 
-    // finding the net-global-linear-acceleration after taking into account the applied forces and the effect of gravity
-    Vector3d Anet_g = (get_g_R_b() * FAppNet_b) / m + g;
+    Matrix_4x4 L = Matrix_4x4::Zero();
+    L << q.w(), -q.x(), -q.y(), -q.z(),   //
+        q.x(), q.w(), -q.z(), q.y(),      //
+        q.y(), q.z(), q.w(), -q.x(),      //
+        q.z(), -q.y(), q.x(), q.w();
 
-    // using a block operation to embed the 3 components of the net-global-linear-acceleration-vector (derivative of
-    // global-linear-velocity) into indexes 3,4,5 of the derivative-of-the-overall-state-vector
-    xdot.segment(3, 3) = Anet_g;
+    Matrix_4x3 H = Matrix_4x3::Zero();
+    H(1, 0)      = 1;
+    H(2, 1)      = 1;
+    H(3, 2)      = 1;
 
-    // converting the 3-component vector-representation of the body-angular-velocity into an equivalent quaternion form
-    Vector3d w_b                           = getBodyAngularVelocity();
-    Quaternion<double> w_b_quaternion_form = Quaternion<double>(0, w_b(0), w_b(1), w_b(2));
+    auto G = L * H;
 
-    // calculating the derivative of the orientation-qauternion (formula 14 from pg.7 of
-    // https://arxiv.org/pdf/0811.2889.pdf)
-    Quaternion<double> qdot = Quaternion<double>(0.5 * (get_b_R_g() * w_b_quaternion_form).coeffs());
+    Vector3 rdot        = q * v;
+    Vector4 qdot_coeffs = 0.5 * G * w;
+    Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
+    Vector3 vdot = (f_b - w.cross(v)) / mass_;
+    Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
 
-    // using a block operation to embed the 4 components of the derivative-of-the-orientation-quaternion, qdot, into
-    // indexes 6,7,8,9 of the derivative-of-the-overall-state-vector
-    xdot.segment(6, 4) = qdot.coeffs();
-
-    // using a block operation to copy the 3 components of the input-vector at indexes 3,4,5 (which represent
-    // net-body-applied-torque) into indexes 10,11,12 of the derivative-of-the-overall-state-vector
-    xdot.segment(10, 3) = u.segment(3, 3);
+    // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
+    // state vector
+    ::set_pos_b_wrt_g_in_g(xdot, rdot);
+    ::set_g_q_b(xdot, qdot, false);
+    ::set_vel_b_wrt_g_in_b(xdot, vdot);
+    ::set_omega_b_wrt_g_in_b(xdot, wdot);
 
     return xdot;
 }
 
-VectorXd RigidBody::rk4(const VectorXd& x, const VectorXd& u, double dt) {
+void RigidBody::rk4(double dt) {
     double half_dt = dt * 0.5;
-    VectorXd k1    = f(x, u);
-    VectorXd k2    = f(x + half_dt * k1, u);
-    VectorXd k3    = f(x + half_dt * k2, u);
-    VectorXd k4    = f(x + dt * k3, u);
-    return x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+    StateVector k1 = f(x_, u_);
+    StateVector k2 = f(x_ + half_dt * k1, u_);
+    StateVector k3 = f(x_ + half_dt * k2, u_);
+    StateVector k4 = f(x_ + dt * k3, u_);
+    x_             = x_ + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+
+    // renormalize the attitude quaternion (taken care of by set_g_q_b())
+    set_g_q_b(get_g_q_b());
 }
 
 void RigidBody::update(double dt) {
-    Matrix3d b_R_g = get_b_R_g().toRotationMatrix();
-    Matrix3d g_R_b = b_R_g.transpose();
-    orientations.push_back(b_R_g);
+    // TODO(tushaar): call logger
 
-    Vector3d euler = b_R_g.eulerAngles(0, 1, 2);
-    thetaX.push_back(euler(0));
-    thetaY.push_back(euler(1));
-    thetaZ.push_back(euler(2));
-
-    // using a block operation to copy the 3 components of the state-vector at indexes 10,11,12 (which represent
-    // body-angular-momentum) into the body-angular-momentum-vector, H_b
-    Vector3d H_b = x.segment(10, 3);
-    H_bX.push_back(H_b(0));
-    H_bY.push_back(H_b(1));
-    H_bZ.push_back(H_b(2));
-
-    Vector3d H_g = g_R_b * H_b;
-    H_gX.push_back(H_g(0));
-    H_gY.push_back(H_g(1));
-    H_gZ.push_back(H_g(2));
-
-    Vector3d w_b = InertiaTensorInverse * H_b;
-    w_bX.push_back(w_b(0));
-    w_bY.push_back(w_b(1));
-    w_bZ.push_back(w_b(2));
-
-    Vector3d w_g = g_R_b * w_b;
-    w_gX.push_back(w_g(0));
-    w_gY.push_back(w_g(1));
-    w_gZ.push_back(w_g(2));
-
-    // using a block operation to copy the 3 components of the state-vector at indexes 3,4,5 (which represent
-    // global-linear-velocity) into the global-linear-velocity-vector, V_g
-    Vector3d V_g = x.segment(3, 3);
-    velX_global_arr.push_back(V_g(0));
-    velY_global_arr.push_back(V_g(1));
-    velZ_global_arr.push_back(V_g(2));
-
-    // using a block operation to copy the 3 components of the state-vector at indexes 0,1,2 (which represent
-    // global-linear-position) into the global-linear-position-vector, P_g
-    Vector3d P_g = x.segment(0, 3);
-    posX_global_arr.push_back(P_g(0));
-    posY_global_arr.push_back(P_g(1));
-    posZ_global_arr.push_back(P_g(2));
-
-    time.push_back(currentTime);
-
-    x = rk4(x, u, dt);
-
-    // numerically integrating the quaternion makes its length "drift" away from having a unit norm. Need to
-    // renormalize:
-    double q_length = get_b_R_g().norm();
-
-    // using a block operation to renormalize the 4 components of the state vector at indexes 6,7,8,9 which makeup the
-    // Rigid Body's orientation-quaternion
-    x.segment(6, 4) /= q_length;
-
-    currentTime += dt;
-    numberOfDatapointsLogged++;
+    rk4(dt);
 }
 
-void RigidBody::logDataToFile() {
-    std::ofstream logFile;
-    logFile.open("3dAnimationData.txt");
+void RigidBody::set_pos_b_wrt_g_in_g(const Vector3& new_pos_b_wrt_g_in_g) {
+    ::set_pos_b_wrt_g_in_g(x_, new_pos_b_wrt_g_in_g);
+}
+void RigidBody::set_g_q_b(const Quaternion& new_g_q_b) {
+    ::set_g_q_b(x_, new_g_q_b, true);
+}
+void RigidBody::set_b_q_g(const Quaternion& new_b_q_g) {
+    ::set_b_q_g(x_, new_b_q_g, true);
+}
+void RigidBody::set_vel_b_wrt_g_in_b(const Vector3& new_vel_b_wrt_g_in_b) {
+    ::set_vel_b_wrt_g_in_b(x_, new_vel_b_wrt_g_in_b);
+}
+void RigidBody::set_omega_b_wrt_g_in_b(const Vector3& new_omega_b_wrt_g_in_b) {
+    ::set_omega_b_wrt_g_in_b(x_, new_omega_b_wrt_g_in_b);
+}
+void RigidBody::set_net_force_b(const Vector3& new_net_force_b) {
+    ::set_net_force_b(u_, new_net_force_b);
+}
+void RigidBody::set_net_moment_b(const Vector3& new_net_moment_b) {
+    ::set_net_moment_b(u_, new_net_moment_b);
+}
 
-    for (long i = 0; i < numberOfDatapointsLogged; i++) {
-        logFile << time[i] << "\n";
-        logFile << orientations[i] << "\n";
-        logFile << posX_global_arr[i] << "\n";
-        logFile << posY_global_arr[i] << "\n";
-        logFile << posZ_global_arr[i] << "\n";
-        logFile << "----------------------------\n";
+Vector3 RigidBody::get_pos_b_wrt_g_in_g() {
+    return ::get_pos_b_wrt_g_in_g(x_);
+}
+Quaternion RigidBody::get_g_q_b() {
+    return ::get_g_q_b(x_);
+}
+Quaternion RigidBody::get_b_q_g() {
+    return ::get_b_q_g(x_);
+}
+Vector3 RigidBody::get_vel_b_wrt_g_in_b() {
+    return ::get_vel_b_wrt_g_in_b(x_);
+}
+Vector3 RigidBody::get_omega_b_wrt_g_in_b() {
+    return ::get_omega_b_wrt_g_in_b(x_);
+}
+Vector3 RigidBody::get_net_force_b() {
+    return ::get_net_force_b(u_);
+}
+Vector3 RigidBody::get_net_moment_b() {
+    return ::get_net_moment_b(u_);
+}
+
+void set_pos_b_wrt_g_in_g(StateVector& x, const Vector3& new_pos_b_wrt_g_in_g) {
+    x.block<3, 1>(0, 0) = new_pos_b_wrt_g_in_g;
+}
+void set_g_q_b(StateVector& x, const Quaternion& new_g_q_b, bool normalize) {
+    auto copy = new_g_q_b;
+    if (normalize) {
+        copy = copy.normalized();
     }
-    logFile.close();
+    x(3) = copy.w();
+    x(4) = copy.x();
+    x(5) = copy.y();
+    x(6) = copy.z();
+}
+void set_b_q_g(StateVector& x, const Quaternion& new_b_q_g, bool normalize) {
+    ::set_g_q_b(x, new_b_q_g.inverse(), normalize);
+}
+void set_vel_b_wrt_g_in_b(StateVector& x, const Vector3& new_vel_b_wrt_g_in_b) {
+    x.block<3, 1>(7, 0) = new_vel_b_wrt_g_in_b;
+}
+void set_omega_b_wrt_g_in_b(StateVector& x, const Vector3& new_omega_b_wrt_g_in_b) {
+    x.block<3, 1>(10, 0) = new_omega_b_wrt_g_in_b;
+}
+void set_net_force_b(Vector6& u, const Vector3& new_net_force_b) {
+    u.block<3, 1>(0, 0) = new_net_force_b;
+}
+void set_net_moment_b(Vector6& u, const Vector3& new_net_moment_b) {
+    u.block<3, 1>(3, 0) = new_net_moment_b;
+}
+
+Vector3 get_pos_b_wrt_g_in_g(const StateVector& x) {
+    return x.block<3, 1>(0, 0);
+}
+Quaternion get_g_q_b(const StateVector& x) {
+    return Quaternion{x(3), x(4), x(5), x(6)};
+}
+Quaternion get_b_q_g(const StateVector& x) {
+    return get_g_q_b(x).inverse();
+}
+Vector3 get_vel_b_wrt_g_in_b(const StateVector& x) {
+    return x.block<3, 1>(7, 0);
+}
+Vector3 get_omega_b_wrt_g_in_b(const StateVector& x) {
+    return x.block<3, 1>(10, 0);
+}
+Vector3 get_net_force_b(const Vector6& u) {
+    return u.block<3, 1>(0, 0);
+}
+Vector3 get_net_moment_b(const Vector6& u) {
+    return u.block<3, 1>(3, 0);
 }

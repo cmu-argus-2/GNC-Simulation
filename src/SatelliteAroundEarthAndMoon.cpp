@@ -38,7 +38,7 @@ std::vector<double> y_pos_arr;   // array that holds the satellite's y position 
 
 // calculating the time-derivative of the satellite's state vector, x: [x_position, x_velocity, y_position, y_velocity],
 // given its current state vector and control inputs, u
-Vector4d f(VectorXd x, double u) {
+Vector4d f(VectorXd x) {
     Vector2d earth_pos;
     earth_pos << x_earth, y_earth;
     Vector2d moon_pos;
@@ -60,12 +60,12 @@ Vector4d f(VectorXd x, double u) {
 
 // 4th order runge-kutta numerical integration
 
-VectorXd rk4(const VectorXd& x, double u, double dt) {
+VectorXd rk4(const VectorXd& x, double dt) {
     double half_dt = dt * 0.5;
-    Vector4d k1    = f(x, u);
-    Vector4d k2    = f(x + half_dt * k1, u);
-    Vector4d k3    = f(x + half_dt * k2, u);
-    Vector4d k4    = f(x + dt * k3, u);
+    Vector4d k1    = f(x);
+    Vector4d k2    = f(x + half_dt * k1);
+    Vector4d k3    = f(x + half_dt * k2);
+    Vector4d k4    = f(x + dt * k3);
     return x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 }
 
@@ -82,7 +82,7 @@ int main() {
            (x(0) - x_earth) * (x(0) - x_earth) + (x(2) - y_earth) * (x(2) - y_earth) >= R_e * R_e) {
         x_pos_arr.push_back(x(0));
         y_pos_arr.push_back(x(2));
-        x = rk4(x, 0, dt);
+        x = rk4(x, dt);
         currTime += dt;
     }
     auto end = std::chrono::steady_clock::now();
@@ -92,7 +92,7 @@ int main() {
     std::ofstream logFile;
     logFile.open("SatelliteAroundEarthAndMoon.txt");
     auto N = x_pos_arr.size();
-    for (long i = 0; i < N; i++) {
+    for (uint64_t i = 0; i < N; i++) {
         logFile << x_pos_arr[i] << "\t" << y_pos_arr[i] << "\n";
     }
     logFile.close();
