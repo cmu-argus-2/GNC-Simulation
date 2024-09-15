@@ -176,9 +176,9 @@ class MontecarloPlots:
             triPlot(
                 data_dicts[i]["time [s]"],
                 [
-                    data_dicts[i]["yaw [deg]"],
-                    data_dicts[i]["pitch [deg]"],
                     data_dicts[i]["roll [deg]"],
+                    data_dicts[i]["pitch [deg]"],
+                    data_dicts[i]["yaw [deg]"],
                 ],
                 seriesLabel=f"_{trial_number}",
             )
