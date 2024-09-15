@@ -66,7 +66,7 @@ StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
     Vector3 rdot        = q * v;
     Vector4 qdot_coeffs = 0.5 * G * w;
     Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
-    Vector3 vdot = (f_b - w.cross(v)) / mass_;
+    Vector3 vdot = f_b / mass_ - w.cross(v);
     Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
 
     // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
