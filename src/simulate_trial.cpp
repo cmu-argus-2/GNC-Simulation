@@ -55,8 +55,31 @@ void simulate_trial(const Simulation_Parameters &params) {
         logger.log<3>(trial_directory + "/attitude_truth.bin", t,
                       RAD_2_DEG(intrinsic_zyx_decomposition(sat.get_g_q_b())), "time [s]",
                       {"yaw [deg]", "pitch [deg]", "roll [deg]"});
+        
+        // Calculate the error in quaternion
+        Quaternion error_quat = Quaternion::Identity();  // Initialize the error to identity
+        Quaternion desired_quat = Quaternion::Identity();  // Set the desired quaternion
+        Quaternion current_quat = sat.get_g_q_b();  // Get the current quaternion
+        error_quat = desired_quat * current_quat.inverse();  // Calculate the error in quaternion
 
-        // TODO(Pedro) apply your controller's forces and torques here
+        // Calculate the error in angular velocity
+        Vector3 error_omega = Vector3::Zero();  // Initialize the error to zero
+        Vector3 desired_omega = Vector3::Zero();  // Set the desired angular velocity
+        Vector3 current_omega = sat.get_omega_b_wrt_g_in_b();  // Get the current angular velocity
+        error_omega = desired_omega - current_omega;  // Calculate the error in angular velocity
+
+        // Define the gain matrices Kp and Kd
+        double omega = 2 * M_PI * 0.1;  // Controller frequency in rad/s
+
+        Eigen::Matrix3d Kp = Eigen::Matrix3d::Identity() * (omega / sqrt(2));  // Proportional gain matrix
+        Eigen::Matrix3d Kd = Eigen::Matrix3d::Identity() * (sqrt(2) * params.InertiaTensor * omega);  // Derivative gain matrix
+        
+        // Calculate the torque using the PD controller
+        Vector3 torque = Kp * error_quat.vec() + Kd * error_omega;
+
+        // Apply the torque to the satellite
+        sat.applyMoment(torque);
+        
         // sat.applyForce(TODO, TODO);
         // sat.applyMoment(TODO);
 

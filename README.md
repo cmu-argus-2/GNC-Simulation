@@ -7,6 +7,9 @@ This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in or
 - Run `python3 run_job.py`
 - Results are written into the `results/` directory
  
+## Debugging
+- launch.json shows the configurations for debugging python and C++ code.
+
 ## Visualization
 - `cd montecarlo/plots_and_analysis/web_visualizer`
 - `python3 job_comparison_tool.py`
