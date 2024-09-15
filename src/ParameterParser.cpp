@@ -38,7 +38,7 @@ void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filena
         std::string error_message = "Failed to open file: " + filename;
         throw std::runtime_error(error_message);
     }
-    printf(SUCCESS_INFO("Parsing Parameter file: %s"), filename.c_str());
+    printf(SUCCESS_INFO("Parsing Parameter file: %s\n"), filename.c_str());
 
     std::map<std::string, std::string> parameterMap;
 
@@ -77,7 +77,7 @@ void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filena
         auto iterator_to_parameter_value = parameterMap.find(parameter_name);
         if (iterator_to_parameter_value == parameterMap.end()) {
             printf(ERROR_INFO("Expected parameter \"%s\" in parameter file "
-                              "but didn't find it"),
+                              "but didn't find it\n"),
                    parameter_name.c_str());
             received_all_expected_parameters = false;
             continue;
