@@ -1,0 +1,30 @@
+
+# Earth Planetary Data
+mu : 3.986004405E+14 # +- 0.001 km^3/s^2 [SOURCE: Montenbruck & Gill - Satellite Orbits Pg 15]
+J2 : 1082.64E-6 
+R_earth : 6371000 #m [Mean Volumetric Radius SOURCE : https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html]
+
+# Satellite Data
+mass : 1 # CHANGE
+ballistic_coefficient : 2.2 # CHANGE
+inertia_tensor : [[1,0,0],[0,1,0],[0,0,1]] #CHANGE
+
+# Data Paths
+harris_priester_data : 'data/harris_priester_density_data.csv'
+log_directory : 'data/logger/logs'
+
+#Solver Data
+solver_timestep : 0.2 #s
+
+## Simulation Settings
+
+# Initial Orbit Parameters
+semi_major_axis : 6798.100 #km
+eccentricity : 0.0007440
+inclination : 98 #deg
+RAAN : 228.3187 #deg
+AOP : 355.2005 #deg
+true_anomaly : 0 #deg
+
+# Termination
+final_time : 9600 #s
