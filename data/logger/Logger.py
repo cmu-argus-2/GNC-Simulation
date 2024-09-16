@@ -18,7 +18,7 @@ class Logger():
                            "Position ECI",
                            "Velocity ECI",
                            "Quaternion",
-                           "Quaternion Rate",
+                           "Body Frame Omega",
                            "Control Inputs",
                            "Spherical Gravitational Acceleration",
                            "J2 Perturbation Acceleration",

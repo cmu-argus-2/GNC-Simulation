@@ -77,10 +77,10 @@ class Dynamics():
         velocity = np.squeeze(R_Omega @ R_i @ R_omega @ np.array([-np.sqrt(mu/p)*np.sin(nu), np.sqrt(mu/p)*(e + np.cos(nu)), 0]).reshape(-1,1))
         
         # Compute Quaternions
-        q = np.array([0.5,1,1,1])
-        qdot = np.array([0.1,0,0,0])
+        q = np.array([0.5,1,1,1])/np.sqrt(3.25)
+        omega = np.array([0.1,0,0])
         
-        self.state = np.concatenate((position, velocity, q, qdot))
+        self.state = np.concatenate((position, velocity, q, omega))
         self.time = 0
     
     '''
@@ -125,9 +125,8 @@ class Dynamics():
         omega = quaternion.as_float_array(omega_quat)[1:] # remove the scalar term
         
         omega_dot = np.linalg.inv(I_sat)@M - np.linalg.inv(I_sat)@(np.cross(omega, I_sat@omega))
-        qdotdot = 0.5*(np.quaternion(*np.concatenate(([0],omega_dot))) - 0.5*omega_quat*omega_quat)*q
         
-        return np.concatenate((v, a, quaternion.as_float_array(qdot), quaternion.as_float_array(qdotdot)))
+        return np.concatenate((v, a, quaternion.as_float_array(qdot), omega_dot))
         
     
         
