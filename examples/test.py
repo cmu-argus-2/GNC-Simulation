@@ -27,7 +27,6 @@ sim.angular_velocity = np.array([0.2, 0., 0.,])
 print(f"Initial position: {sim.position}")
 print(f"Initial attitude: {sim.attitude}")
 
-# simulating 1 year
 for i in range(int(MISSION_DURATION / sim.timestep)):
     sim.step()
 
