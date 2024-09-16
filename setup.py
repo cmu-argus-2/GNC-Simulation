@@ -11,6 +11,6 @@ setup(
         'numpy==1.26.4',
         'scipy==1.12.0',
         'matplotlib==3.8.3',
-        'casadi==3.6.3',
+        'pybind11==2.13.6'
     ]
 )
