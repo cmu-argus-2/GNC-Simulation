@@ -1,6 +1,6 @@
 from plot_helper import (
-    triPlot,
-    annotateTriPlot,
+    multiPlot,
+    annotateMultiPlot,
     save_figure,
 )
 from isolated_trace import itm
@@ -22,25 +22,25 @@ class MontecarloPlots:
         self.close_after_saving = close_after_saving
 
     def true_state_plots(self):
-        data_dict = parse_bin_file(os.path.join(self.job_dir, "state_true.bin"))  # noqa: F821
+        data_dict = parse_bin_file(os.path.join(self.job_dir, "state_true.bin"))
 
         # ==========================================================================
         itm.figure()
-        triPlot(
+        multiPlot(
             data_dict["date [days]"],
             [data_dict["x [m]"], data_dict["y [m]"], data_dict["z [m]"]],
         )
-        annotateTriPlot(title="True Position (ECI) [m]")
+        annotateMultiPlot(title="True Position (ECI) [m]")
         save_figure(
             itm.gcf(), self.plot_dir, "position_ECI_true.png", self.close_after_saving
         )
         # ==========================================================================
         itm.figure()
-        triPlot(
+        multiPlot(
             data_dict["date [days]"],
             [data_dict["x [m/s]"], data_dict["y [m/s]"], data_dict["z [m/s]"]],
         )
-        annotateTriPlot(title="True Velocity (ECI) [m/s]")
+        annotateMultiPlot(title="True Velocity (ECI) [m/s]")
         save_figure(
             itm.gcf(), self.plot_dir, "velocity_ECI_true.png", self.close_after_saving
         )
@@ -48,11 +48,50 @@ class MontecarloPlots:
         # TODO plot attitude
         # ==========================================================================
         itm.figure()
-        triPlot(
+        multiPlot(
             data_dict["date [days]"],
             [data_dict["x [rad/s]"], data_dict["y [rad/s]"], data_dict["z [rad/s]"]],
         )
-        annotateTriPlot(title="True body angular rate [rad/s]")
+        annotateMultiPlot(title="True body angular rate [rad/s]")
         save_figure(
             itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving
+        )
+
+    def measured_omega(self):
+        data_dict = parse_bin_file(os.path.join(self.job_dir, "omega_meausured.bin"))
+
+        # ==========================================================================
+        itm.figure()
+        multiPlot(
+            data_dict["date [days]"],
+            [data_dict["x [rad/s]"], data_dict["y [rad/s]"], data_dict["z [rad/s]"]],
+        )
+        annotateMultiPlot(title="Measured body angular rate [rad/sec]")
+        save_figure(
+            itm.gcf(), self.plot_dir, "body_omega_measured.png", self.close_after_saving
+        )
+
+    def star_tracker(self):
+        data_dict = parse_bin_file(os.path.join(self.job_dir, "J2000_R_ST_true.bin"))
+        itm.figure()
+        multiPlot(
+            data_dict["date [days]"],
+            [data_dict["x"], data_dict["y"], data_dict["z"], data_dict["w"]],
+        )
+        annotateMultiPlot(title="True J2000_R_ST")
+        save_figure(
+            itm.gcf(), self.plot_dir, "J2000_R_ST_true.png", self.close_after_saving
+        )
+        # ==========================================================================
+        data_dict = parse_bin_file(
+            os.path.join(self.job_dir, "J2000_R_ST_measured.bin")
+        )
+        itm.figure()
+        multiPlot(
+            data_dict["date [days]"],
+            [data_dict["x"], data_dict["y"], data_dict["z"], data_dict["w"]],
+        )
+        annotateMultiPlot(title="Measured J2000_R_ST")
+        save_figure(
+            itm.gcf(), self.plot_dir, "J2000_R_ST_measured.png", self.close_after_saving
         )

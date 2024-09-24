@@ -6,7 +6,9 @@ import os
 itm.rcParams["axes.grid"] = True
 
 
-def plotWrapper(x, y, sublpotRows, subplotCols, positionInSubplot, label, title, xlabel, ylabel):
+def plotWrapper(
+    x, y, sublpotRows, subplotCols, positionInSubplot, label, title, xlabel, ylabel
+):
     itm.subplot(sublpotRows, subplotCols, positionInSubplot)
     itm.named_plot(label, x, y)
     itm.title(title)
@@ -20,19 +22,30 @@ def plotWrapper(x, y, sublpotRows, subplotCols, positionInSubplot, label, title,
 
 def plotUncertaintyEnvelope(time, x, stddev_x, sigmas):
     # 1-sigma envelope
-    itm.fill_between(time, x - stddev_x, x + stddev_x, color="green", alpha=0.4, label="1-sigma")
+    itm.fill_between(
+        time, x - stddev_x, x + stddev_x, color="green", alpha=0.4, label="1-sigma"
+    )
 
     if sigmas != 1.0:  # multi-sigma envelope. purposely comapring to float
         # lower envelope
-        itm.fill_between(time, x - sigmas * stddev_x, x - stddev_x, color="red", alpha=0.4, label=f"{sigmas:.3f}-sigma")
+        itm.fill_between(
+            time,
+            x - sigmas * stddev_x,
+            x - stddev_x,
+            color="red",
+            alpha=0.4,
+            label=f"{sigmas:.3f}-sigma",
+        )
 
         # upper envelope
-        itm.fill_between(time, x + stddev_x, x + sigmas * stddev_x, color="green", alpha=0.4)
+        itm.fill_between(
+            time, x + stddev_x, x + sigmas * stddev_x, color="green", alpha=0.4
+        )
     itm.legend()
 
 
 # TOOD optional scale factor?
-def triPlot(time, series, color=None, seriesLabel=None, **kwargs):
+def multiPlot(time, multiSeries, color=None, seriesLabel=None, **kwargs):
     if color is not None:
         kwargs["color"] = color
     if seriesLabel is not None:
@@ -41,19 +54,13 @@ def triPlot(time, series, color=None, seriesLabel=None, **kwargs):
     if "linewidth" not in kwargs:
         kwargs["linewidth"] = 0.3
 
-    itm.subplot(3, 1, 1)
-    itm.plot(time, series[0], **kwargs)
-    itm.legend()
+    N = len(multiSeries)
+    for i, series in enumerate(multiSeries):
+        itm.subplot(N, 1, i + 1)
+        itm.plot(time, series, **kwargs)
+        itm.legend()
 
-    itm.subplot(3, 1, 2)
-    itm.plot(time, series[1], **kwargs)
-    itm.legend()
-
-    itm.subplot(3, 1, 3)
-    itm.plot(time, series[2], **kwargs)
-    itm.legend()
-
-    annotateTriPlot()
+    annotateMultiPlot()
 
 
 def annotatePlot(title=None, xlabel=None, ylabel=None, seriesLabel=None):
@@ -78,7 +85,9 @@ def plot_orientations(time, orientations, series_label, title, labelDegrees, col
     triPlot(time, euler_angles, color=color)
 
 
-def annotateTriPlot(y_units=None, title=None, ylabels=["x", "y", "z"], seriesLabel=None):
+def annotateTriPlot(
+    y_units=None, title=None, ylabels=["x", "y", "z"], seriesLabel=None
+):
     if title is not None:
         itm.suptitle(title)
 
@@ -89,6 +98,23 @@ def annotateTriPlot(y_units=None, title=None, ylabels=["x", "y", "z"], seriesLab
             units_suffix = " [" + y_units + "]"
             full_y_label += units_suffix
         annotatePlot(xlabel="time [s]", ylabel=full_y_label, seriesLabel=seriesLabel)
+
+
+def annotateMultiPlot(y_units=None, title=None, ylabels=None, seriesLabel=None):
+    if title is not None:
+        itm.suptitle(title)
+
+    if ylabels is not None:
+        N = len(ylabels)
+        for i in range(N):
+            itm.subplot(N, 1, i + 1)
+            full_y_label = ylabels[i]
+            if y_units is not None:
+                units_suffix = " [" + y_units + "]"
+                full_y_label += units_suffix
+            annotatePlot(
+                xlabel="time [s]", ylabel=full_y_label, seriesLabel=seriesLabel
+            )
 
 
 # TOOD optional scale factor?
@@ -119,11 +145,15 @@ def showError(time, trueSeries, estimatedSeries, color):
 
 
 def draw_vertical_line(color, x, label):
-    return itm.axvline(x, color=color, label=rf"{label}: {x:.4g}", linestyle="dashed", linewidth=2)
+    return itm.axvline(
+        x, color=color, label=rf"{label}: {x:.4g}", linestyle="dashed", linewidth=2
+    )
 
 
 def draw_horizontal_line(color, y, label=None, linestyle="dashed", linewidth=2):
-    return itm.axhline(y, color=color, label=label, linestyle=linestyle, linewidth=linewidth)
+    return itm.axhline(
+        y, color=color, label=label, linestyle=linestyle, linewidth=linewidth
+    )
 
 
 def plot_hist(figure, data, xlabel, title, density=False):

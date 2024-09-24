@@ -2,12 +2,15 @@
 import yaml
 import numpy as np
 import datetime
+from scipy.spatial.transform import Rotation as R
 
 # file imports
 from world.physics.dynamics import Dynamics
 from simulation_manager import logger
 from time import time
 import os
+from sensors.imu import IMU, Gyro, Accel
+from sensors.star_tracker import StarTracker
 
 """
     CLASS MANAGER
@@ -68,6 +71,18 @@ class Simulator:
 
     def run(self, log_directory):
         l = logger.MultiFileLogger(log_directory)
+
+        dt = 1 / self.update_rate
+
+        gyro = Gyro(
+            np.deg2rad([3, 7, 2]),  # [rad/s]
+            np.deg2rad([0.2, 0.1, 0.4]),  # [(rad/s)/sqrt(Hz)]
+            [1e-3, 1e-2, -1e-4],  # [-]
+            dt,  # [s]
+        )
+
+        ST = StarTracker(0.1)
+
         i = 0
         while self.date - self.config["mission"]["start_date"] <= self.config[
             "mission"
@@ -80,9 +95,7 @@ class Simulator:
 
             self.world.update(input=np.zeros((9,)))
 
-            self.date += (1 / self.update_rate) / (
-                24 * 60 * 60
-            )  # 1 second into Julian date conversion
+            self.date += dt / (24 * 60 * 60)  # 1 second into Julian date conversion
             if i % 1000 == 0:
                 print(i, self.date, self.world_state)
             l.log_v(
@@ -97,6 +110,40 @@ class Simulator:
                     *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
                 ],
             )
+
+            true_omega = self.world_state[10:13]
+            meas_omega = gyro.get_measurement(true_omega)
+            l.log_v(
+                "omega_meausured.bin",
+                self.date,
+                meas_omega,
+                "date [days]",
+                ["x [rad/s]", "y [rad/s]", "z [rad/s]"],
+            )
+
+            # TODO check quaternion order
+            ECI_R_BODY = R.from_quat(self.world_state[6:10])
+
+            J2000_R_ECI = R.identity()  # TODO compute this
+            BODY_R_ST = R.identity()  # TODO read this in from config
+
+            true_J2000_R_ST = J2000_R_ECI * ECI_R_BODY * BODY_R_ST
+            measured_J2000_R_ST = ST.get_measurement(true_J2000_R_ST)
+            l.log_v(
+                "J2000_R_ST_true.bin",
+                self.date,
+                true_J2000_R_ST.as_quat(),
+                "date [days]",
+                ["x", "y", "z", "w"],
+            )
+            l.log_v(
+                "J2000_R_ST_measured.bin",
+                self.date,
+                measured_J2000_R_ST.as_quat(),
+                "date [days]",
+                ["x", "y", "z", "w"],
+            )
+
             i += 1
 
 
@@ -138,4 +185,4 @@ if __name__ == "__main__":
     simulator = Simulator()
     simulator.run(job_directory_abs)
     END = time()
-    print(f"Took {(END-START):.2f} seconds to simulate job \"{job_name}\"")
+    print(f'Took {(END-START):.2f} seconds to simulate job "{job_name}"')

@@ -2,7 +2,6 @@ import numpy as np
 
 
 class InertialSensor:
-
     def __init__(self, initial_bias, sigma, scale_factor_error, dt):
         """_summary_
 
@@ -48,7 +47,6 @@ class TriAxialInertialSensor:
 
 
 class Gyro(TriAxialInertialSensor):
-
     def __init__(self, initial_bias, sigma_ARW, scale_factor_error, dt):
         """_summary_
 
@@ -58,14 +56,13 @@ class Gyro(TriAxialInertialSensor):
             scale_factor_error (3x1):          [-]
             dt (double):                       [s]
         """
-        super.__init__(initial_bias, sigma_ARW, scale_factor_error, dt)
+        super().__init__(initial_bias, sigma_ARW, scale_factor_error, dt)
 
     def get_measurement(self, true_omega):
-        return super.get_measurement(true_omega)
+        return super().get_measurement(true_omega)
 
 
 class Accel(TriAxialInertialSensor):
-
     def __init__(self, initial_bias, sigma_VRW, scale_factor_error, dt):
         """_summary_
 
@@ -82,10 +79,12 @@ class Accel(TriAxialInertialSensor):
 
 
 class IMU:
-
     def __init__(self, gyro, accel):
         self.gyro = gyro
         self.accel = accel
 
-    def get_measurement(self, true_J2000_R_ST):
-        return (self.gyro.get_measurement(), self.accel.get_measurement())
+    def get_measurement(self, true_omega, true_accel):
+        return (
+            self.gyro.get_measurement(true_omega),
+            self.accel.get_measurement(true_accel),
+        )
