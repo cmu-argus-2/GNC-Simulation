@@ -1,0 +1,38 @@
+# Simulation Configuration File
+
+satellite:
+      # physical properties
+      mass : 1.0 # kg
+      area : 0.01 # face area m^2
+      inertia : [[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]]
+      Cd : 2.2 # Drag coefficient
+      
+      # Reaction Wheels
+      rw_orientation : [[1,0,0], [0,1,0], [0,0,1]] # spin axis of each reaction wheel in the body frame
+      I_rw : 0.01 # kg.m^2 inertia of each reaction wheel
+
+      # Magnetorquers
+      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame 
+
+      
+
+solver:
+      world_update_rate : 100 #Hz
+      controller_update_rate : 10 #Hz
+      payload_update_rate : 0.001 #Hz
+
+mission:
+      start_date : 60431.0 # MJD corresponding to midnight May 01 2024
+      duration : 100 # s
+      
+      # initial state properties
+      initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
+      initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
+      initial_angular_rate : [0.0, 1.0, 0.0]
+
+complexity:
+      use_drag : True
+      use_srp : True
+
+
+      
