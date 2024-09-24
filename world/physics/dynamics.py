@@ -90,9 +90,9 @@ class Dynamics():
         self.state[13:16] = self.srp.sun_position(self.epc)
         self.state[16:19] = self.magnetic_field.field(self.state[0:3], self.epc)
 
-        print(self.epc.jd())
+        # print("jd:", self.epc.jd())
         self.epc = Epoch(*brahe.time.jd_to_caldate(self.epc.jd() + (1/self.config["solver"]["world_update_rate"])/(24*60*60)))
-        print(self.epc.mjd())
+        # print("mjd:", self.epc.mjd())
     
     '''
         FUNCTION STATE_DERIVATIVE
