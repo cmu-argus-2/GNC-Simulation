@@ -46,7 +46,7 @@ class Dynamics:
         [
          ECI position (3x1) [UNITS: m], 
          ECI velocity (3x1) [UNITS: m/s],
-         Body-ECI quaternion (4x1),
+         Body-ECI quaternion (4x1) [Order : [scalar, vector]],
          Body frame angular rates (3x1) [UNITS: rad/s],
          ECI Sun position (3x1) [UNITS: m],
          ECI magnetic field (3x1) [UNITS: T]
@@ -105,14 +105,12 @@ class Dynamics:
         self.state[13:16] = self.srp.sun_position(self.epc)
         self.state[16:19] = self.magnetic_field.field(self.state[0:3], self.epc)
 
-        print(self.epc.jd())
         self.epc = Epoch(
             *brahe.time.jd_to_caldate(
                 self.epc.jd()
                 + (1 / self.config["solver"]["world_update_rate"]) / (24 * 60 * 60)
             )
         )
-        print(self.epc.mjd())
 
     """
         FUNCTION STATE_DERIVATIVE
