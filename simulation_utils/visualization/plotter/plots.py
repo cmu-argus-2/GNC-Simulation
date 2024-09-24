@@ -1,19 +1,11 @@
-import matplotlib.pyplot as plt
-import yaml
-from multiprocessing import Pool
-import time
 from plot_helper import (
     triPlot,
     annotateTriPlot,
-    plot_hist,
     save_figure,
-    draw_horizontal_line,
 )
 from isolated_trace import itm
-import numpy as np
-from parse_bin_file import parse_bin_file, parse_bin_file_wrapper
+from parse_bin_file import parse_bin_file
 import os
-from plot_state import plot_state, plot_state_error
 
 
 class MontecarloPlots:
@@ -29,17 +21,38 @@ class MontecarloPlots:
         self.PERCENTAGE_OF_DATA_TO_PLOT = PERCENTAGE_OF_DATA_TO_PLOT
         self.close_after_saving = close_after_saving
 
-    def position_plots(self):
-        true_XYZt_plot = itm.figure()
+    def true_state_plots(self):
+        data_dict = parse_bin_file(os.path.join(self.job_dir, "state_true.bin"))  # noqa: F821
 
-        data_dict = parse_bin_file(os.path.join(self.job_dir, "position_ECI_true.bin"))
-        itm.figure(true_XYZt_plot)
+        # ==========================================================================
+        itm.figure()
         triPlot(
             data_dict["date [days]"],
             [data_dict["x [m]"], data_dict["y [m]"], data_dict["z [m]"]],
         )
-
         annotateTriPlot(title="True Position (ECI) [m]")
         save_figure(
             itm.gcf(), self.plot_dir, "position_ECI_true.png", self.close_after_saving
+        )
+        # ==========================================================================
+        itm.figure()
+        triPlot(
+            data_dict["date [days]"],
+            [data_dict["x [m/s]"], data_dict["y [m/s]"], data_dict["z [m/s]"]],
+        )
+        annotateTriPlot(title="True Velocity (ECI) [m/s]")
+        save_figure(
+            itm.gcf(), self.plot_dir, "velocity_ECI_true.png", self.close_after_saving
+        )
+        # ==========================================================================
+        # TODO plot attitude
+        # ==========================================================================
+        itm.figure()
+        triPlot(
+            data_dict["date [days]"],
+            [data_dict["x [rad/s]"], data_dict["y [rad/s]"], data_dict["z [rad/s]"]],
+        )
+        annotateTriPlot(title="True body angular rate [rad/s]")
+        save_figure(
+            itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving
         )

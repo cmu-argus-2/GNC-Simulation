@@ -86,11 +86,16 @@ class Simulator:
             if i % 1000 == 0:
                 print(i, self.date, self.world_state)
             l.log_v(
-                "position_ECI_true.bin",
+                "state_true.bin",
                 self.date,
-                self.world_state[0:3],
+                self.world_state[:-6],
                 "date [days]",
-                ["x [m]", "y [m]", "z [m]"],
+                [
+                    *["x [m]", "y [m]", "z [m]"],
+                    *["x [m/s]", "y [m/s]", "z [m/s]"],
+                    *["x", "y", "z", "w"],
+                    *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
+                ],
             )
             i += 1
 
@@ -114,7 +119,7 @@ if __name__ == "__main__":
     # "_abs" suffix indicates an absolute filepath
     repo_root_abs = os.path.realpath(repo_root_rel)
     results_directory_abs = os.path.join(repo_root_abs, montecarlo_rel, "results/")
-
+    os.system(f"mkdir -p {results_directory_abs}")
     # ensure repo_root_abs actually points to the REPO_NAME
     assert os.path.basename(repo_root_abs) == REPO_NAME
 
@@ -133,4 +138,4 @@ if __name__ == "__main__":
     simulator = Simulator()
     simulator.run(job_directory_abs)
     END = time()
-    print(f"Took {(END-START):.2f} seconds to simulate")
+    print(f"Took {(END-START):.2f} seconds to simulate job \"{job_name}\"")
