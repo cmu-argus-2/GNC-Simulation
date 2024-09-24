@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from argus2sim.bin.dynamics import step_position_and_velocity,
+from argus2sim.bin.dynamics import step_position_and_velocity,\
                                    step_attitude_and_angular_velocity
 
 
