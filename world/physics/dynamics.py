@@ -186,10 +186,10 @@ class Dynamics:
         # Attitude Dynamics equation
         h_sc  = self.I_sat @ state[self.Idx["X"]["ANG_VEL"]]
         wdot[self.Idx["X"]["ANG_VEL"]] = (np.linalg.inv(self.I_sat) @ (
-            -np.cross(state[self.Idx["X"]["ANG_VEL"]], (G_rw @ h_rw + h_sc)).reshape(-1, 1) + (G_rw * tau_rw) + tau_mtb.reshape(-1, 1)
+            -np.cross(state[self.Idx["X"]["ANG_VEL"]], (G_rw @ h_rw + h_sc)).reshape(-1, 1) - (G_rw * tau_rw) + tau_mtb.reshape(-1, 1)
         )).flatten()
         
         # RW speed dynamics:
-        wdot[self.Idx["X"]["RW_SPEED"]] = -tau_rw / I_rw
+        wdot[self.Idx["X"]["RW_SPEED"]] = tau_rw / I_rw
 
         return wdot
