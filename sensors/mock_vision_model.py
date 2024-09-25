@@ -17,7 +17,7 @@ class PixelEcefCorrespondence():
         self.ecef_coordinate = ecef_coord
 
 
-class RayTracer():
+class RayCaster():
     def get_ray_and_sphere_intersections(
         self,
         ray_dirs: np.ndarray,
@@ -145,7 +145,7 @@ class MockVisionModel:
         max_correspondences: int,
         earth_radius: float,
     ) -> None:
-        self.tracer = RayTracer()
+        self.caster = RayCaster()
         self.cam = camera
         self.N = max_correspondences
         self.R = earth_radius
