@@ -1,5 +1,4 @@
 from typing import List
-from enum import Enum
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -32,16 +31,16 @@ class RayTracer():
         Bs = 2 * np.sum(ray_dirs*Ks, axis=1)
         Cs = np.linalg.norm(Ks, ord=2, axis=1)**2 - sphere_radius**2
         Ts = self.solve_quadratic_equations(As, Bs, Cs)
-        ts = self.get_desired_intersection_parameters(Ts)
+        ts = self.get_valid_intersection_parameters(Ts)
         return ray_start + [1,1,1]*columnify(ts) * ray_dirs
 
-    def get_desired_intersection_parameters(
+    def get_valid_intersection_parameters(
         self,
         Ts: np.ndarray
     ) -> np.ndarray:
         is_complex_or_negative = np.logical_or(np.iscomplex(Ts), Ts < 0)
-        Ts_des = np.ma.masked_array(Ts, mask=is_complex_or_negative)
-        return np.real(np.min(Ts_des, axis=1))
+        Ts_val = np.ma.masked_array(Ts, mask=is_complex_or_negative)
+        return np.real(np.min(Ts_val, axis=1))
 
     def solve_quadratic_equations(
         self,
@@ -156,16 +155,21 @@ class MockVisionModel:
         cubesat_position_in_ecef: np.ndarray,
         cubesat_attitude_in_ecef: np.ndarray
     ) -> List[PixelEcefCorrespondence]:
+        # Sample N pixels
         pixel_coords = self.sample_pixel_coordinates()
+        # Get ray directions for each sampled pixel
         ray_dirs = self.cam.convert_pixel_coordinates_to_ecef_ray_directions(
             pixel_coords, cubesat_attitude_in_ecef
         )
+        # Get ECEF camera position as a product of several rigid body transforms
         cam_pos = self.cam.get_camera_position_in_ecef(
             cubesat_position_in_ecef, cubesat_attitude_in_ecef
         )
+        # Get ECEF surface coordinates of rays
         ecef_coords = self.get_ecef_ray_and_earth_intersections(
             ray_dirs, cam_pos
         )
+        # Pack valid ECEF surface coordinates into correspondences
         correspondences = []
         for i in range(self.N):
             if np.ma.is_masked(ecef_coords[i,:]):
