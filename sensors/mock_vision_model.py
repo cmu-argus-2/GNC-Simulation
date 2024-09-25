@@ -191,7 +191,7 @@ class MockVisionModel:
         camera_pos: np.ndarray,
     ) -> np.ndarray:
         earth_pos = np.zeros(3)
-        return self.tracer.get_ray_and_sphere_intersections(
+        return self.caster.get_ray_and_sphere_intersections(
             ray_dirs=ray_dirs, ray_start=camera_pos,
             sphere_center=earth_pos, sphere_radius=self.R
         )
