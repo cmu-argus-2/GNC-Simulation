@@ -8,7 +8,8 @@ from world.physics.models.gravity import Gravity
 from world.physics.models.drag import Drag
 from world.physics.models.srp import SRP
 from world.physics.models.magnetic_field import MagneticField
-
+from actuators.magnetorquer import Magnetorquers
+from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
 from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
 
@@ -24,7 +25,7 @@ class Dynamics:
     1. config - instance of class Config containing simulation parameters for the current simulation
     """
 
-    def __init__(self, config) -> None:
+    def __init__(self, config, Idx) -> None:
         self.config = config
 
         # Update all brahe data files
@@ -41,6 +42,7 @@ class Dynamics:
         self.srp = SRP()
         self.magnetic_field = MagneticField()
 
+        self.Idx = Idx
         """
         TRUE WORLD STATE (w*)
         [
@@ -58,30 +60,56 @@ class Dynamics:
             *brahe.time.mjd_to_caldate(self.config["mission"]["start_date"])
         )
         self.state = np.zeros((19,))
-
+        
+        self.Idx["NX"] = 19
+        self.Idx["X"]  = dict()
+        self.Idx["X"]["ECI_POS"]   = slice(0, 3)
+        self.Idx["X"]["ECI_VEL"]   = slice(3, 6)
+        self.Idx["X"]["TRANS"]     = slice(0, 6)
+        self.Idx["X"]["QUAT"]      = slice(6, 10)
+        self.Idx["X"]["ANG_VEL"]   = slice(10, 13)
+        self.Idx["X"]["ROT"]       = slice(6, 13)
+        self.Idx["X"]["SUN_POS"]   = slice(13, 16)
+        self.Idx["X"]["MAG_FIELD"] = slice(16, 19)
+        
         # Orbital Position and Velocity
-        self.state[0:6] = brahe.coordinates.sOSCtoCART(
+        self.state[self.Idx["X"]["TRANS"]] = brahe.coordinates.sOSCtoCART(
             self.config["mission"]["initial_orbital_elements"], use_degrees=True
         )
 
         # Attitude and Quaternion Initialization
-        self.state[6:10] = self.config["mission"]["initial_attitude"]
-        self.state[10:13] = self.config["mission"]["initial_angular_rate"]
+        self.state[self.Idx["X"]["QUAT"]] = self.config["mission"]["initial_attitude"]
+        self.state[self.Idx["X"]["ANG_VEL"]] = self.config["mission"]["initial_angular_rate"]
 
         # Sun Position
-        self.state[13:16] = self.srp.sun_position(self.epc)
+        self.state[self.Idx["X"]["SUN_POS"]] = self.srp.sun_position(self.epc)
 
         # Magnetic Field Vector
-        self.state[16:19] = self.magnetic_field.field(self.state[0:3], self.epc)
-
+        self.state[self.Idx["X"]["MAG_FIELD"]] = self.magnetic_field.field(self.state[self.Idx["X"]["ECI_POS"]], self.epc)
+    
         # Actuator specific data
-        self.G_rw_b = np.array(self.config["satellite"]["rw_orientation"]).T
-        self.N_rw = self.G_rw_b.shape[1]
-        self.I_rw = np.array(self.config["satellite"]["I_rw"])
-
-        self.G_mtb_b = np.array(self.config["satellite"]["mtb_orientation"]).T
-
+        self.Magnetorquers  = Magnetorquers(self.config)
+        self.ReactionWheels = ReactionWheel(self.config)
+        
         self.I_sat = np.array(self.config["satellite"]["inertia"])
+        
+        # Actuator Indexing
+        N_rw  = self.config["satellite"]["N_rw"]
+        N_mtb = self.config["satellite"]["N_mtb"]
+        self.Idx["NU"] = N_rw + N_mtb
+        self.Idx["U"]  = dict()
+        self.Idx["U"]["RW_TORQUE"]  = slice(0, N_rw)
+        self.Idx["U"]["MTB_TORQUE"] = slice(N_rw, N_rw + N_mtb)
+        # RW speed should be a state because it depends on the torque applied and needs to be propagated
+        self.Idx["X"]["RW_SPEED"]   = slice(19, 19+N_rw)
+        # Extend state to include RW speed
+        self.state = np.concatenate((self.state, np.zeros(N_rw)))
+
+        # Assign initial RW speed values
+        self.state[self.Idx["X"]["RW_SPEED"]] = self.config["mission"]["initial_rw_speed"]
+        # Measurement Indexing
+        # self.Idx["NY"]
+        # self.Idx["Y"]
 
     """
         FUNCTION UPDATE
@@ -99,11 +127,11 @@ class Dynamics:
             self.state,
             input,
             self.state_derivative,
-            self.config["solver"]["world_update_rate"],
+            1.0/self.config["solver"]["world_update_rate"],
         )
-        self.state[6:10] = self.state[6:10] / np.linalg.norm(self.state[6:10])
-        self.state[13:16] = self.srp.sun_position(self.epc)
-        self.state[16:19] = self.magnetic_field.field(self.state[0:3], self.epc)
+        self.state[self.Idx["X"]["QUAT"]] = self.state[self.Idx["X"]["QUAT"]] / np.linalg.norm(self.state[self.Idx["X"]["QUAT"]])
+        self.state[self.Idx["X"]["SUN_POS"]] = self.srp.sun_position(self.epc)
+        self.state[self.Idx["X"]["MAG_FIELD"]] = self.magnetic_field.field(self.state[self.Idx["X"]["ECI_POS"]], self.epc)
 
         self.epc = Epoch(
             *brahe.time.jd_to_caldate(
@@ -128,41 +156,40 @@ class Dynamics:
     def state_derivative(self, state, input):
         wdot = np.zeros_like(self.state)
 
-        wdot[0:3] = state[3:6]  # rdot = v
+        wdot[self.Idx["X"]["ECI_POS"]] = state[self.Idx["X"]["ECI_VEL"]]  # rdot = v
 
-        acceleration = self.gravity.acceleration(state[0:3], self.epc)
+        acceleration = self.gravity.acceleration(state[self.Idx["X"]["ECI_POS"]], self.epc)
         if self.config["complexity"]["use_drag"]:
             acceleration = acceleration + self.drag.acceleration(
-                state[0:3], state[3:6], state[6:10], self.epc, self.config["satellite"]
+                state[self.Idx["X"]["ECI_POS"]], state[self.Idx["X"]["ECI_VEL"]], 
+                state[self.Idx["X"]["QUAT"]], self.epc, self.config["satellite"]
             )
         if self.config["complexity"]["use_srp"]:
             acceleration = acceleration + self.srp.acceleration(
-                state[0:3], state[6:10], self.epc, self.config["satellite"]
+                state[self.Idx["X"]["ECI_POS"]], state[self.Idx["X"]["QUAT"]], self.epc, self.config["satellite"]
             )
 
-        wdot[3:6] = acceleration
+        wdot[self.Idx["X"]["ECI_VEL"]] = acceleration
 
         # ATTITUDE DYNAMICS
-        wdot[6:10] = 0.5 * hamiltonproduct(np.insert(state[10:13], 0, 0), state[6:10])
-
-        R_BtoECI = quatrotation(state[6:10])
+        wdot[self.Idx["X"]["QUAT"]] = 0.5 * hamiltonproduct(np.insert(state[self.Idx["X"]["ANG_VEL"]], 0, 0), state[self.Idx["X"]["QUAT"]])
 
         # Reaction wheels
-        G_rw = R_BtoECI @ self.G_rw_b  # RW orientation matrix in ECI
-        h_rw = self.I_rw * (input[0 : self.N_rw] + G_rw.T @ state[10:13])
-        tau_rw = G_rw @ input[self.N_rw : 2 * self.N_rw]
-
+        tau_rw = self.ReactionWheels.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]])
+        G_rw   = self.ReactionWheels.G_rw_b
+        I_rw   = self.ReactionWheels.I_rw
+        h_rw   = I_rw * (state[self.Idx["X"]["RW_SPEED"]] + G_rw.T @ state[self.Idx["X"]["ANG_VEL"]])
+        
         # Magnetorquers
-        tau_mtb = (
-            crossproduct(state[16:19])
-            @ R_BtoECI
-            @ self.G_mtb_b
-            @ input[2 * self.N_rw :]
-        )
-
+        tau_mtb = self.Magnetorquers.get_applied_torque(input[self.Idx["U"]["MTB_TORQUE"]], state, self.Idx)
+        
         # Attitude Dynamics equation
-        wdot[10:13] = np.linalg.inv(self.I_sat) @ (
-            -np.cross(state[10:13], G_rw @ h_rw) - tau_rw - tau_mtb
-        )
+        h_sc  = self.I_sat @ state[self.Idx["X"]["ANG_VEL"]]
+        wdot[self.Idx["X"]["ANG_VEL"]] = (np.linalg.inv(self.I_sat) @ (
+            -np.cross(state[self.Idx["X"]["ANG_VEL"]], (G_rw @ h_rw + h_sc)).reshape(-1, 1) + (G_rw * tau_rw) + tau_mtb.reshape(-1, 1)
+        )).flatten()
+        
+        # RW speed dynamics:
+        wdot[self.Idx["X"]["RW_SPEED"]] = -tau_rw / I_rw
 
         return wdot

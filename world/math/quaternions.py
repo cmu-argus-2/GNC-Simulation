@@ -68,3 +68,19 @@ def crossproduct(v: np.ndarray):
     V = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
     return V
+
+
+def rotmat2quat(R):
+    q = np.zeros((4,))
+    q[0] = np.sqrt(1 + np.trace(R)) / 2
+    q[1] = (R[2, 1] - R[1, 2]) / (4 * q[0])
+    q[2] = (R[0, 2] - R[2, 0]) / (4 * q[0])
+    q[3] = (R[1, 0] - R[0, 1]) / (4 * q[0])
+
+    return q
+
+def q_inv(q):
+    q_inv = np.zeros_like(q)
+    q_inv[0] = q[0]
+    q_inv[1:] = -q[1:]
+    return q_inv

@@ -4,17 +4,21 @@ satellite:
       # physical properties
       mass : 1.0 # kg
       area : 0.01 # face area m^2
-      inertia : [[0.1, 0, 0], [0, 0.1, 0], [0, 0, 0.1]]
+      inertia : [[0.002, 0, 0], [0, 0.002, 0], [0, 0, 0.002]]
       Cd : 2.2 # Drag coefficient
       
       # Reaction Wheels
-      rw_orientation : [[1,0,0], [0,1,0], [0,0,1]] # spin axis of each reaction wheel in the body frame
-      I_rw : 0.01 # kg.m^2 inertia of each reaction wheel
+      N_rw : 1                   # number of reaction wheels
+      rw_orientation : [[0,0,1]] # spin axis of each reaction wheel in the body frame
+      I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
+      m_rw: 0.002                # kg mass of each reaction wheel
+      max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
+      max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
 
       # Magnetorquers
+      N_mtb : 3                                     # number of magnetorquers
       mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame 
 
-      
 
 solver:
       world_update_rate : 100 #Hz
@@ -28,11 +32,22 @@ mission:
       # initial state properties
       initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
       initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
-      initial_angular_rate : [0.0, 1.0, 0.0]
+      initial_angular_rate : [0.0, 0.0, 0.0]
+      initial_rw_speed : [100.0]
+      # Mode management
+      pointing_mode: "Sun" # "Nadir" or "Sun"
+
 
 complexity:
       use_drag : True
       use_srp : True
 
 
-      
+controller:
+      # assuming controller states are angular velocity and quaternion imaginary components
+      state_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
+                              [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
+                              [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
+      # state_int_feedback_gains: [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+      #                             [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+      #                             [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]]
