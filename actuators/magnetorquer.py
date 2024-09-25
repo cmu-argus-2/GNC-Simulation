@@ -24,12 +24,12 @@ class Magnetorquers:
         in any direction up to a maximum magnitude.
 
         :param induced_dipole_moment: The induced dipole moment of the satellite, in the body frame.
-        :param B_external: The external magnetic field due to the Earth, in the body frame.
         :return: The torque applied by the magnetorquers, in the body frame.
         """
         m_norm = np.linalg.norm(induced_dipole_moment)
         if m_norm > self.max_induced_dipole_moment:
             induced_dipole_moment *= self.max_induced_dipole_moment / m_norm
             
-        # Body Frame torque 
-        return crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b @ induced_dipole_moment
+        # Body Frame torque
+        return np.cross(self.G_mtb_b @ induced_dipole_moment,
+                        quatrotation(state[Idx["X"]["QUAT"]]).T @ state[Idx["X"]["MAG_FIELD"]])
