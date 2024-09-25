@@ -178,7 +178,7 @@ class Dynamics:
         tau_rw = self.ReactionWheels.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]])
         G_rw   = self.ReactionWheels.G_rw_b
         I_rw   = self.ReactionWheels.I_rw
-        h_rw   = I_rw * (state[self.Idx["X"]["RW_SPEED"]] + G_rw.T @ state[self.Idx["X"]["ANG_VEL"]])
+        h_rw   = I_rw * state[self.Idx["X"]["RW_SPEED"]]
         
         # Magnetorquers
         tau_mtb = self.Magnetorquers.get_applied_torque(input[self.Idx["U"]["MTB_TORQUE"]], state, self.Idx)
