@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class ReactionWheel:
     def __init__(self, config):
         """
@@ -13,7 +14,7 @@ class ReactionWheel:
         self.I_rw = np.array(config["satellite"]["I_rw"])
         self.max_torque = config["satellite"]["max_torque"]
         self.max_speed = config["satellite"]["max_speed"]
-        
+
     def get_applied_torque(self, actuator_cmd):
         """
         Get the torque applied by the reaction wheel based on the actuator command.
@@ -22,7 +23,7 @@ class ReactionWheel:
         :return: Torque applied by the reaction wheel (Nm)
         """
         # Torque saturation
-        output_torque = max(-self.max_torque, min(self.max_torque, actuator_cmd))
+        output_torque = np.clip(actuator_cmd, -self.max_torque, self.max_torque)
         # Wheel Speed saturation
         # ...
 
@@ -39,5 +40,3 @@ class ReactionWheel:
         self.current_speed += acceleration * delta_time
         if abs(self.current_speed) > self.max_speed:
             self.current_speed = self.max_speed if self.current_speed > 0 else -self.max_speed
-
-   
