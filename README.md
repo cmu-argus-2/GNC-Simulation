@@ -5,6 +5,17 @@ Active Branch for simulation development
 > [!WARNING]
 Do Not push code to main. Use PULL REQUESTS between dev and main
 
+
+## Setting Up
+### First time
+1. Run `python -m venv .venv` to create a virtual environment (venv)
+2. Run `source .venv/bin/activate` to activate the venv
+3. Run `pip install -r requirements.txt`
+
+### Each time
+2. Run `source .venv/bin/activate` to activate the venv
+3. Once done wit hdevlopment, run `deactivate` to exit the venv
+
 ## Style Guide
 > [!IMPORTANT]
 > PEP8 formatting rules
