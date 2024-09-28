@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -133,7 +133,7 @@ class Camera():
         coords: np.ndarray,
     ) -> np.ndarray:
         coords_ndc = (coords + 0.5) / self.dims
-        return [1, -1] * (2*coords_ndc - 1)
+        return [1,-1] * (2*coords_ndc - 1)
 
     def convert_pixel_coordinates_to_camera_ray_directions(
             self,
@@ -161,20 +161,27 @@ class MockVisionModel:
         cubesat_position_in_ecef: np.ndarray,
         cubesat_attitude_in_ecef: np.ndarray
     ) -> List[PixelEcefCorrespondence]:
+        #TODO: convert eci to ecef
         # Sample N pixels
-        pixel_coords = self.sample_pixel_coordinates()
+        pixel_coords, pixel_coords_trunc = self.sample_pixel_coordinates()
+
+        #TODO: add noise to pixel coordinates
+
         # Get ray directions for each sampled pixel
         ray_dirs = self.cam.convert_pixel_coordinates_to_ecef_ray_directions(
             pixel_coords, cubesat_attitude_in_ecef
         )
+
         # Get ECEF camera position as a product of several rigid body transforms
         cam_pos = self.cam.get_camera_position_in_ecef(
             cubesat_position_in_ecef, cubesat_attitude_in_ecef
         )
+
         # Get ECEF surface coordinates of rays
         ecef_coords = self.get_ecef_ray_and_earth_intersections(
             ray_dirs, cam_pos
         )
+
         # Pack valid ECEF surface coordinates into correspondences
         correspondences = []
         for i in range(self.N):
@@ -182,14 +189,15 @@ class MockVisionModel:
                 continue
             else:
                 correspondences += [PixelEcefCorrespondence(
-                    pixel_coord=pixel_coords[i,:],
+                    pixel_coord=pixel_coords_trunc[i,:],
                     ecef_coord=ecef_coords[i,:]
                 )]
         return correspondences
 
-    def sample_pixel_coordinates(self) -> np.ndarray:
-        coords = np.random.randint(self.cam.dims, size=(self.N, 2))
-        return coords
+    def sample_pixel_coordinates(self) -> Tuple[np.ndarray, np.ndarray]:
+        coords = np.random.uniform(high=self.cam.dims, size=(self.N, 2))
+        coords_trunc = np.int32(coords)
+        return coords, coords_trunc
 
     def get_ecef_ray_and_earth_intersections(
         self,
@@ -201,3 +209,5 @@ class MockVisionModel:
             ray_dirs=ray_dirs, ray_start=camera_pos,
             sphere_center=earth_pos, sphere_radius=self.R
         )
+
+    #TODO: noise method
