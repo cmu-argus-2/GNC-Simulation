@@ -150,8 +150,12 @@ class MockVisionModel:
         camera: Camera,
         max_correspondences: int,
         earth_radius: float,
+        pixel_noise_mean=np.zeros(2),
+        pixel_noise_std_dev=np.zeros(2),
     ) -> None:
         self.caster = RayCaster()
+        self.mean = pixel_noise_mean
+        self.sd = pixel_noise_std_dev
         self.cam = camera
         self.N = max_correspondences
         self.R = earth_radius
@@ -162,14 +166,16 @@ class MockVisionModel:
         cubesat_attitude_in_ecef: np.ndarray
     ) -> List[PixelEcefCorrespondence]:
         #TODO: convert eci to ecef
+
         # Sample N pixels
         pixel_coords, pixel_coords_trunc = self.sample_pixel_coordinates()
 
-        #TODO: add noise to pixel coordinates
+        # Add noise to sampled pixels
+        noisy_coords = self.add_gaussian_noise(pixel_coords)
 
         # Get ray directions for each sampled pixel
         ray_dirs = self.cam.convert_pixel_coordinates_to_ecef_ray_directions(
-            pixel_coords, cubesat_attitude_in_ecef
+            noisy_coords, cubesat_attitude_in_ecef
         )
 
         # Get ECEF camera position as a product of several rigid body transforms
@@ -177,12 +183,12 @@ class MockVisionModel:
             cubesat_position_in_ecef, cubesat_attitude_in_ecef
         )
 
-        # Get ECEF surface coordinates of rays
+        # Get ECEF coordinates of ray intersections
         ecef_coords = self.get_ecef_ray_and_earth_intersections(
             ray_dirs, cam_pos
         )
 
-        # Pack valid ECEF surface coordinates into correspondences
+        # Pack valid ECEF intersections into correspondences
         correspondences = []
         for i in range(self.N):
             if np.ma.is_masked(ecef_coords[i,:]):
@@ -193,6 +199,13 @@ class MockVisionModel:
                     ecef_coord=ecef_coords[i,:]
                 )]
         return correspondences
+
+    def add_gaussian_noise(
+        self,
+        coords: np.ndarray
+    ) -> np.ndarray:
+        noise = np.random.normal(loc=self.mean, scale=self.sd, size=coords.shape)
+        return coords + noise
 
     def sample_pixel_coordinates(self) -> Tuple[np.ndarray, np.ndarray]:
         coords = np.random.uniform(high=self.cam.dims, size=(self.N, 2))
@@ -209,5 +222,3 @@ class MockVisionModel:
             ray_dirs=ray_dirs, ray_start=camera_pos,
             sphere_center=earth_pos, sphere_radius=self.R
         )
-
-    #TODO: noise method
