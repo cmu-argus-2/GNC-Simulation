@@ -77,9 +77,7 @@ class Camera():
         coords: np.ndarray,
         cubesat_att_in_ecef: np.ndarray,
     ) -> np.ndarray:
-        cam_ray_dirs = self.convert_screen_coordinates_to_camera_ray_directions(
-            self.convert_pixel_coordinates_to_screen_coordinates(coords)
-        )
+        cam_ray_dirs = self.convert_pixel_coordinates_to_camera_ray_directions(coords)
         return self.convert_camera_directions_to_ecef_directions(
             cam_ray_dirs, cubesat_att_in_ecef
         )
@@ -136,6 +134,14 @@ class Camera():
     ) -> np.ndarray:
         coords_ndc = (coords + 0.5) / self.dims
         return [1, -1] * (2*coords_ndc - 1)
+
+    def convert_pixel_coordinates_to_camera_ray_directions(
+            self,
+            coords: np.ndarray
+    ) -> np.ndarray:
+        return self.convert_screen_coordinates_to_camera_ray_directions(
+            self.convert_pixel_coordinates_to_screen_coordinates(coords)
+        )
 
 
 class MockVisionModel:
