@@ -12,6 +12,7 @@ from actuators.magnetorquer import Magnetorquers
 from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
 from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
+from world.math.time import increment_epoch
 
 """
     CLASS DYNAMICS
@@ -134,12 +135,7 @@ class Dynamics:
         self.state[self.Idx["X"]["SUN_POS"]] = self.srp.sun_position(self.epc)
         self.state[self.Idx["X"]["MAG_FIELD"]] = self.magnetic_field.field(self.state[self.Idx["X"]["ECI_POS"]], self.epc)
 
-        self.epc = Epoch(
-            *brahe.time.jd_to_caldate(
-                self.epc.jd()
-                + (1 / self.config["solver"]["world_update_rate"]) / (24 * 60 * 60)
-            )
-        )
+        self.epc = increment_epoch(self.epc, 1 / self.config["solver"]["world_update_rate"])
 
     """
         FUNCTION STATE_DERIVATIVE
