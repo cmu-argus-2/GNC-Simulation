@@ -4,13 +4,13 @@ import time
 import yaml
 import numpy as np
 from mock_vision_model import *
+from brahe.constants import R_EARTH as R
 
 
 with open("../config.yaml", "r") as f:
     config = yaml.safe_load(f)
 camera_params = config["satellite"]["camera"]
 
-R = 6.371e6     # m
 N = 100
 cubesat_pos_in_ecef = np.array([0.0, 0.0, -1.1*R])
 cubesat_att_in_ecef = np.array([1.0, 0.0, 0.0, 0.0])
