@@ -4,6 +4,8 @@ from scipy.spatial.transform import Rotation
 
 
 def columnify(vec: np.ndarray):
+    if type(vec) != np.ndarray and type(vec) != np.ma.masked_array:
+        vec = np.array(vec)
     return vec.reshape((vec.shape[0], 1))
 
 
