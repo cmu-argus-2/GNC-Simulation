@@ -86,7 +86,7 @@ def test_od():
     states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
 
     # set up arrays to store measurements
-    times = np.array([])  # every minute
+    times = np.array([], dtype=int)  # every minute
     cubesat_attitudes = np.zeros(shape=(0, 4))
     pixel_coordinates = np.zeros(shape=(0, 2))
     landmarks = np.zeros(shape=(0, 3))

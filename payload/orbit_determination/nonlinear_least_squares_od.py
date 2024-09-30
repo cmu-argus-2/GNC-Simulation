@@ -59,8 +59,8 @@ class OrbitDetermination:
         Solve the orbit determination problem using non-linear least squares.
 
         :param starting_epoch: The starting epoch as an instance of brahe's Epoch class.
-        :param times: A numpy array of shape (n,) containing the indices of time steps at which landmarks were observed.
-                      Must be sorted in non-strictly ascending order.
+        :param times: A numpy array of shape (n,) and dtype of int containing the indices of time steps at which
+                      landmarks were observed. Must be sorted in non-strictly ascending order.
         :param landmarks: A numpy array of shape (n, 3) containing the ECI coordinates of the landmarks.
         :param pixel_coordinates: A numpy array of shape (n, 2) containing the pixel coordinates of the landmarks.
         :param cubesat_attitudes: A numpy array of shape (n, 4) containing the quaternions representing the attitude of the satellite.
