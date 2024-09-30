@@ -79,7 +79,7 @@ def test_od():
     )
     N = int(np.ceil(config["mission"]["duration"] * config["solver"]["world_update_rate"]))
     states = np.zeros((N, 6))
-    states[0] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
+    states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
 
     # set up arrays to store measurements
     times = np.arange(1, N, 60)  # every minute
