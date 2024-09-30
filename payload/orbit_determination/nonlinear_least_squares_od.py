@@ -85,7 +85,13 @@ class OrbitDetermination:
 
         N = times[-1] + 1  # number of time steps
 
-        def residuals(X):
+        def residuals(X: np.ndarray) -> np.ndarray:
+            """
+            Compute the residuals of the non-linear least squares problem.
+
+            :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
+            :return: A numpy array of shape (3 * (N - 1) + 3 * len(times),) containing the residuals.
+            """
             states = X.reshape(-1, 6)
             positions = states[:, :3]
 
