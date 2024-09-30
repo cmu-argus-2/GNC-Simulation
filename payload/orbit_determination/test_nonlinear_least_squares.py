@@ -49,7 +49,7 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
     y_axis = [0, 1, 0]  # along orbital angular momentum
     z_axis = state[:3] / np.linalg.norm(state[:3])  # along radial vector
     x_axis = np.cross(y_axis, z_axis)
-    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
+    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis]).T  # TODO: why do we need to transpose?
     cubesat_attitude = Rotation.from_matrix(R_body_to_eci).as_quat(scalar_first=True)  # in eci
 
     # run vision model
