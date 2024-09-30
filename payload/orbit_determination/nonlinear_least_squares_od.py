@@ -105,6 +105,6 @@ class OrbitDetermination:
 
             return res
 
-        initial_guess = np.zeros(6 * N)  # TODO: improve initial guess
+        initial_guess = np.ones(6 * N)  # TODO: improve initial guess
         result = least_squares(residuals, initial_guess, method="lm")
         return result.x.reshape(-1, 6)
