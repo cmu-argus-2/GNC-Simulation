@@ -76,10 +76,8 @@ class OrbitDetermination:
         assert len(times) == len(landmarks) == len(pixel_coordinates), \
             "times, landmarks, and pixel_coordinates must have the same length"
 
-        bearing_unit_vectors = np.zeros((len(times), 3))
-        for i in range(len(times)):
-            bearing_vector = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates[i, :])
-            bearing_unit_vectors[i] = bearing_vector / np.linalg.norm(bearing_vector)
+        bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
+        bearing_unit_vectors = np.linalg.norm(bearing_vectors, axis=1)
 
         eci_to_camera_rotations = np.zeros((len(times), 3, 3))
         for i in range(len(times)):
