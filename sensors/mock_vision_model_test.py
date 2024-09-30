@@ -1,25 +1,26 @@
 #!/usr/bin/python3
 
 import time
+import yaml
 import numpy as np
 from mock_vision_model import *
+from brahe.constants import R_EARTH as R
 
-width = 720     # px
-height = 720    # px
-f = 600.0e-3    # m
-R = 6.371e6     # m
+
+with open("../config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+camera_params = config["satellite"]["camera"]
+
 N = 100
 cubesat_pos_in_ecef = np.array([0.0, 0.0, -1.1*R])
 cubesat_att_in_ecef = np.array([1.0, 0.0, 0.0, 0.0])
-camera_pos_in_cubesat = np.zeros(3)
-camera_att_in_cubesat = np.array([1.0, 0.0, 0.0, 0.0])
 
 cam = Camera(
-    image_width=width,
-    image_height=height,
-    focal_length=f,
-    position_in_cubesat_frame=camera_pos_in_cubesat,
-    orientation_in_cubesat_frame=camera_att_in_cubesat
+    image_width=camera_params["image_width"],
+    image_height=camera_params["image_height"],
+    focal_length=camera_params["focal_length"],
+    position_in_cubesat_frame=camera_params["position_in_cubesat_frame"],
+    orientation_in_cubesat_frame=camera_params["orientation_in_cubesat_frame"]
 )
 
 vision = MockVisionModel(

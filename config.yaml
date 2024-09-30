@@ -17,7 +17,15 @@ satellite:
 
       # Magnetorquers
       N_mtb : 3                                     # number of magnetorquers
-      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame 
+      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame
+
+      # Sensors
+      camera:
+            image_width: 720  # px
+            image_height: 720  # px
+            focal_length: 600.0e-3   # m
+            position_in_cubesat_frame: [ 0.0, 0.0, 0.0 ]  # m, position of camera in the satellite's body frame
+            orientation_in_cubesat_frame: [ 1.0, 0.0, 0.0, 0.0 ]  # quaternions representing a transformation from body-frame to camera-frame
 
 
 solver:
