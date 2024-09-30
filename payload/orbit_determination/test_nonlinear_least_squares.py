@@ -8,6 +8,7 @@ from brahe.epoch import Epoch
 from brahe.constants import R_EARTH
 
 from world.math.time import increment_epoch
+from world.math.transforms import update_brahe_data_files
 from sensors.mock_vision_model import Camera, MockVisionModel
 from nonlinear_least_squares_od import OrbitDetermination
 
@@ -57,6 +58,7 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
 
 
 def test_od():
+    update_brahe_data_files()
     config = load_config()
 
     # set up camera, vision model, and orbit determination objects
