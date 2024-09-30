@@ -1,9 +1,10 @@
-from typing import List
 import numpy as np
 from scipy.spatial.transform import Rotation
 
 
 def columnify(vec: np.ndarray):
+    if type(vec) != np.ndarray and type(vec) != np.ma.masked_array:
+        vec = np.array(vec)
     return vec.reshape((vec.shape[0], 1))
 
 
@@ -139,7 +140,7 @@ class Camera():
         coords: np.ndarray,
     ) -> np.ndarray:
         coords_ndc = (coords + 0.5) / self.dims
-        return [1, -1] * (2*coords_ndc - 1)
+        return [1,-1] * (2*coords_ndc - 1)
 
     def convert_pixel_coordinates_to_camera_ray_directions(
             self,
@@ -156,8 +157,12 @@ class MockVisionModel:
         camera: Camera,
         max_correspondences: int,
         earth_radius: float,
+        pixel_noise_mean=np.zeros(2),
+        pixel_noise_std_dev=np.zeros(2),
     ) -> None:
         self.caster = RayCaster()
+        self.mean = pixel_noise_mean
+        self.sd = pixel_noise_std_dev
         self.cam = camera
         self.N = max_correspondences
         self.R = earth_radius
@@ -167,12 +172,19 @@ class MockVisionModel:
         cubesat_position_in_ecef: np.ndarray,
         cubesat_attitude_in_ecef: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
+        #TODO: convert eci to ecef
+
         # Sample N pixels
-        pixel_coords = self.sample_pixel_coordinates()
+        pixel_coords, pixel_coords_trunc = self.sample_pixel_coordinates()
+
+        # Add noise to sampled pixels
+        noisy_coords = self.add_gaussian_noise(pixel_coords)
+
         # Get ray directions for each sampled pixel
         ray_dirs = self.cam.convert_pixel_coordinates_to_ecef_ray_directions(
-            pixel_coords, cubesat_attitude_in_ecef
+            noisy_coords, cubesat_attitude_in_ecef
         )
+
         # Get ECEF camera position as a product of several rigid body transforms
         cam_pos = self.cam.get_camera_position_in_ecef(
             cubesat_position_in_ecef, cubesat_attitude_in_ecef
@@ -182,11 +194,19 @@ class MockVisionModel:
             ray_dirs, cam_pos
         )
         # Filter out pixel coordinates that did not intersect the Earth, ecef_coords is already filtered
-        return pixel_coords[valid_intersections, :], ecef_coords
+        return pixel_coords_trunc[valid_intersections, :], ecef_coords
 
-    def sample_pixel_coordinates(self) -> np.ndarray:
-        coords = np.random.randint(self.cam.dims, size=(self.N, 2))
-        return coords
+    def add_gaussian_noise(
+        self,
+        coords: np.ndarray
+    ) -> np.ndarray:
+        noise = np.random.normal(loc=self.mean, scale=self.sd, size=coords.shape)
+        return coords + noise
+
+    def sample_pixel_coordinates(self) -> tuple[np.ndarray, np.ndarray]:
+        coords = np.random.uniform(high=self.cam.dims, size=(self.N, 2))
+        coords_trunc = np.int32(coords)
+        return coords, coords_trunc
 
     def get_ecef_ray_and_earth_intersections(
         self,

@@ -14,6 +14,8 @@ camera_params = config["satellite"]["camera"]
 N = 100
 cubesat_pos_in_ecef = np.array([0.0, 0.0, -1.1*R])
 cubesat_att_in_ecef = np.array([1.0, 0.0, 0.0, 0.0])
+pixel_noise_mean = np.zeros(2)
+pixel_noise_std_dev = np.array([10.0, 10.0 * camera_params["image_height"] / camera_params["image_width"]])
 
 cam = Camera(
     image_width=camera_params["image_width"],
@@ -26,7 +28,9 @@ cam = Camera(
 vision = MockVisionModel(
     camera=cam,
     max_correspondences=N,
-    earth_radius=R
+    earth_radius=R,
+    pixel_noise_mean=pixel_noise_mean,
+    pixel_noise_std_dev=pixel_noise_std_dev,
 )
 
 st = time.time()
