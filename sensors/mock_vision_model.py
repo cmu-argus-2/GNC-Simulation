@@ -7,16 +7,6 @@ def columnify(vec: np.ndarray):
     return vec.reshape((vec.shape[0], 1))
 
 
-class PixelEcefCorrespondence():
-    def __init__(
-        self,
-        pixel_coord: np.ndarray,
-        ecef_coord: np.ndarray,
-    ) -> None:
-        self.pixel_coordinate = pixel_coord
-        self.ecef_coordinate = ecef_coord
-
-
 class RayCaster():
     def get_ray_and_sphere_intersections(
         self,
@@ -176,7 +166,7 @@ class MockVisionModel:
         self,
         cubesat_position_in_ecef: np.ndarray,
         cubesat_attitude_in_ecef: np.ndarray
-    ) -> List[PixelEcefCorrespondence]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         # Sample N pixels
         pixel_coords = self.sample_pixel_coordinates()
         # Get ray directions for each sampled pixel
@@ -191,14 +181,8 @@ class MockVisionModel:
         valid_intersections, ecef_coords = self.get_ecef_ray_and_earth_intersections(
             ray_dirs, cam_pos
         )
-        # Pack valid ECEF surface coordinates into correspondences
-        correspondences = []
-        for pixel_coord, ecef_coord in zip(pixel_coords[valid_intersections, :], ecef_coords):
-            correspondences.append(PixelEcefCorrespondence(
-                pixel_coord=pixel_coord,
-                ecef_coord=ecef_coord
-            ))
-        return correspondences
+        # Filter out pixel coordinates that did not intersect the Earth, ecef_coords is already filtered
+        return pixel_coords[valid_intersections, :], ecef_coords
 
     def sample_pixel_coordinates(self) -> np.ndarray:
         coords = np.random.randint(self.cam.dims, size=(self.N, 2))

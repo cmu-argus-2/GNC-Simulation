@@ -32,12 +32,16 @@ def load_config() -> dict[str, Any]:
 def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: MockVisionModel) \
         -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Get all the information needed to represent a single landmark bearing measurement.
+    Get all the information needed to represent several landmark bearing measurements.
+    The number of landmark bearing measurements, M, will be some number less than or equal to the configured maximum
+    number of correspondences, mock_vision_model.N.
 
     :param epoch: The measurement epoch as an instance of brahe's Epoch class.
     :param state: The state of the satellite at the measurement epoch as a numpy array of shape (6,).
     :param mock_vision_model: The mock vision model object.
-    :return: A tuple containing numpy arrays of the cubesat attitude as a quaternion in ECI, the pixel coordinates of the landmark, and the landmark position in ECI coordinates.
+    :return: A tuple containing a numpy array of shape (M, 4) containing the cubesat attitudes as quaternions in ECI,
+             a numpy array of shape (M, 2) containing the pixel coordinates of the landmarks,
+             and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
     """
     R_eci_to_ecef = brahe.frames.rECItoECEF(epoch)
 
@@ -49,12 +53,12 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
     cubesat_attitude = Rotation.from_matrix(R_body_to_eci).as_quat(scalar_first=True)  # in eci
 
     # run vision model
-    correspondences = mock_vision_model.get_measurement(
+    pixel_coordinates, landmark_positions_ecef = mock_vision_model.get_measurement(
         cubesat_position_in_ecef=R_eci_to_ecef @ state[:3],
         cubesat_attitude_in_ecef=Rotation.from_matrix(R_eci_to_ecef @ R_body_to_eci).as_quat(scalar_first=True)
     )
-    landmark_position_eci = R_eci_to_ecef.T @ correspondences[0].ecef_coordinate
-    return cubesat_attitude, correspondences[0].pixel_coordinate, landmark_position_eci
+    landmark_positions_eci = (R_eci_to_ecef.T @ landmark_positions_ecef.T).T
+    return np.tile(cubesat_attitude, (pixel_coordinates.shape[0], 1)), pixel_coordinates, landmark_positions_eci
 
 
 def test_od():
@@ -70,7 +74,7 @@ def test_od():
         position_in_cubesat_frame=np.asarray(camera_params["position_in_cubesat_frame"]),
         orientation_in_cubesat_frame=np.asarray(camera_params["orientation_in_cubesat_frame"])
     )
-    mock_vision_model = MockVisionModel(camera, max_correspondences=1, earth_radius=R_EARTH)
+    mock_vision_model = MockVisionModel(camera, max_correspondences=10, earth_radius=R_EARTH)
     od = OrbitDetermination(camera, dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state
@@ -82,20 +86,22 @@ def test_od():
     states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
 
     # set up arrays to store measurements
-    times = np.arange(1, N, 60)  # every minute
-    cubesat_attitudes = np.zeros((len(times), 4))
-    pixel_coordinates = np.zeros((len(times), 2))
-    landmarks = np.zeros((len(times), 3))
-    idx = 0  # helper index for storing measurements sequentially
+    times = np.array([])  # every minute
+    cubesat_attitudes = np.zeros(shape=(0, 4))
+    pixel_coordinates = np.zeros(shape=(0, 2))
+    landmarks = np.zeros(shape=(0, 3))
 
     epoch = starting_epoch
-    for t in range(1, N):
-        states[t, :] = od.f(states[t - 1, :], epoch)
+    for t in range(0, N - 1):
+        states[t + 1, :] = od.f(states[t, :], epoch)
 
-        if t in times:
-            cubesat_attitudes[idx, :], pixel_coordinates[idx, :], landmarks[idx, :] = \
+        if t % 60 == 0:  # take a set of measurements every minute, starting at the first iteration
+            measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
                 get_measurement_info(epoch, states[t, :], mock_vision_model)
-            idx += 1
+            times = np.concatenate((times, np.repeat(t, measurement_cubesat_attitudes.shape[0])))
+            cubesat_attitudes = np.vstack((cubesat_attitudes, measurement_cubesat_attitudes))
+            pixel_coordinates = np.vstack((pixel_coordinates, measurement_pixel_coordinates))
+            landmarks = np.vstack((landmarks, measurement_landmarks))
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
 
