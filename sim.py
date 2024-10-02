@@ -41,7 +41,7 @@ angle_between_pos_vector_and_orbital_plane_normal = np.arccos(
 assert abs(angle_between_pos_vector_and_orbital_plane_normal - np.pi / 2) < 1e-10
 
 
-initial_state = np.array(
+true_initial_state = np.array(
     [
         *init_pos_b_wrt_ECI_in_ECI,
         *init_ECI_q_b.as_quat(),  # [x, y, z, w]
@@ -49,21 +49,22 @@ initial_state = np.array(
         *init_omega_b_wrt_ECI_in_b,
     ]
 )
+true_state = true_initial_state
+
 
 last_print_time = 0
-state = initial_state
 while current_time <= params.MAX_TIME:
-    # if current_time >= last_controller_update + controller_dt:
-    #     state_estimate = get_truth_state()
-    #     controller_output = controller(state_estimate)
-    #     apply_torque(controller_output_torque)
-    #     last_controller_update = current_time
-    #     print(f"Controller update: {current_time}")
-    # if current_time >= last_estimator_update + estimator_dt:
-    #     # w = get_gyro_measurement()
-    #     # estimator(w)
-    #     last_estimator_update = current_time
-    #     print(f"Estimator update: {current_time}")
+    controller_output = np.zeros((6, 1))
+    if current_time >= last_controller_update + controller_dt:
+        state_estimate = true_state  # TODO fix me
+        controller_output = controller(state_estimate)
+        last_controller_update = current_time
+        print(f"Controller update: {current_time}")
+    if current_time >= last_estimator_update + estimator_dt:
+        # w = get_gyro_measurement()
+        # estimator(w)
+        last_estimator_update = current_time
+        print(f"Estimator update: {current_time}")
 
     # state = propogate(state, sim_dt)
     if current_time >= last_print_time + 1000:
@@ -71,7 +72,7 @@ while current_time <= params.MAX_TIME:
         last_print_time = current_time
 
     u = np.zeros((6, 1))
-    state = rk4(state, u, params.InertiaTensor, params.InertiaTensorInverse, params.satellite_mass, params.dt)
+    state = rk4(true_state, u, params.InertiaTensor, params.InertiaTensorInverse, params.satellite_mass, params.dt)
 
     current_time += params.dt
 
