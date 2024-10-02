@@ -71,6 +71,9 @@ class Magnetorquer:
             )
         self.dipole_moment = self.convert_current_to_dipole_moment(current)
 
+    def get_dipole_moment_over_current(self) -> float:
+        return self.N_per_face * self.A_cross
+
     def convert_current_to_dipole_moment(
         self,
         current: float,
