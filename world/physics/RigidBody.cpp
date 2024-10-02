@@ -37,7 +37,8 @@ void RigidBody::clearAppliedForcesAndMoments() {
     set_net_moment_b(Vector3::Zero());
 }
 
-StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
+StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
+              const Matrix_3x3& InertiaTensorInverse, double mass) {
     StateVector xdot;   // derivative of the state vector
 
     // aliases for brevity
@@ -45,8 +46,8 @@ StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
     auto v     = ::get_vel_b_wrt_g_in_b(x);
     auto q     = ::get_g_q_b(x);
     auto f_b   = ::get_net_force_b(u);
-    auto J     = InertiaTensor_;
-    auto Jinv  = InertiaTensorInverse_;
+    auto J     = InertiaTensor;
+    auto Jinv  = InertiaTensorInverse;
     auto tau_b = ::get_net_moment_b(u);
     auto w     = ::get_omega_b_wrt_g_in_b(x);
 
@@ -66,7 +67,7 @@ StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
     Vector3 rdot        = q * v;
     Vector4 qdot_coeffs = 0.5 * G * w;
     Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
-    Vector3 vdot = f_b / mass_ - w.cross(v);
+    Vector3 vdot = f_b / mass - w.cross(v);
     Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
 
     // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
@@ -79,16 +80,18 @@ StateVector RigidBody::f(const StateVector& x, const Vector6& u) {
     return xdot;
 }
 
-void RigidBody::rk4(double dt) {
-    double half_dt = dt * 0.5;
-    StateVector k1 = f(x_, u_);
-    StateVector k2 = f(x_ + half_dt * k1, u_);
-    StateVector k3 = f(x_ + half_dt * k2, u_);
-    StateVector k4 = f(x_ + dt * k3, u_);
-    x_             = x_ + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+StateVector rk4(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
+                const Matrix_3x3& InertiaTensorInverse, double mass, double dt) {
+    double half_dt    = dt * 0.5;
+    StateVector k1    = f(x, u, InertiaTensor, InertiaTensorInverse, mass);
+    StateVector k2    = f(x + half_dt * k1, u, InertiaTensor, InertiaTensorInverse, mass);
+    StateVector k3    = f(x + half_dt * k2, u, InertiaTensor, InertiaTensorInverse, mass);
+    StateVector k4    = f(x + dt * k3, u, InertiaTensor, InertiaTensorInverse, mass);
+    StateVector x_new = x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 
     // renormalize the attitude quaternion (taken care of by set_g_q_b())
-    set_g_q_b(get_g_q_b());
+    set_g_q_b(x_new, get_g_q_b(x_new), true);
+    return x_new;
 }
 
 void RigidBody::set_pos_b_wrt_g_in_g(const Vector3& new_pos_b_wrt_g_in_g) {

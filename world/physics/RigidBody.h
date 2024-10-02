@@ -3,6 +3,12 @@
 
 #include "math/EigenWrapper.h"
 
+StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
+              const Matrix_3x3& InertiaTensorInverse, double mass);
+
+StateVector rk4(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
+                const Matrix_3x3& InertiaTensorInverse, double mass, double dt);
+
 /**
  * @brief Assumes body-frame origin coincides with the center-of-mass
  *

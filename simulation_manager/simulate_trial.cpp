@@ -38,33 +38,35 @@ void simulate_trial(const Simulation_Parameters &params) {
         acos(params.orbital_plane_normal.dot(init_pos_b_wrt_ECI_in_ECI.normalized()));
     assert(fabs(angle_between_pos_vector_and_orbital_plane_normal - M_PI_2) < 1e-10);
 
-    RigidBody sat = RigidBody(params.satellite_mass, params.InertiaTensor, init_pos_b_wrt_ECI_in_ECI, init_ECI_q_b,
-                              init_vel_b_wrt_ECI_in_b, init_omega_b_wrt_ECI_in_b);
+    StateVector x;
+    set_pos_b_wrt_g_in_g(x, init_pos_b_wrt_ECI_in_ECI);
+    set_g_q_b(x, init_ECI_q_b, true);
+    set_vel_b_wrt_g_in_b(x, init_vel_b_wrt_ECI_in_b);
+    set_omega_b_wrt_g_in_b(x, init_omega_b_wrt_ECI_in_b);
+
+    Matrix_3x3 InertiaTensorInverse = params.InertiaTensor.inverse();
 
     double t = 0.0;
     while (t <= params.MAX_TIME) {
-        sat.clearAppliedForcesAndMoments();
-
-        logger.log<3>(trial_directory + "/position_truth.bin", t, sat.get_pos_b_wrt_g_in_g(), "time [s]",
+        logger.log<3>(trial_directory + "/position_truth.bin", t, get_pos_b_wrt_g_in_g(x), "time [s]",
                       {"x [m]", "y [m]", "z [m]"});
-        logger.log<3>(trial_directory + "/velocity_truth.bin", t, sat.get_vel_b_wrt_g_in_b(), "time [s]",
+        logger.log<3>(trial_directory + "/velocity_truth.bin", t, get_vel_b_wrt_g_in_b(x), "time [s]",
                       {"x [m/s]", "y [m/s]", "z [m/s]"});
-        logger.log<3>(trial_directory + "/omega_truth.bin", t, RAD_2_DEG(sat.get_omega_b_wrt_g_in_b()), "time [s]",
+        logger.log<3>(trial_directory + "/omega_truth.bin", t, RAD_2_DEG(get_omega_b_wrt_g_in_b(x)), "time [s]",
                       {"x [deg/s]", "y [deg/s]", "z [deg/s]"});
-        logger.log<3>(trial_directory + "/attitude_truth.bin", t,
-                      RAD_2_DEG(intrinsic_zyx_decomposition(sat.get_g_q_b())), "time [s]",
-                      {"yaw [deg]", "pitch [deg]", "roll [deg]"});
+        logger.log<3>(trial_directory + "/attitude_truth.bin", t, RAD_2_DEG(intrinsic_zyx_decomposition(get_g_q_b(x))),
+                      "time [s]", {"yaw [deg]", "pitch [deg]", "roll [deg]"});
 
         // Calculate the error in quaternion
         Quaternion error_quat   = Quaternion::Identity();                  // Initialize the error to identity
         Quaternion desired_quat = Quaternion::Identity();                  // Set the desired quaternion
-        Quaternion current_quat = sat.get_g_q_b();                         // Get the current quaternion
+        Quaternion current_quat = get_g_q_b(x);                            // Get the current quaternion
         error_quat              = desired_quat * current_quat.inverse();   // Calculate the error in quaternion
 
         // Calculate the error in angular velocity
         Vector3 error_omega   = Vector3::Zero();                 // Initialize the error to zero
         Vector3 desired_omega = Vector3::Zero();                 // Set the desired angular velocity
-        Vector3 current_omega = sat.get_omega_b_wrt_g_in_b();    // Get the current angular velocity
+        Vector3 current_omega = get_omega_b_wrt_g_in_b(x);       // Get the current angular velocity
         error_omega           = desired_omega - current_omega;   // Calculate the error in angular velocity
 
         // Define the gain matrices Kp and Kd
@@ -75,15 +77,16 @@ void simulate_trial(const Simulation_Parameters &params) {
             Eigen::Matrix3d::Identity() * (sqrt(2) * params.InertiaTensor * omega);   // Derivative gain matrix
 
         // Calculate the torque using the PD controller
-        Vector3 torque = Kp * error_quat.vec() + Kd * error_omega;
+        Vector3 net_moment_b = Kp * error_quat.vec() + Kd * error_omega;
 
-        // Apply the torque to the satellite
-        sat.applyMoment(torque);
+        Vector3 net_force_b = Vector3::Zero();
 
-        // sat.applyForce(TODO, TODO);
-        // sat.applyMoment(TODO);
+        Vector6 u;
+        set_net_force_b(u, net_force_b);
+        set_net_moment_b(u, net_moment_b);
 
-        sat.rk4(params.dt);
+        x = rk4(x, u, params.InertiaTensor, InertiaTensorInverse, params.satellite_mass, params.dt);
+
         t += params.dt;
     }
 
