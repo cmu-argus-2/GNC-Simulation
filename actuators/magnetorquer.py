@@ -10,6 +10,7 @@ class Magnetorquer:
     def __init__(
         self,
         config,
+        IdMtb,
         max_voltage=5,
         coils_per_layer=32.0,
         layers=2.0,
@@ -35,16 +36,16 @@ class Magnetorquer:
         self.A_cross = (self.pcb_side_max - self.N * self.coil_width) ** 2
         self.R = self.compute_coil_resistance()
 
-        self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"]).T
-        self.dipole_moment = np.zeros(3)
+        self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"][IdMtb]).T
+        self.dipole_moment = np.zeros(3,)
 
-    def get_torque(self, state, Idx):
+    def get_torque(self, MAG_FIELD):
         """
         Update voltage or current before getting the torque.
         """
         # TODO: Get moment and field in whatever frame the sim wants torque
         return np.crossproduct(
-            self.dipole_moment, self.state[Idx["X"]["MAG_FIELD"]]
+            self.dipole_moment, MAG_FIELD
         )
 
     def set_voltage(

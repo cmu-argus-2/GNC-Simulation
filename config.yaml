@@ -35,7 +35,7 @@ mission:
       initial_angular_rate : [0.0, 0.00001, 0.0]
       initial_rw_speed : [100.0]
       # Mode management
-      pointing_mode: "Sun" # "Nadir" or "Sun"
+      pointing_mode: "detumble" # "Nadir" or "Sun" or "detumble" or "spin-stabilized"
 
 
 complexity:
@@ -45,6 +45,11 @@ complexity:
 
 controller:
       # assuming controller states are angular velocity and quaternion imaginary components
+      algorithm: "BCROSS" # "BCROSS" or "PID" or whatever
+      bcrossgain: [[0.0028, 0.0, 0.0],
+                  [0.0, 0.0028, 0.0],
+                  [0.0, 0.0, 0.0028]]
+
       state_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
                               [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
                               [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]

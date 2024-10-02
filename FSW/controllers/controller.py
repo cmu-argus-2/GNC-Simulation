@@ -1,15 +1,16 @@
 import configparser
 import numpy as np
 from world.math.quaternions import *
-
+from FSW.controllers.detumbling_controller import *
 
 class Controller:
     def __init__(self, config, Idx) -> None:
         self.config = config
         self.pointing_mode    = config["mission"]["pointing_mode"]
+        self.controller_algo  = config["controller"]["algorithm"]
         self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
-        
+        self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
         self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
@@ -23,7 +24,6 @@ class Controller:
     
     # define feedforward torque and state profile
     def define_att_profile(self, date, pointing_mode, est_world_states):
-        
         ref_ctrl_states = np.zeros((7,))
         if pointing_mode == "Sun":
             # Define reference torque as zero
@@ -51,6 +51,10 @@ class Controller:
             # Default values if not sun pointing
             ref_ctrl_states = np.zeros((19,))
             ref_torque = np.zeros((3,))
+        elif  pointing_mode == "detumble":
+            # Default values if not sun pointing
+            ref_ctrl_states = np.zeros((19,))
+            ref_torque = np.zeros((3,))
         else:
             raise ValueError(f"Unrecognized pointing mode: {pointing_mode}")
             
@@ -58,6 +62,11 @@ class Controller:
     
     def get_torque(self, date, ref_torque, ref_ctrl_states, est_ctrl_states):
         # from the reference and estimated quaternions, get the error quaternion for control
+        if self.controller_algo == "Bcross":
+            Re2b = quatrotation(est_ctrl_states[self.Idx["X"]["QUAT"]]).T
+            bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+            return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, est_ctrl_states[10:13], est_ctrl_states[10:13])
+            
         q_ref = ref_ctrl_states[:4]
         q_est = est_ctrl_states[6:10]
         q_err = hamiltonproduct(q_ref, q_inv(q_est))
@@ -75,10 +84,12 @@ class Controller:
         B_mat[:,Idx["U"]["RW_TORQUE"]]  = self.G_rw_b.T
         B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b
         
-        allocation_mat = np.linalg.pinv(B_mat)
+        allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
+        # np.linalg.pinv(B_mat)
+        
         # Normalize columns of the allocation matrix
-        col_norms = np.linalg.norm(allocation_mat, axis=0)
-        allocation_mat = allocation_mat / col_norms
+        # col_norms = np.linalg.norm(allocation_mat, axis=0)
+        # allocation_mat = allocation_mat / col_norms
         
         actuator_cmd = self.allocation_mat @ torque_cmd
         return actuator_cmd
@@ -90,8 +101,9 @@ class Controller:
         ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, est_world_states)
         # feedforward and feedback controller
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states)
+        
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
-        
+                
         return actuator_cmd
         

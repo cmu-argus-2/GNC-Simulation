@@ -8,7 +8,7 @@ from world.physics.models.gravity import Gravity
 from world.physics.models.drag import Drag
 from world.physics.models.srp import SRP
 from world.physics.models.magnetic_field import MagneticField
-from actuators.magnetorquer import Magnetorquers
+from actuators.magnetorquer import Magnetorquer
 from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
 from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
@@ -48,7 +48,7 @@ class Dynamics:
         [
          ECI position (3x1) [UNITS: m], 
          ECI velocity (3x1) [UNITS: m/s],
-         Body-ECI quaternion (4x1) [Order : [scalar, vector]],
+         Body->ECI quaternion (4x1) [Order : [scalar, vector]],
          Body frame angular rates (3x1) [UNITS: rad/s],
          ECI Sun position (3x1) [UNITS: m],
          ECI magnetic field (3x1) [UNITS: T]
@@ -88,8 +88,9 @@ class Dynamics:
         self.state[self.Idx["X"]["MAG_FIELD"]] = self.magnetic_field.field(self.state[self.Idx["X"]["ECI_POS"]], self.epc)
     
         # Actuator specific data
-        self.Magnetorquers  = Magnetorquers(self.config)
-        self.ReactionWheels = ReactionWheel(self.config)
+        
+        self.Magnetorquers = [Magnetorquer(self.config, IdMtb) for IdMtb in range(self.config["satellite"]["N_mtb"])]
+        self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
         
         self.I_sat = np.array(self.config["satellite"]["inertia"])
         self.I_sat_inv = np.linalg.inv(self.I_sat)
@@ -176,13 +177,21 @@ class Dynamics:
         wdot[self.Idx["X"]["QUAT"]] = 0.5 * hamiltonproduct(np.insert(state[self.Idx["X"]["ANG_VEL"]], 0, 0), state[self.Idx["X"]["QUAT"]])
 
         # Reaction wheels
-        tau_rw = self.ReactionWheels.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]])
+        tau_rw = np.zeros(3)
+        for i, rw in enumerate(self.ReactionWheels):
+            tau_rw += rw.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]][i])
         G_rw   = self.ReactionWheels.G_rw_b
         I_rw   = self.ReactionWheels.I_rw
         h_rw   = I_rw * state[self.Idx["X"]["RW_SPEED"]]
         
         # Magnetorquers
-        tau_mtb = self.Magnetorquers.get_applied_torque(input[self.Idx["U"]["MTB_TORQUE"]], state, self.Idx)
+        tau_mtb = np.zeros(3)
+        Re2b = quatrotation(state[self.Idx["X"]["QUAT"]]).T
+        bfMAG_FIELD = Re2b @ self.state[self.Idx["X"]["MAG_FIELD"]] # convert ECI MAG FIELD 2 body frame
+        for i, mtb in enumerate(self.Magnetorquers):
+            tau_mtb += np.crossproduct(self.Idx["U"]["MTB_TORQUE"][i], bfMAG_FIELD )
+            # mtb.get_torque(input[self.Idx["U"]["MTB_TORQUE"]][i], bfMAG_FIELD)
+        # self.Magnetorquer.get_torque(self, state, Idx)
         
         # Attitude Dynamics equation
         h_sc  = self.I_sat @ state[self.Idx["X"]["ANG_VEL"]]
