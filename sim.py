@@ -2,9 +2,10 @@ from build.world.pyphysics import rk4
 from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParams
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from time import time
 
-MAX_TIME = 1000
-sim_dt = 0.01
+START_TIME = time()
+
 controller_dt = 0.1
 estimator_dt = 1
 
@@ -49,9 +50,9 @@ initial_state = np.array(
     ]
 )
 
-
+last_print_time = 0
 state = initial_state
-while current_time <= MAX_TIME:
+while current_time <= params.MAX_TIME:
     # if current_time >= last_controller_update + controller_dt:
     #     state_estimate = get_truth_state()
     #     controller_output = controller(state_estimate)
@@ -65,8 +66,14 @@ while current_time <= MAX_TIME:
     #     print(f"Estimator update: {current_time}")
 
     # state = propogate(state, sim_dt)
-    print(f"Update: {current_time}")
+    if current_time >= last_print_time + 1000:
+        print(f"Heartbeat: {current_time}")
+        last_print_time = current_time
+
     u = np.zeros((6, 1))
     state = rk4(state, u, params.InertiaTensor, params.InertiaTensorInverse, params.satellite_mass, params.dt)
 
-    current_time += sim_dt
+    current_time += params.dt
+
+
+print(f'Sim took {time()-START_TIME:.3f} [s] "wall-clock" to simulate {params.MAX_TIME} [s]')
