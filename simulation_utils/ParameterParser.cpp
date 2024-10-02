@@ -10,10 +10,20 @@
 #include "ExpressionEvaluation.h"
 #include "StringUtils/StringUtils.h"
 #include "colored_output.h"
-#include "math/conversions.h"
-#include "math/random.h"
 #include "misc.h"
-#include "utils_and_transforms.h"
+
+#ifdef USE_PYBIND_TO_COMPILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
+
+#ifdef print
+#undef print   // we deifned our own print funciton that clasehes with pybind's internal print; ignore ours
+#include "pybind11/eigen.h"
+#include "pybind11/pybind11.h"
+#endif
+
+#pragma GCC diagnostic pop
+#endif
 
 // FSW includes
 
@@ -28,7 +38,7 @@ double UTC_to_unix(const std::string& UTC_date) {
 }
 // ==========================================================================
 
-void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filename) {
+void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
     std::ifstream file(filename);
 
     if (!file.is_open()) {
@@ -129,6 +139,9 @@ void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filena
                     Ixy,Iyy,Iyz,//
                     Ixz,Iyz,Izz;
 
+    // precompute this once and for all
+    InertiaTensorInverse = InertiaTensor.inverse();
+
     // Verifying parameters that were read in
     {
 
@@ -154,7 +167,7 @@ void Simulation_Parameters::getParamsFromFileAndSample(const std::string& filena
                                    cos(orbital_incliniation)};
 }
 
-void Simulation_Parameters::dumpSampledParametersToYAML(const std::string& absolute_filename) {
+void Simulation_Parameters::dumpSampledParametersToYAML(std::string absolute_filename) {
     std::ofstream file(absolute_filename);
     if (!file.is_open()) {
         std::cerr << "Failed to open file \"" << absolute_filename << "\"for writing." << std::endl;
@@ -174,3 +187,26 @@ void Simulation_Parameters::dumpSampledParametersToYAML(const std::string& absol
 
     file.close();
 }
+
+#ifdef USE_PYBIND_TO_COMPILE
+PYBIND11_MODULE(pysim_utils, m) {
+    pybind11::class_<Simulation_Parameters>(m, "Simulation_Parameters")
+        .def(pybind11::init<>())
+        .def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
+        .def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
+        .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
+        .def_readonly("dt", &Simulation_Parameters::dt)
+        .def_readonly("RAAN", &Simulation_Parameters::RAAN)
+        .def_readonly("init_altitute", &Simulation_Parameters::init_altitute)
+        .def_readonly("orbital_velocity", &Simulation_Parameters::orbital_velocity)
+        .def_readonly("orbital_incliniation", &Simulation_Parameters::orbital_incliniation)
+        .def_readonly("satellite_mass", &Simulation_Parameters::satellite_mass)
+        .def_readonly("InertiaTensor", &Simulation_Parameters::InertiaTensor)
+        .def_readonly("InertiaTensorInverse", &Simulation_Parameters::InertiaTensorInverse)
+        .def_readonly("earliest_sim_start_unix", &Simulation_Parameters::earliest_sim_start_unix)
+        .def_readonly("latest_sim_start_unix", &Simulation_Parameters::latest_sim_start_unix)
+        .def_readonly("EARTH_RADIUS", &Simulation_Parameters::EARTH_RADIUS)
+        .def_readonly("orbital_plane_normal", &Simulation_Parameters::orbital_plane_normal);
+}
+
+#endif

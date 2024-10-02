@@ -72,7 +72,7 @@ class RigidBody {
     /**
      * @brief Comprised of 4 parts:
      * (3x1) pos_b_wrt_g_in_g  : position of body from global frame, expressed in global frame [m]
-     * (4x1) g_q_b [w,x,y,z]   : rotation that transforms a vector with body coords. into one with global coords.
+     * (4x1) g_q_b [x,y,z,w]   : rotation that transforms a vector with body coords. into one with global coords.
      * (3x1) vel_b_wrt_g_in_b  : linear velocity of body with respect to global frame, expressed in body frame [m/s]
      * (3x1) omega_b_wrt_g_in_b: angular velocity of body with respect to global frame, expressed in body frame [rad/s]
      */

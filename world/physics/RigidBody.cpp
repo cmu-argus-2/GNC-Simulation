@@ -2,6 +2,13 @@
 
 #include "math/EigenWrapper.h"
 
+#ifdef USE_PYBIND_TO_COMPILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
+#include "pybind11/eigen.h"
+#pragma GCC diagnostic pop
+#endif
+
 RigidBody::RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3& init_pos_b_wrt_g_in_g,
                      const Quaternion& init_g_q_b, const Vector3& init_vel_b_wrt_g_in_b,
                      const Vector3& init_omega_b_wrt_g_in_b)
@@ -146,10 +153,10 @@ void set_g_q_b(StateVector& x, const Quaternion& new_g_q_b, bool normalize) {
     if (normalize) {
         copy = copy.normalized();
     }
-    x(3) = copy.w();
-    x(4) = copy.x();
-    x(5) = copy.y();
-    x(6) = copy.z();
+    x(3) = copy.x();
+    x(4) = copy.y();
+    x(5) = copy.z();
+    x(6) = copy.w();
 }
 void set_b_q_g(StateVector& x, const Quaternion& new_b_q_g, bool normalize) {
     ::set_g_q_b(x, new_b_q_g.inverse(), normalize);
@@ -171,7 +178,7 @@ Vector3 get_pos_b_wrt_g_in_g(const StateVector& x) {
     return x.block<3, 1>(0, 0);
 }
 Quaternion get_g_q_b(const StateVector& x) {
-    return Quaternion{x(3), x(4), x(5), x(6)};
+    return Quaternion{x(6), x(3), x(4), x(5)};
 }
 Quaternion get_b_q_g(const StateVector& x) {
     return get_g_q_b(x).inverse();
@@ -188,3 +195,10 @@ Vector3 get_net_force_b(const Vector6& u) {
 Vector3 get_net_moment_b(const Vector6& u) {
     return u.block<3, 1>(3, 0);
 }
+
+#ifdef USE_PYBIND_TO_COMPILE
+PYBIND11_MODULE(pyphysics, m) {
+    m.doc() = "pybind11 physics plugin";   // module docstring
+    m.def("rk4", &rk4, "rk4 integrator");
+}
+#endif

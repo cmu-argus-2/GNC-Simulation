@@ -2,6 +2,15 @@
 
 This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in orbit.
 
+Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
+
+## Build Instructions
+- `git submodule update --recursive --init `
+- `mkdir build`
+- `cd build`
+- `cmake ..`
+- `make`
+
 ## Running the sim
 - `cd montecarlo/`
 - Run `python3 run_job.py`
@@ -20,14 +29,3 @@ This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in or
 
 # Satellite orbit demo
 There are also 2 files for simulating orbital dynamics in the plane. SatelliteAroudnEarth is exactly what it sounds like. SatelliteAroundEarthAndMoon shows a satellite moving on a trajectory resembling a figure 8 around earth and moon. 
-
-## Instructions
-- `mkdir build`
-- `cd build`
-- `cmake ..`
-- `make`
-- `./SatelliteAroundEarth`
-- `./SatelliteAroundEarthAndMoon`
-
-## Visualization
- - `python3 visualize_orbit.py`

@@ -7,8 +7,11 @@ target_link_libraries(sim_utils PUBLIC Eigen3::Eigen IMULib tjLib math)
 target_include_directories(sim_utils PUBLIC .)
 
 
-add_executable(SatelliteAroundEarth SatelliteAroundEarth.cpp)
-target_link_libraries(SatelliteAroundEarth Eigen3::Eigen)
-
-add_executable(SatelliteAroundEarthAndMoon SatelliteAroundEarthAndMoon.cpp)
-target_link_libraries(SatelliteAroundEarthAndMoon Eigen3::Eigen)
+pybind11_add_module(pysim_utils SHARED 
+    ExpressionEvaluation.cpp
+    ParameterParser.cpp 
+    IO.cpp
+)
+target_link_libraries(pysim_utils PUBLIC Eigen3::Eigen IMULib tjLib math)
+target_include_directories(pysim_utils PUBLIC .)
+target_compile_definitions(pysim_utils PRIVATE USE_PYBIND_TO_COMPILE)

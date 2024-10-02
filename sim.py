@@ -1,4 +1,7 @@
+from build.world.pyphysics import rk4
+from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParams
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 MAX_TIME = 1000
 sim_dt = 0.01
@@ -18,7 +21,33 @@ def estimator(w):
     pass
 
 
-initial_state = TODO
+params = SimParams()
+params.getParamsFromFileAndSample("montecarlo/configs/params.yaml")
+
+init_pos_b_wrt_ECI_in_ECI = np.array([params.EARTH_RADIUS + params.init_altitute, 0, 0])  # [m]
+init_pos_b_wrt_ECI_in_ECI_normalized = init_pos_b_wrt_ECI_in_ECI / np.linalg.norm(init_pos_b_wrt_ECI_in_ECI)
+init_ECI_q_b = R.from_quat([0, 0, 0, 1])
+init_vel_b_wrt_ECI_in_ECI = params.orbital_velocity * np.cross(
+    params.orbital_plane_normal, init_pos_b_wrt_ECI_in_ECI_normalized
+)  # [m/s]
+init_vel_b_wrt_ECI_in_b = init_ECI_q_b.as_matrix().T @ init_vel_b_wrt_ECI_in_ECI  # [m/s]
+init_omega_b_wrt_ECI_in_b = np.array([0, 0, np.deg2rad(3)])  # [rad/s]
+
+# assert the initial position vector is orthogonal to the satellite's orbital plane normal vector
+angle_between_pos_vector_and_orbital_plane_normal = np.arccos(
+    params.orbital_plane_normal.dot(init_pos_b_wrt_ECI_in_ECI_normalized)
+)
+assert abs(angle_between_pos_vector_and_orbital_plane_normal - np.pi / 2) < 1e-10
+
+
+initial_state = np.array(
+    [
+        *init_pos_b_wrt_ECI_in_ECI,
+        *init_ECI_q_b.as_quat(),  # [x, y, z, w]
+        *init_vel_b_wrt_ECI_in_b,
+        *init_omega_b_wrt_ECI_in_b,
+    ]
+)
 
 
 state = initial_state
@@ -37,5 +66,7 @@ while current_time <= MAX_TIME:
 
     # state = propogate(state, sim_dt)
     print(f"Update: {current_time}")
+    u = np.zeros((6, 1))
+    state = rk4(state, u, params.InertiaTensor, params.InertiaTensorInverse, params.satellite_mass, params.dt)
 
     current_time += sim_dt
