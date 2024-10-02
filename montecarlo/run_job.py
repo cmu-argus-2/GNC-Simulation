@@ -23,7 +23,7 @@ repo_root_rel = "../"
 
 # paths relative to "moonranger-rover-flight/":
 pose_simulator_build_script_rel = "build_sim_debug.sh"
-trial_executable_path_rel = "build/main"
+trial_executable_path_rel = "build/simulation_manager/main"
 montecarlo_rel = "montecarlo/"
 
 # "_abs" suffix indicates an absolute filepath
