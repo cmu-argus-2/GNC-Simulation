@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 
 double randomUniformLog(double min, double max, std::default_random_engine& rng) {
 #pragma GCC diagnostic push

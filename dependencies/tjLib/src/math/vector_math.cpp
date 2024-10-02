@@ -3,7 +3,7 @@
 #include <cassert>
 #include <vector>
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 
 vectord zeros(unsigned long size) {
     vectord z;

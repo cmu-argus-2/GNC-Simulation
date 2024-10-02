@@ -3,8 +3,8 @@
 
 #include "IO.h"
 #include "ParameterParser.h"
+#include "colored_output.h"
 #include "simulate_trial.h"
-#include "tjLib/include/colored_output.h"
 
 std::string trial_directory;
 

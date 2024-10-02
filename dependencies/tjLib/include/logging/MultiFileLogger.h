@@ -3,7 +3,7 @@
 #include <fstream>
 #include <unordered_map>
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 class MultiFileLogger {
    public:
     void log(const std::string &file_name, double x, const std::string &label);

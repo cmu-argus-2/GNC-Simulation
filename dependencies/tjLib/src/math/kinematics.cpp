@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 #include "math/vector_math.h"
 
 std::vector<Quaternion> integrate_body_angular_velocities(vectord t, std::vector<Vector3> w_b,

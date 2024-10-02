@@ -4,7 +4,7 @@
 #include <random>
 
 #include "Bias.h"
-#include "EigenWrapper.h"
+#include "tjLib/math/EigenWrapper.h"
 #include "IMUparams.h"
 
 class Sensor {

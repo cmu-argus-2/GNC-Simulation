@@ -1,6 +1,6 @@
 #include "RigidBody.h"
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 
 RigidBody::RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3& init_pos_b_wrt_g_in_g,
                      const Quaternion& init_g_q_b, const Vector3& init_vel_b_wrt_g_in_b,

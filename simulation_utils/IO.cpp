@@ -9,7 +9,7 @@
 #include <regex>
 #include <tuple>
 
-#include "tjLib/include/colored_output.h"
+#include "colored_output.h"
 
 vectord SplitCSV(const std::string &data, char separator, char delimiter) {
     vectord Values;

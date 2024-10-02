@@ -1,7 +1,7 @@
 #ifndef C___RIGIDBODY_H
 #define C___RIGIDBODY_H
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 
 /**
  * @brief Assumes body-frame origin coincides with the center-of-mass

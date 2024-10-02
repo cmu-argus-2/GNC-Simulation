@@ -2,7 +2,7 @@
 #ifndef _POSE_EKF_UTILS_AND_TRANSFORMS_
 #define _POSE_EKF_UTILS_AND_TRANSFORMS_
 
-#include "EigenWrapper.h"
+#include "math/EigenWrapper.h"
 
 // How close each A(i,j) must be to A(j,i) for matrix to be considered symmetric
 static constexpr double VALID_SYMMETRIC_MATRIX_TOLERANCE = 1E-60;

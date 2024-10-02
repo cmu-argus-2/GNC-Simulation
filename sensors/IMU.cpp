@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "EigenWrapper.h"
+#include "tjLib/math/EigenWrapper.h"
 #include "IMUparams.h"
 
 IMU::IMU(double dt, IMUNoiseParams params, std::default_random_engine& rng)

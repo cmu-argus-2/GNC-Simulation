@@ -35,13 +35,11 @@ class MontecarloPlots:
     def position_plot(self):
         position_figure = itm.figure()
         itm.subplot(3, 1, 1)
-        itm.title(f"True position [m]")
+        itm.title(f"True position [km]")
 
         filenames = []
         for trial_number in self.trials:
-            filenames.append(
-                os.path.join(self.trials_dir, f"trial{trial_number}/position_truth.bin")
-            )
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/position_truth.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
@@ -56,9 +54,9 @@ class MontecarloPlots:
             triPlot(
                 data_dicts[i]["time [s]"],
                 [
-                    data_dicts[i]["x [m]"],
-                    data_dicts[i]["y [m]"],
-                    data_dicts[i]["z [m]"],
+                    data_dicts[i]["x [m]"] / 1000.0,
+                    data_dicts[i]["y [m]"] / 1000.0,
+                    data_dicts[i]["z [m]"] / 1000.0,
                 ],
                 seriesLabel=f"_{trial_number}",
             )
@@ -75,13 +73,11 @@ class MontecarloPlots:
     def velocity_plot(self):
         velocity_figure = itm.figure()
         itm.subplot(3, 1, 1)
-        itm.title(f"True velocity [m/s]")
+        itm.title(f"True velocity [km/s]")
 
         filenames = []
         for trial_number in self.trials:
-            filenames.append(
-                os.path.join(self.trials_dir, f"trial{trial_number}/velocity_truth.bin")
-            )
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/velocity_truth.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
@@ -96,9 +92,9 @@ class MontecarloPlots:
             triPlot(
                 data_dicts[i]["time [s]"],
                 [
-                    data_dicts[i]["x [m/s]"],
-                    data_dicts[i]["y [m/s]"],
-                    data_dicts[i]["z [m/s]"],
+                    data_dicts[i]["x [m/s]"] / 1000.0,
+                    data_dicts[i]["y [m/s]"] / 1000.0,
+                    data_dicts[i]["z [m/s]"] / 1000.0,
                 ],
                 seriesLabel=f"_{trial_number}",
             )
@@ -119,9 +115,7 @@ class MontecarloPlots:
 
         filenames = []
         for trial_number in self.trials:
-            filenames.append(
-                os.path.join(self.trials_dir, f"trial{trial_number}/omega_truth.bin")
-            )
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/omega_truth.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
@@ -159,9 +153,7 @@ class MontecarloPlots:
 
         filenames = []
         for trial_number in self.trials:
-            filenames.append(
-                os.path.join(self.trials_dir, f"trial{trial_number}/attitude_truth.bin")
-            )
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/attitude_truth.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]

@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include "tjLib/include/math/vector_math.h"
+#include "math/vector_math.h"
 
 vectord SplitCSV(const std::string &data, char separator, char delimiter);
 
