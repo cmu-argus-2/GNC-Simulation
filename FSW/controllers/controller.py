@@ -10,9 +10,9 @@ class Controller:
         self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
         
+        self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"])
+        self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
-        self.allocation_mat[Idx["U"]["RW_TORQUE"],:]  = np.array(config["satellite"]["rw_orientation"])
-        self.allocation_mat[Idx["U"]["MTB_TORQUE"],:] = np.array(config["satellite"]["mtb_orientation"])
        
     def _load_gains(self):
         gains = {}
@@ -66,14 +66,24 @@ class Controller:
         torque = ref_torque + self.feedback_gains @ err_vec
         return torque
     
-    def allocate_torque(self, date, torque_cmd):
+    def allocate_torque(self, state, torque_cmd, Idx):
         # Placeholder for actuator management
         # if torque = B @ actuator_cmd
         # actuator_cmd = Binv @ torque_cmd
+        
+        B_mat = np.zeros((3, Idx["NU"]))
+        B_mat[:,Idx["U"]["RW_TORQUE"]]  = self.G_rw_b.T
+        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b
+        
+        allocation_mat = np.linalg.pinv(B_mat)
+        # Normalize columns of the allocation matrix
+        col_norms = np.linalg.norm(allocation_mat, axis=0)
+        allocation_mat = allocation_mat / col_norms
+        
         actuator_cmd = self.allocation_mat @ torque_cmd
         return actuator_cmd
     
-    def run(self, date, est_world_states):
+    def run(self, date, est_world_states, Idx):
         
         self.est_world_states = est_world_states
         # define slew profile
@@ -81,7 +91,7 @@ class Controller:
         # feedforward and feedback controller
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states)
         # actuator management function
-        actuator_cmd = self.allocate_torque(date, torque_cmd)
+        actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
         
         return actuator_cmd
         
