@@ -92,6 +92,7 @@ class Dynamics:
         self.ReactionWheels = ReactionWheel(self.config)
         
         self.I_sat = np.array(self.config["satellite"]["inertia"])
+        self.I_sat_inv = np.linalg.inv(self.I_sat)
         
         # Actuator Indexing
         N_rw  = self.config["satellite"]["N_rw"]
@@ -185,8 +186,8 @@ class Dynamics:
         
         # Attitude Dynamics equation
         h_sc  = self.I_sat @ state[self.Idx["X"]["ANG_VEL"]]
-        wdot[self.Idx["X"]["ANG_VEL"]] = (np.linalg.inv(self.I_sat) @ (
-            -np.cross(state[self.Idx["X"]["ANG_VEL"]], (G_rw @ h_rw + h_sc)).reshape(-1, 1) - (G_rw * tau_rw) + tau_mtb.reshape(-1, 1)
+        wdot[self.Idx["X"]["ANG_VEL"]] = (self.I_sat_inv @ (
+            -np.cross(state[self.Idx["X"]["ANG_VEL"]], (G_rw @ h_rw + h_sc)).reshape(-1, 1) + (G_rw * tau_rw) + tau_mtb.reshape(-1, 1)
         )).flatten()
         
         # RW speed dynamics:

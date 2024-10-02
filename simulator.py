@@ -7,7 +7,6 @@ from world.physics.dynamics import Dynamics
 
 from FSW.controllers.controller import Controller
 from FSW.estimators.estimator import Estimator
-from extra_funcs.actuation import Actuation
 
 """
     CLASS MANAGER
