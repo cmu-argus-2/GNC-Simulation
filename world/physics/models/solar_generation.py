@@ -115,6 +115,7 @@ class SolarGeneration:
             for j, other_surface in enumerate(self.surfaces):
                 if i == j:
                     continue
+                # TODO: there are probably some simple heuristics we can use to skip some surfaces
 
                 occluded_rays |= self.get_intersections(other_surface, ray_starts, sun_vector_body)
 
