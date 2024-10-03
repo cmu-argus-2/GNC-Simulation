@@ -38,32 +38,27 @@ class SolarGeneration:
         pass
 
     @staticmethod
-    def has_intersection(surface: Surface, ray_start: np.ndarray, ray_dir: np.ndarray) -> bool:
+    def get_intersections(surface: Surface, ray_starts: np.ndarray, ray_dir: np.ndarray) -> np.ndarray:
         """
-        Check if a ray intersects a Surface.
+        Check if a set of rays intersect a Surface.
 
         :param surface: A Surface object representing the surface.
-        :param ray_start: The starting point of the ray in the body frame.
-        :param ray_dir: The direction of the ray in the body frame.
-        :return: True if the ray intersects the surface, False otherwise.
+        :param ray_starts: A numpy array of shape (n, 3) representing the starting points of the rays in the body frame.
+        :param ray_dir: A 3-element array representing the direction of the rays in the body frame.
+        :return: A boolean array of shape (n,) indicating whether the corresponding rays intersect the surface.
         """
         cos_theta = np.dot(surface.normal, ray_dir)
         if cos_theta < 1e-3:
-            # The ray is parallel to the surface.
-            return False
+            # The rays are parallel to the surface.
+            return np.zeros(ray_starts.shape[0], dtype=bool)
 
-        t = np.dot(surface.normal, surface.center - ray_start) / cos_theta
-        if t <= 0:
-            # The intersection point is behind the ray start.
-            return False
+        ts = (surface.center - ray_starts) @ surface.normal / cos_theta
+        intersection_points = ray_starts + np.outer(ts, ray_dir)
+        intersection_point_offsets = intersection_points - surface.center
+        xs = intersection_point_offsets @ surface.x_dir
+        ys = intersection_point_offsets @ surface.y_dir
 
-        intersection_point = ray_start + t * ray_dir
-        intersection_point_offset = intersection_point - surface.center
-        x = np.dot(intersection_point_offset, surface.x_dir)
-        y = np.dot(intersection_point_offset, surface.y_dir)
-
-        return -surface.width / 2 <= x <= surface.width / 2 and \
-            -surface.height / 2 <= y <= surface.height / 2
+        return ts > 0 & (np.abs(xs) <= surface.width / 2) & (np.abs(ys) <= surface.height / 2)
 
     @staticmethod
     def in_earths_shadow(position_eci: np.ndarray, sun_vector_eci: np.ndarray) -> bool:
@@ -116,19 +111,15 @@ class SolarGeneration:
             ray_starts = surface.center + np.outer(x_samples, surface.x_dir) + np.outer(y_samples, surface.y_dir)
 
             # Check how many of the sampled rays are exposed to the sun
-            exposed_count = 0
-            for ray_start in ray_starts:
-                for j, other_surface in enumerate(self.surfaces):
-                    if i == j:
-                        continue
+            occluded_rays = np.zeros(ray_starts.shape[0], dtype=bool)
+            for j, other_surface in enumerate(self.surfaces):
+                if i == j:
+                    continue
 
-                    if self.has_intersection(other_surface, ray_start, sun_vector_body):
-                        break
-                else:
-                    exposed_count += 1
+                occluded_rays |= self.get_intersections(other_surface, ray_starts, sun_vector_body)
 
             # Calculate the power output
-            exposed_area = (exposed_count / ray_starts.shape[0]) * surface.width * surface.height
+            exposed_area = np.mean(~occluded_rays) * surface.width * surface.height
             power_output += cos_theta * exposed_area * self.SOLAR_FLUX * self.PANEL_EFFICIENCY
 
         return power_output
