@@ -5,7 +5,7 @@
 #include <random>
 
 #include "IMUparams.h"
-#include "tjLib/math/EigenWrapper.h"
+#include "math/EigenWrapper.h"
 #include "Sensor.h"
 struct IMUsignal {
     Vector3 gyro;

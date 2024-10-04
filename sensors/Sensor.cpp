@@ -2,7 +2,7 @@
 
 #include <random>
 
-#include "tjLib/math/EigenWrapper.h"
+#include "math/EigenWrapper.h"
 #include "IMUparams.h"
 // #include "rng.h"
 
