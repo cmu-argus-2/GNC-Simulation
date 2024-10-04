@@ -34,7 +34,8 @@ class SolarGeneration:
         self.surfaces = self.parse_config(config)
         self.sample_resolution = 0.05  # The resolution of the occlusion sampling grid, in meters.
 
-    def parse_config(self, config: dict) -> list[Surface]:
+    @staticmethod
+    def parse_config(config: dict) -> list[Surface]:
         pass
 
     @staticmethod
@@ -117,7 +118,7 @@ class SolarGeneration:
                     continue
                 # TODO: there are probably some simple heuristics we can use to skip some surfaces
 
-                occluded_rays |= self.get_intersections(other_surface, ray_starts, sun_vector_body)
+                occluded_rays |= SolarGeneration.get_intersections(other_surface, ray_starts, sun_vector_body)
 
             # Calculate the power output
             exposed_area = np.mean(~occluded_rays) * surface.width * surface.height
