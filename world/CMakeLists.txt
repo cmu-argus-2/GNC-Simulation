@@ -4,6 +4,7 @@ target_include_directories(math PUBLIC "math")
 
 add_library(physics SHARED physics/RigidBody.cpp)
 target_link_libraries(physics PUBLIC Eigen3::Eigen tjLib)
+target_link_libraries(physics PUBLIC spice)
 target_include_directories(physics PUBLIC "physics")
 
 pybind11_add_module(pyphysics SHARED physics/RigidBody.cpp)

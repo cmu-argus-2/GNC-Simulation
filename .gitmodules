@@ -1,3 +1,13 @@
 [submodule "dependencies/pybind11"]
 	path = dependencies/pybind11
 	url = https://github.com/pybind/pybind11/
+[submodule "extern/pybind11"]
+	path = extern/pybind11
+	url = ../../pybind/pybind11
+	branch = stable
+[submodule "extern/cppSpice"]
+	path = extern/cppSpice
+	url = https://github.com/tomreddell/cppSpice.git
+[submodule "dependencies/Spice"]
+	path = dependencies/Spice
+	url = https://github.com/OpenSpace/Spice.git

@@ -1,6 +1,7 @@
 #include "RigidBody.h"
 
 #include "math/EigenWrapper.h"
+#include "../../dependencies/Spice/include/SpiceUsr.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -98,6 +99,18 @@ StateVector rk4(const StateVector& x, const Vector6& u, const Matrix_3x3& Inerti
 
     // renormalize the attitude quaternion (taken care of by set_g_q_b())
     set_g_q_b(x_new, get_g_q_b(x_new), true);
+
+    SpiceDouble state[6] ;
+    SpiceDouble * lt;
+
+    spkezr_c ( "Sun",
+                                62550.0,
+                                "J2000",
+                                "NONE",
+                                "Earth",
+                                state,
+                                lt       );
+       
     return x_new;
 }
 

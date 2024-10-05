@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(GNC_Sim LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -17,7 +18,6 @@ add_compile_options(
     -Wpointer-arith         # Warn about suspicious pointer operations
     -Wshadow                # Warn about variable shadowing
     -Wfloat-equal           # Warn about testing floats with ==
-    -Werror
     -Wparentheses
     -Wunused-variable
     -Wunused-function

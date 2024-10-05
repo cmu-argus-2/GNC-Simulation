@@ -1,2 +1,5 @@
 add_subdirectory(tjLib)
-add_subdirectory(pybind11)
+add_subdirectory(Spice)
+if (NOT TARGET pybind11::pybind11)
+	add_subdirectory(pybind11)
+endif()
