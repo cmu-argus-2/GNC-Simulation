@@ -63,16 +63,20 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
 
 // Basic Utility functions
 void loadAllKernels() {
-    std::string sol_system_pos = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/de440.bsp";
+    std::string sol_system_spk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/de440.bsp";
     std::string earth_rotation_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/earth_latest_high_prec.bpc";
+    std::string earth_dimensions_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
+    std::string leap_seconds_lsk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
     
     SpiceInt count;
     ktotal_c("ALL", &count);
     printf("Count %d\n", count);
 
     if (count == 0) {
-        furnsh_c(sol_system_pos.c_str());
+        furnsh_c(sol_system_spk.c_str());
         furnsh_c(earth_rotation_pck.c_str());
+        furnsh_c(earth_dimensions_pck.c_str());
+        furnsh_c(leap_seconds_lsk.c_str());
     }; // only load kernel if not already loaded
     
 }
@@ -102,4 +106,57 @@ Matrix_3x3 ECEF2ECI(double t_J2000) {
     pxform_c("ITRF93", "J2000", t_J2000, Rot);
     
     return Cspice2Eigen(Rot);
+}
+
+Vector3 ECEF2GEOD(Vector3 v_ecef) {
+
+    SpiceInt n;
+    SpiceDouble radii[3];
+    SpiceDouble v[3]; //ECEF vector as a spice double
+    SpiceDouble f;
+
+    SpiceDouble lon, lat, alt;
+
+    loadAllKernels();
+    
+    bodvrd_c( "EARTH", "RADII", 3, &n, radii ); // extract earth radius and flattening info
+    f = ( radii[0] - radii[2] ) / radii[0]; // flattening coeffficient
+
+    vpack_c(v_ecef(0), v_ecef(1), v_ecef(2), v); // cast Vector 3 to SpiceDouble[3]
+    recgeo_c(v, 1000*radii[0], f, &lon, &lat, &alt); //convert to lon-lat-alt //NOTE: radii is populated in km
+
+    Vector3 geod (lon, lat, alt);
+    
+    return geod;
+}
+
+Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude)
+{
+    Vector3 r_ecef;
+    Matrix_3x3 R {{sin(latitude)*cos(longitude), -sin(longitude), cos(latitude)*cos(longitude)},
+                  {sin(latitude)*sin(longitude), cos(longitude), cos(latitude)*sin(longitude)},
+                  {-cos(latitude), 0.0, sin(latitude)}};
+
+    r_ecef = R*r_sez;
+    return r_ecef;
+}
+
+
+/* TIME UTILITIES */
+Vector5 TJ2000toUTC(double t_J2000)
+{
+    loadAllKernels();
+    const int oplen = 35;
+    SpiceChar utc_datestring[oplen];
+    Vector5 utc_date;
+
+    et2utc_c(t_J2000, "ISOD", 3, oplen, utc_datestring);
+    std::string datestring = utc_datestring;
+    utc_date(0) = atof(datestring.substr(0,4).c_str());
+    utc_date(1) = atof(datestring.substr(5,3).c_str());
+    utc_date(2) = atof(datestring.substr(9,2).c_str());
+    utc_date(3) = atof(datestring.substr(12,2).c_str());
+    utc_date(4) = atof(datestring.substr(15,6).c_str());
+
+    return utc_date;
 }

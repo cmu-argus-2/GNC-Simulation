@@ -1,6 +1,9 @@
 #include "RigidBody.h"
 
 #include "math/EigenWrapper.h"
+#include "utils_and_transforms.h"
+#include <iostream>
+#include "SRP.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push

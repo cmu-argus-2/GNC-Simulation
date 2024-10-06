@@ -6,3 +6,8 @@ dev tools for code consistency
 speed up:
 https://pybind11.readthedocs.io/en/stable/advanced/cast/eigen.html
     look into pass-by-reference to avoid eigen copies
+
+
+MODELS:
+    1. Shadow function for SRP acceleration
+    2. Harmonic gravity (if required)
