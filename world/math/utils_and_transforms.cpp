@@ -1,5 +1,7 @@
 #include "utils_and_transforms.h"
 
+#include "SpiceUsr.h"
+
 // rotation matrix elements under this threshhold will be reset to 0
 static constexpr double ROT_MAT_0_THRESH = 1e-10;
 
@@ -55,4 +57,49 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
     double pitch = asin(-R(2, 0));
 
     return Vector3{yaw, pitch, roll};
+}
+
+/* COORDINATE TRANSFORMATIONS FROM SPICE */
+
+// Basic Utility functions
+void loadAllKernels() {
+    std::string sol_system_pos = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/de440.bsp";
+    std::string earth_rotation_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/earth_latest_high_prec.bpc";
+    
+    SpiceInt count;
+    ktotal_c("ALL", &count);
+    printf("Count %d\n", count);
+
+    if (count == 0) {
+        furnsh_c(sol_system_pos.c_str());
+        furnsh_c(earth_rotation_pck.c_str());
+    }; // only load kernel if not already loaded
+    
+}
+
+// Convert CSPICE Double array to 3x3 Eigen Matrix
+Matrix_3x3 Cspice2Eigen(SpiceDouble M[3][3]) {
+    Matrix_3x3 R;
+    R << M[0][0], M[0][1], M[0][2], M[1][0], M[1][1], M[1][2], M[2][0], M[2][1], M[2][2];
+    return R;
+}
+
+// TRANSFORMS
+
+Matrix_3x3 ECI2ECEF(double t_J2000) {
+    SpiceDouble Rot[3][3];
+
+    loadAllKernels();
+    pxform_c("J2000", "ITRF93", t_J2000, Rot);
+    
+    return Cspice2Eigen(Rot);
+}
+
+Matrix_3x3 ECEF2ECI(double t_J2000) {
+    SpiceDouble Rot[3][3];
+
+    loadAllKernels();
+    pxform_c("ITRF93", "J2000", t_J2000, Rot);
+    
+    return Cspice2Eigen(Rot);
 }

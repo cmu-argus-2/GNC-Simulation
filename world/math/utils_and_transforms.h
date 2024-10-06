@@ -3,6 +3,7 @@
 #define _POSE_EKF_UTILS_AND_TRANSFORMS_
 
 #include "math/EigenWrapper.h"
+#include "SpiceUsr.h"
 
 // How close each A(i,j) must be to A(j,i) for matrix to be considered symmetric
 static constexpr double VALID_SYMMETRIC_MATRIX_TOLERANCE = 1E-60;
@@ -85,5 +86,40 @@ Vector3 intrinsic_xyz_decomposition(const Quaternion &q);
  * @return Vector3 {yaw, pitch, roll} [radians]
  */
 Vector3 intrinsic_zyx_decomposition(const Quaternion &q);
+
+
+// CSPICE COORDINATE TRANSFORMS
+
+/**
+ * @brief Load a SPICE kernel from provided path
+ *
+ * @param kernel_file absolute path to data file
+ * @param kernel_type type of kernel according to SPICE [read https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Kernel%20Types]
+ */
+void loadKernel(std::string kernel_file, std::string kernel_type);
+
+/**
+ * @brief Cast a double[3][3] into an Eigen <double, 3, 3> matrix
+ *
+ * @param M SpiceDouble 3x3 matrix
+ * @return R Eigen 3x3 matrix
+ */
+Matrix_3x3 Cspice2Eigen(SpiceDouble M[3][3]);
+
+/**
+ * @brief Computes the rotation matrix from ECI to ECEF at a given time
+ *
+ * @param t_J2000 - seconds past J2000 i.e., seconds past Jan 1st 2000, 12:00:00 PM
+ * @return R Eigen 3x3 matrix representing roation from ECI to ECEF
+ */
+Matrix_3x3 ECI2ECEF(double t_J2000);
+
+/**
+ * @brief Computes the rotation matrix from ECEF to ECI at a given time
+ *
+ * @param t_J2000 - seconds past J2000 i.e., seconds past Jan 1st 2000, 12:00:00 PM
+ * @return R Eigen 3x3 matrix representing roation from ECEF to ECI
+ */
+Matrix_3x3 ECEF2ECI(double t_J2000);
 
 #endif   //_POSE_EKF_UTILS_AND_TRANSFORMS_ header
