@@ -1,0 +1,6 @@
+brahe
+pyigrf
+matplotlib
+numpy
+scipy
+pyyaml
