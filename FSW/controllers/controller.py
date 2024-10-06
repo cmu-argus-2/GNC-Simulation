@@ -84,7 +84,7 @@ class Controller:
         B_mat[:,Idx["U"]["RW_TORQUE"]]  = self.G_rw_b.T
         B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b
         
-        allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
+        self.allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
         # np.linalg.pinv(B_mat)
         
         # Normalize columns of the allocation matrix
