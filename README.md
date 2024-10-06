@@ -1,18 +1,15 @@
 # 3dDynamicsSim
 
-This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in orbit.
+This Repo contains C++ code for simulating the 3d Dynamics of a satellite  in orbit.
 
 Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
 ## SPICE data download
-- download 'de440.bsp' from https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/ and place within data/
+- run the data_downloader.py to download 'de440.bsp' from https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/ and place within data/, or do it manually
 
 ## Build Instructions
 - `git submodule update --recursive --init `
-- `mkdir build`
-- `cd build`
-- `cmake ..`
-- `make`
+- run build_sim_debug.sh
 
 ## Running the sim
 - `cd montecarlo/`
