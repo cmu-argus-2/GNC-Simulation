@@ -1,3 +1,6 @@
 [submodule "dependencies/pybind11"]
 	path = dependencies/pybind11
 	url = https://github.com/pybind/pybind11/
+[submodule "dependencies/Spice"]
+	path = dependencies/Spice
+	url = https://github.com/OpenSpace/Spice.git

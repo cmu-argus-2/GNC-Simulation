@@ -17,10 +17,10 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
 
 #ifdef print
-#undef print   // we deifned our own print funciton that clasehes with pybind's internal print; ignore ours
+#undef print   // we defined our own print funciton that clasehes with pybind's internal print; ignore ours
+#endif
 #include "pybind11/eigen.h"
 #include "pybind11/pybind11.h"
-#endif
 
 #pragma GCC diagnostic pop
 #endif
