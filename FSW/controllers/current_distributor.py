@@ -1,35 +1,32 @@
+from typing import List
 import numpy as np
 from actuators.magnetorquer import Magnetorquer
 
-class TripleCurrentDistributor():
+class MagnetorquerCurrentDistributor():
     def __init__(
         self,
-        torquer1: Magnetorquer,
-        torquer2: Magnetorquer,
-        torquer3: Magnetorquer,
+        magnetorquers: List[Magnetorquer]
     ) -> None:
-        self.D = self.get_current_distributor_matrix(
-            torquer1, torquer2, torquer3
-        )
+        self.D = self.get_current_distribution_matrix(magnetorquers)
 
-    def get_current_command(
+    def get_current_commands(
         self,
         dipole_moment: np.ndarray,
     ) -> np.ndarray:
         return self.D @ dipole_moment
 
-    def get_current_distributor_matrix(
+    def get_current_distribution_matrix(
         self,
-        torquer1: Magnetorquer,
-        torquer2: Magnetorquer,
-        torquer3: Magnetorquer,
+        magnetorquers: List[Magnetorquer]
     ) -> np.ndarray:
-        U = np.column_stack((
-            torquer1.G_mtb_b, torquer2.G_mtb_b, torquer3.G_mtb_b
-        ))
-        K = np.diag(np.array([
-            torquer1.get_dipole_moment_over_current(),
-            torquer2.get_dipole_moment_over_current(),
-            torquer3.get_dipole_moment_over_current(),
-        ]))
+        U = magnetorquers[0].G_mtb_b
+        k = np.array([magnetorquers[0].get_dipole_moment_over_current()])
+
+        for i in range(1, len(magnetorquers)):
+            U = np.column_stack((U, magnetorquers[i].G_mtb_b))
+            k = np.hstack((
+                k, magnetorquers[i].get_dipole_moment_over_current()
+            ))
+
+        K = np.diag(k)
         return np.linalg.pinv(U @ K)
