@@ -4,6 +4,9 @@ This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in or
 
 Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
+## SPICE data download
+- download 'de440.bsp' from https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/ and place within data/
+
 ## Build Instructions
 - `git submodule update --recursive --init `
 - `mkdir build`
