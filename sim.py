@@ -52,19 +52,19 @@ true_initial_state = np.array(
 true_state = true_initial_state
 
 
-last_print_time = 0
+last_print_time = -1e99
 while current_time <= params.MAX_TIME:
     controller_output = np.zeros((6, 1))
     if current_time >= last_controller_update + controller_dt:
         state_estimate = true_state  # TODO fix me
         controller_output = controller(state_estimate)
         last_controller_update = current_time
-        print(f"Controller update: {current_time}")
+        # print(f"Controller update: {current_time}")
     if current_time >= last_estimator_update + estimator_dt:
         # w = get_gyro_measurement()
         # estimator(w)
         last_estimator_update = current_time
-        print(f"Estimator update: {current_time}")
+        # print(f"Estimator update: {current_time}")
 
     # state = propogate(state, sim_dt)
     if current_time >= last_print_time + 1000:
@@ -77,4 +77,8 @@ while current_time <= params.MAX_TIME:
     current_time += params.dt
 
 
-print(f'Sim took {time()-START_TIME:.3f} [s] "wall-clock" to simulate {params.MAX_TIME} [s]')
+elapsed_seconds_wall_clock = time() - START_TIME
+speed_up = params.MAX_TIME / elapsed_seconds_wall_clock
+print(
+    f'Sim ran {speed_up:.4g}x faster than realtime. Took {elapsed_seconds_wall_clock:.1f} [s] "wall-clock" to simulate {params.MAX_TIME} [s]'
+)

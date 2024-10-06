@@ -1,5 +1,5 @@
 MAX_TIME: 20*90*60 # [s]
-dt: 0.01             # [s]
+dt: 0.05             # [s]
 
 RAAN: DEG_2_RAD(0)                    # [rad]
 init_altitute: 600e3                  # [m]
