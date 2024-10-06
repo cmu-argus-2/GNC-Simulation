@@ -5,18 +5,19 @@ import time
 import subprocess
 
 # ============================================= JOB CONFIGURATION CONSTANTS ===========================================
-trial_executable_abs = sys.argv[1]
-job_directory_abs = sys.argv[2]
-parameter_file_abs = sys.argv[3]
-TIMEOUT = int(sys.argv[4])
-MAX_CONCURRENT_TRIALS = int(sys.argv[5])
-TRIALS = [int(arg) for arg in sys.argv[6:]]
+trial_command = sys.argv[1]
+trial_command_dir = sys.argv[2]
+job_directory_abs = sys.argv[3]
+parameter_file_abs = sys.argv[4]
+TIMEOUT = int(sys.argv[5])
+MAX_CONCURRENT_TRIALS = int(sys.argv[6])
+TRIALS = [int(arg) for arg in sys.argv[7:]]
 NUM_TRIALS = len(TRIALS)
 job_name = os.path.basename(job_directory_abs)
 
 # ensure paths exist
 assert os.path.exists(parameter_file_abs), f"Nonexistent: {parameter_file_abs}"
-assert os.path.exists(trial_executable_abs), f"Nonexistent: {trial_executable_abs}"
+assert os.path.exists(trial_command_dir), f"Nonexistent: {trial_command_dir}"
 # ==================================================== HELPER CODE ====================================================
 
 
@@ -70,11 +71,7 @@ if __name__ == "__main__":
                 if not process_info["is_finished"]:
                     return_code = process_info["process"].returncode
                     color = GREEN if return_code == 0 else RED
-                    print(
-                        color
-                        + f"Trial {trial} finished with return code: {return_code}"
-                        + RESET
-                    )
+                    print(color + f"Trial {trial} finished with return code: {return_code}" + RESET)
                     process_info["is_finished"] = True
                     TRIALS_FINISHED += 1
             else:
@@ -86,24 +83,19 @@ if __name__ == "__main__":
     while TRIALS_FINISHED < NUM_TRIALS:
         if TRIALS_STARTED < NUM_TRIALS:  # need to run more trials
             number_of_active_trials = TRIALS_STARTED - TRIALS_FINISHED
-            if (
-                number_of_active_trials < MAX_CONCURRENT_TRIALS
-            ):  # can run another trial without freezing up CPU
+            if number_of_active_trials < MAX_CONCURRENT_TRIALS:  # can run another trial without freezing up CPU
                 TRIAL_NUMBER = TRIALS[TRIALS_STARTED]
-                trial_directory_abs = os.path.join(
-                    job_directory_abs, "trials", f"trial{TRIAL_NUMBER}"
-                )
+                trial_directory_abs = os.path.join(job_directory_abs, "trials", f"trial{TRIAL_NUMBER}")
                 trial_output_file = os.path.join(trial_directory_abs, "output.txt")
                 os.system(f"mkdir -p {trial_directory_abs}")
                 with open(trial_output_file, "w") as outfile:
                     process = subprocess.Popen(
-                        [trial_executable_abs],
+                        trial_command.strip("'").split(" "),
                         env={
-                            "TRIAL_NUMBER": f"{TRIAL_NUMBER}",
                             "TRIAL_DIRECTORY": trial_directory_abs,
                             "PARAMETER_FILEPATH": parameter_file_abs,
                         },
-                        cwd=os.path.dirname(trial_executable_abs),
+                        cwd=trial_command_dir,
                         stderr=outfile,
                         stdout=outfile,
                     )

@@ -9,7 +9,7 @@ from plot_menu import get_user_selections
 from matplotlib import pyplot as plt
 import argparse
 
-PERCENTAGE_OF_DATA_TO_PLOT = 100
+PERCENTAGE_OF_DATA_TO_PLOT = 1
 
 # Create a dictionary to hold method names and their corresponding functions
 all_plotting_task_names = []
@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    job_directory = os.path.realpath(os.path.join("../results", args.job_name))
+    job_directory = os.path.realpath(os.path.join("../../montecarlo/results", args.job_name))
     trials_directory = os.path.join(job_directory, "trials")
     plot_directory = os.path.join(job_directory, "plots")
 
