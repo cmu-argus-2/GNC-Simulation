@@ -1,38 +1,34 @@
-# GNC Simulation - dev branch
+# 3dDynamicsSim
 
-Active Branch for simulation development
+This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in orbit.
 
-> [!WARNING]
-Do Not push code to main. Use PULL REQUESTS between dev and main
+Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
-## Style Guide
-> [!IMPORTANT]
-> PEP8 formatting rules
+## SPICE data download
+- download 'de440.bsp' from https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/ and place within data/
 
-1. Use <u> ruff </u> to auto-check formatting
-``` pip install ruff ``` or use VSCode Extension
+## Build Instructions
+- `git submodule update --recursive --init `
+- `mkdir build`
+- `cd build`
+- `cmake ..`
+- `make`
 
-2. Before any function/class definition, provide the following details in a multi-line comment
-```
-    '''
-        FUNCTION <function name>
+## Running the sim
+- `cd montecarlo/`
+- Run `python3 run_job.py`
+- Results are written into the `results/` directory
+ 
+## Debugging
+- launch.json shows the configurations for debugging python and C++ code.
 
-        <function purpose>
-        
-        INPUTS:
-            <Numbered list of inputs>
-            
-        OUTPUTS:
-            <numbered list of outputs>
-    '''  
-```
+## Visualization
+- `cd montecarlo/plots_and_analysis/web_visualizer`
+- `python3 job_comparison_tool.py`
 
-3. No Loose functions
-    - All files will have <u> one and only one </u> class definition within them
-    - There will not be any functions not present within a class definition
-    - If it does not make sense to have a class, consider merging the function with its caller
-
-## Code Architecture
-Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simulation-Architecture-10648018d82a80d4a90ce8fb38b47777">here</a>
+## Tweaking parameters
+- Edit `montecarlo/configs/params.yaml`
 
 
+# Satellite orbit demo
+There are also 2 files for simulating orbital dynamics in the plane. SatelliteAroudnEarth is exactly what it sounds like. SatelliteAroundEarthAndMoon shows a satellite moving on a trajectory resembling a figure 8 around earth and moon. 
