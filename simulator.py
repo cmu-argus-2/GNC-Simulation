@@ -25,16 +25,12 @@ class Simulator:
                 self.config["solver"]["payload_update_rate"],
             ]
         )
-
-        # Initialize the index dictionary
-        self.Idx = {}
         
         # Intialize the dynamics class as the "world"
-        self.world = Dynamics(self.config, self.Idx)
-        self.Idx = self.world.Idx
-        
+        self.world = Dynamics(self.config)
+
         # Initialize the Controller Class
-        self.controller = Controller(self.config, self.Idx)
+        self.controller = Controller(self.config)
         
         self.estimator = Estimator()
         
@@ -84,7 +80,7 @@ class Simulator:
             # self.control_inputs = self.controller(self.date, self.measurement)
             est_world_states = self.estimator.run(self.date, self.measurement, self.world_state)
             
-            actuator_cmd = self.controller.run(self.date, est_world_states, self.Idx)
+            actuator_cmd = self.controller.run(self.date, est_world_states)
 
             # Pedro: may want to rename dynamics to world. It will include the propagation of 
             # actuator states (rw speed, motor time constant, ...)
