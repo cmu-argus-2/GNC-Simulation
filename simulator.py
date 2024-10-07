@@ -84,6 +84,8 @@ class Simulator:
         WorldStates     = np.zeros((NT, self.Idx["NX"]))
         Results["WorldStates"]   = WorldStates
         Results["ControlInputs"] = np.zeros((NT, self.Idx["NU"]))
+        Results["PowerConsumption"] = {}
+        Results["PowerConsumption"]["MTB"] = np.zeros((self.config["satellite"]["N_mtb"], NT))
         
         for i, _ in enumerate(TimeVec):
             self.world_state = self.world.state
@@ -106,9 +108,7 @@ class Simulator:
             
             Results["WorldStates"][i, :] = self.world_state
             Results["ControlInputs"][i, :] = actuator_cmd[:, 0]
-            # self.world.Magnetorquers.get_power 
-            # self.world.ReactionWheels
-            # Results["PowerConsumption"][i] = self.actuation.get_power_consumption()
+            Results["PowerConsumption"] = self.world.get_power(i,Results["PowerConsumption"])
         
         return Results
 
