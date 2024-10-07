@@ -28,7 +28,7 @@ class SolarGeneration:
     TODO: validate that occlusions from the Moon are negligible, since they are not accounted for in this model.
     """
     SOLAR_FLUX = 1373  # The solar power flux at the Earth's orbital radius in W/m^2.
-    PANEL_EFFICIENCY = 0.2  # The efficiency of the solar panels, as a fraction in [0, 1].
+    PANEL_EFFICIENCY = 0.15  # The efficiency of the solar panels, as a fraction in [0, 1].
 
     def __init__(self, config: dict) -> None:
         self.surfaces = SolarGeneration.parse_solar_config(config["satellite"]["solar"])
