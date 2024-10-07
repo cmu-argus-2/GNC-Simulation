@@ -79,7 +79,7 @@ class Dynamics:
 
         # Attitude and Quaternion Initialization
         self.state[self.Idx["X"]["QUAT"]] = self.config["mission"]["initial_attitude"]
-        self.state[self.Idx["X"]["ANG_VEL"]] = self.config["mission"]["initial_angular_rate"]
+        self.state[self.Idx["X"]["ANG_VEL"]] = np.deg2rad(self.config["mission"]["initial_angular_rate"])
 
         # Sun Position
         self.state[self.Idx["X"]["SUN_POS"]] = self.srp.sun_position(self.epc)
@@ -105,6 +105,7 @@ class Dynamics:
         self.Idx["U"]["RW_TORQUE"]  = slice(0, N_rw)
         self.Idx["U"]["MTB_TORQUE"] = slice(N_rw, N_rw + N_mtb)
         # RW speed should be a state because it depends on the torque applied and needs to be propagated
+        self.Idx["NX"] = self.Idx["NX"] + N_rw
         self.Idx["X"]["RW_SPEED"]   = slice(19, 19+N_rw)
         # Extend state to include RW speed
         self.state = np.concatenate((self.state, np.zeros(N_rw)))

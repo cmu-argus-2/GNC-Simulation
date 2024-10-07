@@ -7,6 +7,7 @@ from world.physics.dynamics import Dynamics
 
 from FSW.controllers.controller import Controller
 from FSW.estimators.estimator import Estimator
+from visualization.plot_results import main_plotter
 
 """
     CLASS MANAGER
@@ -74,28 +75,49 @@ class Simulator:
     """
 
     def run(self):
-        while self.date - self.config["mission"]["start_date"] <= self.config[
-            "mission"
-        ]["duration"] / (24 * 60 * 60):
+        
+        Results         = {}
+        Results["Time"] = []
+        TimeVec         = np.arange( 0,self.config["mission"]["duration"], 1 / self.update_rate)
+        NT              = len(TimeVec)
+        Results["Time"] = TimeVec
+        WorldStates     = np.zeros((NT, self.Idx["NX"]))
+        Results["WorldStates"]   = WorldStates
+        Results["ControlInputs"] = np.zeros((NT, self.Idx["NU"]))
+        
+        for i, _ in enumerate(TimeVec):
             self.world_state = self.world.state
 
             # self.measurement = self.sensors(self.date, self.world_state) # UNCOMMENT WHEN SENSOR MODELS ARE IMPLEMENTED
             self.measurement = []
             # self.control_inputs = self.controller(self.date, self.measurement)
-            est_world_states = self.estimator.run(self.date, self.measurement, self.world_state)
+            est_world_states = self.estimator.run(self.date, self.measurement, self.world_state, self.Idx)
             
             actuator_cmd = self.controller.run(self.date, est_world_states, self.Idx)
 
             # Pedro: may want to rename dynamics to world. It will include the propagation of 
             # actuator states (rw speed, motor time constant, ...)
-            self.world.update(input=actuator_cmd) # self.control_torques)        
+            self.world.update(input=actuator_cmd) # self.control_torques)
             
             self.date += (1 / self.update_rate) / (
                 24 * 60 * 60
             )  # 1 second into Julian date conversion
             print(f"{self.date:.2f}", np.round(self.world_state, 2))
+            
+            Results["WorldStates"][i, :] = self.world_state
+            Results["ControlInputs"][i, :] = actuator_cmd[:, 0]
+        
+        return Results
 
 
 if __name__ == "__main__":
     simulator = Simulator()
-    simulator.run()
+    Results = simulator.run()
+    
+    save_results = True
+    if save_results:
+        import pickle
+        with open("Results.pkl", "wb") as f:
+            pickle.dump({"Results": Results, "Idx": simulator.Idx}, f)
+            
+    main_plotter(Results, simulator.Idx)

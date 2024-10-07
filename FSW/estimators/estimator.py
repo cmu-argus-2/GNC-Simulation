@@ -22,16 +22,22 @@ class Estimator:
         # This should be replaced with actual implementation
         return -world_state[0:3]
     
-    def run(self, date, measurements, world_state):
-        est_world_states = np.zeros((19,))
+    def run(self, date, measurements, world_state, Idx):
+        est_world_states = np.zeros((Idx["NX"],))
         # sun sensor processing (if any)
         sun_direction   = self.estimate_sun_direction(date, measurements, world_state)
         # attitude estimation
         att_states      = self.estimate_att_states(date, measurements, world_state)
         # nadir estimation (gps, earth sensor, etc)
         nadir_direction = self.estimate_nadir(date, measurements, world_state)
-        est_world_states[:3]    = -nadir_direction
-        est_world_states[6:13]  = att_states
-        est_world_states[13:16] = sun_direction
+        est_world_states[Idx["X"]["ECI_POS"]]    = -nadir_direction
+        est_world_states[Idx["X"]["ECI_VEL"]]    = world_state[Idx["X"]["ECI_VEL"]]
+        est_world_states[Idx["X"]["QUAT"]]       = att_states[:4]
+        est_world_states[Idx["X"]["ANG_VEL"]]    = att_states[4:7]
+        est_world_states[Idx["X"]["SUN_POS"]]    = sun_direction
+        est_world_states[Idx["X"]["MAG_FIELD"]]  = world_state[Idx["X"]["MAG_FIELD"]]
+        
+        if Idx["NX"] > 19:
+            est_world_states[19:] = world_state[19:]
     
         return est_world_states
