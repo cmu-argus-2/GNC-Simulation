@@ -1,10 +1,11 @@
 import configparser
 import numpy as np
 from world.math.quaternions import *
+from world.physics.index import State, Control
 from FSW.controllers.detumbling_controller import *
 
 class Controller:
-    def __init__(self, config, Idx) -> None:
+    def __init__(self, config) -> None:
         self.config = config
         self.pointing_mode    = config["mission"]["pointing_mode"]
         self.controller_algo  = config["controller"]["algorithm"]
@@ -13,7 +14,7 @@ class Controller:
         self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
         self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
-        self.allocation_mat = np.zeros((Idx["NU"],3))
+        self.allocation_mat = np.zeros((Control.NU, 3))
        
     def _load_gains(self):
         gains = {}
@@ -63,8 +64,8 @@ class Controller:
     def get_torque(self, date, ref_torque, ref_ctrl_states, est_ctrl_states):
         # from the reference and estimated quaternions, get the error quaternion for control
         if self.controller_algo == "Bcross":
-            Re2b = quatrotation(est_ctrl_states[self.Idx["X"]["QUAT"]]).T
-            bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+            Re2b = quatrotation(est_ctrl_states[State.QUAT]).T
+            bfMAG_FIELD = Re2b @ est_ctrl_states[State.MAG_FIELD]
             return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, est_ctrl_states[10:13], est_ctrl_states[10:13])
             
         q_ref = ref_ctrl_states[:4]
@@ -75,14 +76,14 @@ class Controller:
         torque = ref_torque + self.feedback_gains @ err_vec
         return torque
     
-    def allocate_torque(self, state, torque_cmd, Idx):
+    def allocate_torque(self, state, torque_cmd):
         # Placeholder for actuator management
         # if torque = B @ actuator_cmd
         # actuator_cmd = Binv @ torque_cmd
         
-        B_mat = np.zeros((3, Idx["NU"]))
-        B_mat[:,Idx["U"]["RW_TORQUE"]]  = self.G_rw_b.T
-        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b
+        B_mat = np.zeros((3, Control.NU))
+        B_mat[:, Control.RW_TORQUE]  = self.G_rw_b.T
+        B_mat[:, Control.MTB_TORQUE] = crossproduct(state[State.MAG_FIELD])  @ self.G_mtb_b
         
         self.allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
         # np.linalg.pinv(B_mat)
@@ -94,7 +95,7 @@ class Controller:
         actuator_cmd = self.allocation_mat @ torque_cmd
         return actuator_cmd
     
-    def run(self, date, est_world_states, Idx):
+    def run(self, date, est_world_states):
         
         self.est_world_states = est_world_states
         # define slew profile
@@ -103,7 +104,7 @@ class Controller:
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states)
         
         # actuator management function
-        actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
+        actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd)
                 
         return actuator_cmd
         
