@@ -9,6 +9,7 @@ from brahe.constants import R_EARTH
 
 from world.math.time import increment_epoch
 from world.math.transforms import update_brahe_data_files
+from world.physics.orbital_dynamics import f
 from sensors.mock_vision_model import Camera, MockVisionModel
 from nonlinear_least_squares_od import OrbitDetermination
 
@@ -93,7 +94,7 @@ def test_od():
 
     epoch = starting_epoch
     for t in range(0, N - 1):
-        states[t + 1, :] = od.f(states[t, :], epoch)
+        states[t + 1, :] = f(states[t, :], od.dt)
 
         if t % 60 == 0:  # take a set of measurements every minute, starting at the first iteration
             measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
@@ -105,7 +106,7 @@ def test_od():
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
 
-    estimated_states = od.fit_orbit(starting_epoch, times, landmarks, pixel_coordinates, cubesat_attitudes)
+    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes)
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
     rms_position_error = np.sqrt(np.sum(position_errors ** 2))
     print(f"RMS position error: {rms_position_error}")
