@@ -14,8 +14,6 @@ camera_params = config["satellite"]["camera"]
 N = 100
 cubesat_pos_in_ecef = np.array([0.0, 0.0, -1.1*R])
 cubesat_att_in_ecef = np.array([1.0, 0.0, 0.0, 0.0])
-camera_pos_in_cubesat = np.zeros(3)
-camera_att_in_cubesat = np.array([1.0, 0.0, 0.0, 0.0])
 pixel_noise_mean = np.zeros(2)
 pixel_noise_std_dev = np.array([10.0, 10.0 * camera_params["image_height"] / camera_params["image_width"]])
 
