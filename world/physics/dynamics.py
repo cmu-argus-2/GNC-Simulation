@@ -13,19 +13,18 @@ from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
 from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
 
-"""
-    CLASS DYNAMICS
-    Defines and stores the true world state (w*) over time
-"""
-
 
 class Dynamics:
     """
-    INIT
-    1. config - instance of class Config containing simulation parameters for the current simulation
+        CLASS DYNAMICS
+        Defines and stores the true world state (w*) over time
     """
 
     def __init__(self, config, Idx) -> None:
+        """
+        INIT
+        1. config - instance of class Config containing simulation parameters for the current simulation
+        """
         self.config = config
 
         # Update all brahe data files
@@ -115,18 +114,17 @@ class Dynamics:
         # self.Idx["NY"]
         # self.Idx["Y"]
 
-    """
-        FUNCTION UPDATE
-        Updates the satellite state and stores the updated state within self.state
-
-        INPUTS:
-            1. Control vector as: [ω_rw ...., τ_rw, ..., τ_mtb]
-        
-        OUTPUTS
-            None
-    """
-
     def update(self, input):
+        """
+            FUNCTION UPDATE
+            Updates the satellite state and stores the updated state within self.state
+
+            INPUTS:
+                1. Control vector as: [ω_rw ...., τ_rw, ..., τ_mtb]
+
+            OUTPUTS
+                None
+        """
         self.state = RK4(
             self.state,
             input,
@@ -144,20 +142,19 @@ class Dynamics:
             )
         )
 
-    """
-        FUNCTION STATE_DERIVATIVE
-        Forms the state derivative vector at the current timestep
-        Having this as a separate function allows us to call RK4 on this function directly
-
-        INPUTS:
-            1. current state vector 
-            2. Control vector as: [ω_rw ...., τ_rw, ..., τ_mtb, ...]
-        
-        OUTPUTS:
-            1. state derivative at current timestep
-    """
-
     def state_derivative(self, state, input):
+        """
+            FUNCTION STATE_DERIVATIVE
+            Forms the state derivative vector at the current timestep
+            Having this as a separate function allows us to call RK4 on this function directly
+
+            INPUTS:
+                1. current state vector
+                2. Control vector as: [ω_rw ...., τ_rw, ..., τ_mtb, ...]
+
+            OUTPUTS:
+                1. state derivative at current timestep
+        """
         wdot = np.zeros_like(self.state)
 
         wdot[self.Idx["X"]["ECI_POS"]] = state[self.Idx["X"]["ECI_VEL"]]  # rdot = v

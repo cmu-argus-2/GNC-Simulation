@@ -4,30 +4,29 @@ import brahe
 from brahe.epoch import Epoch
 import pyIGRF
 
-"""
-    CLASS MAGNETICFIELD
-
-    Uses the IGRF model to compute the magnetic field vector any any given position
-"""
-
 
 class MagneticField:
+    """
+        CLASS MAGNETICFIELD
+
+        Uses the IGRF model to compute the magnetic field vector any any given position
+    """
+
     def __init__(self) -> None:
         pass
 
-    """
-        FUNCTION FIELD
-        Computes the magnetic field vector in ECI frame given the satellite position and date
-
-        INPUTS:
-            1. r - satellite position in ECI frame [UNITS: m]
-            2. epc - current Epoch as an instance of brahe's Epoch
-
-        OUTPUTS:
-            1. B - mangetic field vector in ECI frame [UNITS: T]
-    """
-
     def field(self, r: np.ndarray, epc: Epoch):
+        """
+            FUNCTION FIELD
+            Computes the magnetic field vector in ECI frame given the satellite position and date
+
+            INPUTS:
+                1. r - satellite position in ECI frame [UNITS: m]
+                2. epc - current Epoch as an instance of brahe's Epoch
+
+            OUTPUTS:
+                1. B - mangetic field vector in ECI frame [UNITS: T]
+        """
         R_ECI2ECEF = brahe.frames.rECItoECEF(epc)
         r_ecef = R_ECI2ECEF @ r
         longitude, latitude, altitude = brahe.coordinates.sECEFtoGEOC(r_ecef, True)
