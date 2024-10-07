@@ -2,15 +2,15 @@ import numpy as np
 
 
 class ReactionWheel:
-    def __init__(self, config):
+    def __init__(self, config, IdRw):
         """
         Initialize the ReactionWheel with maximum torque and speed.
 
         :param max_torque: Maximum torque the reaction wheel can provide (Nm)
         :param max_speed: Maximum speed the reaction wheel can spin (rad/s)
         """
-        self.G_rw_b = np.array(config["satellite"]["rw_orientation"]).T
-        self.N_rw = self.G_rw_b.shape[1]
+        self.G_rw_b = np.array(config["satellite"]["rw_orientation"][IdRw]).T
+        self.N_rw = np.array(config["satellite"]["rw_orientation"]).shape[0]
         self.I_rw = np.array(config["satellite"]["I_rw"])
         self.max_torque = config["satellite"]["max_torque"]
         self.max_speed = config["satellite"]["max_speed"]

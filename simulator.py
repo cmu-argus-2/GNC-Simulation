@@ -84,7 +84,7 @@ class Simulator:
             # self.control_inputs = self.controller(self.date, self.measurement)
             est_world_states = self.estimator.run(self.date, self.measurement, self.world_state)
             
-            actuator_cmd = self.controller.run(self.date, est_world_states)
+            actuator_cmd = self.controller.run(self.date, est_world_states, self.Idx)
 
             # Pedro: may want to rename dynamics to world. It will include the propagation of 
             # actuator states (rw speed, motor time constant, ...)
@@ -93,7 +93,7 @@ class Simulator:
             self.date += (1 / self.update_rate) / (
                 24 * 60 * 60
             )  # 1 second into Julian date conversion
-            print(self.date, self.world_state)
+            print(f"{self.date:.2f}", np.round(self.world_state, 2))
 
 
 if __name__ == "__main__":
