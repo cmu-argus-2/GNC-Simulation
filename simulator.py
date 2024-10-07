@@ -8,12 +8,13 @@ from world.physics.dynamics import Dynamics
 from FSW.controllers.controller import Controller
 from FSW.estimators.estimator import Estimator
 
-"""
-    CLASS MANAGER
-    Master class that controls the entire simulation
-"""
 
 class Simulator:
+    """
+        CLASS MANAGER
+        Master class that controls the entire simulation
+    """
+
     def __init__(self) -> None:
         self.load_config()
 
@@ -45,35 +46,33 @@ class Simulator:
         
         self.date = self.config["mission"]["start_date"]
 
-    """
-        FUNCTION LOAD_CONFIG
-        Loads the config file as a dictionary into this class
-
-        INPUTS:
-            None
-        
-        OUTPUTS:
-            None
-    """
-
     def load_config(self):
+        """
+            FUNCTION LOAD_CONFIG
+            Loads the config file as a dictionary into this class
+
+            INPUTS:
+                None
+
+            OUTPUTS:
+                None
+        """
         # Read the YAML file and parse it into a dictioanry
         self.config_file = "config.yaml"
         with open(self.config_file, "r") as f:
             self.config = yaml.safe_load(f)
 
-    """
-        FUNCTION RUN
-        Runs the simulation until a termination is reached
-
-        INPUTS:
-            None
-
-        OUTPUTS:
-            None
-    """
-
     def run(self):
+        """
+            FUNCTION RUN
+            Runs the simulation until a termination is reached
+
+            INPUTS:
+                None
+
+            OUTPUTS:
+                None
+        """
         while self.date - self.config["mission"]["start_date"] <= self.config[
             "mission"
         ]["duration"] / (24 * 60 * 60):

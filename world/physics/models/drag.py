@@ -7,45 +7,43 @@ from brahe.epoch import Epoch
 from world.math.quaternions import quatrotation
 
 
-"""
-    CLASS DRAG
-
-    Computes drag induced acceleration in orbit
-    Accesses the Harris-Priester model for density data
-"""
-
-
 class Drag:
+    """
+        CLASS DRAG
+
+        Computes drag induced acceleration in orbit
+        Accesses the Harris-Priester model for density data
+    """
+
     def __init__(self, harris_priester_density_file) -> None:
         self.hp_data = np.genfromtxt(harris_priester_density_file, delimiter=",")
 
         # Earth angular rotation in ECEF frame
         self.OMEGA_VECTOR = np.array([0.0, 0.0, brahe.OMEGA_EARTH])
 
-    """
-        FUNCTION ACCELERATION
-
-        Computes the drag acceleration using the Harris-Priester density model
-        NOTE : Drag does not seem to have a python version in brahe
-               This file has been translated from the rust script (https://github.com/duncaneddy/brahe/blob/main/src/orbit_dynamics/drag.rs)
-               Reference calculation : Satellite Orbits, Montenbruck & Gill Pg 89
-
-        INPUTS:
-            1. r - satellite position in ECI frame [UNITS : m]
-            2. q - quaternion representing rotation from satellite body frame to ECI
-            3. v - satellite velocity in ECI frame [UNITS: m/s]
-            4. epc - current Epoch as an instance of brahe's Epoch class
-            4. satellite - dictionary containing mass and area properties of the satellite
-
-        OUTPUTS:
-            1. a - drag-induced acceleration vector in ECI frame (m/s^2)
-        
-        TODO: Account for changing area due to attitude
-    """
-
     def acceleration(
         self, r: np.ndarray, v: np.ndarray, q: np.ndarray, epc: Epoch, satellite: dict
     ):
+        """
+            FUNCTION ACCELERATION
+
+            Computes the drag acceleration using the Harris-Priester density model
+            NOTE : Drag does not seem to have a python version in brahe
+                   This file has been translated from the rust script (https://github.com/duncaneddy/brahe/blob/main/src/orbit_dynamics/drag.rs)
+                   Reference calculation : Satellite Orbits, Montenbruck & Gill Pg 89
+
+            INPUTS:
+                1. r - satellite position in ECI frame [UNITS : m]
+                2. q - quaternion representing rotation from satellite body frame to ECI
+                3. v - satellite velocity in ECI frame [UNITS: m/s]
+                4. epc - current Epoch as an instance of brahe's Epoch class
+                4. satellite - dictionary containing mass and area properties of the satellite
+
+            OUTPUTS:
+                1. a - drag-induced acceleration vector in ECI frame (m/s^2)
+
+            TODO: Account for changing area due to attitude
+        """
         R_ECI2ECEF = brahe.frames.rECItoECEF(epc)
         r_ecef = R_ECI2ECEF @ r
         v_ecef = R_ECI2ECEF @ v
@@ -72,21 +70,20 @@ class Drag:
 
         return R_ECI2ECEF.T @ a
 
-    """
-        FUNCTION HARRIS_PRIESTER
-        
-        Calculates the atmospheric density at a given altitude and solar flux
-
-        INPUTS:
-            1. r - satellite position in ECI frame
-            2. R - rotation matrix from ECI to ECEF frame
-            2. epc - current Epoch as an instance of brahe's Epoch class
-
-        OUTPUTS:
-            1. density - atmospheric density at current satellite position [UNITS: kg/m^3]
-    """
-
     def harris_priester(self, r: np.ndarray, R: np.ndarray, epc: Epoch):
+        """
+            FUNCTION HARRIS_PRIESTER
+
+            Calculates the atmospheric density at a given altitude and solar flux
+
+            INPUTS:
+                1. r - satellite position in ECI frame
+                2. R - rotation matrix from ECI to ECEF frame
+                2. epc - current Epoch as an instance of brahe's Epoch class
+
+            OUTPUTS:
+                1. density - atmospheric density at current satellite position [UNITS: kg/m^3]
+        """
         HP_UPPER_LIMIT = 1000.0
         HP_LOWER_LIMIT = 100.0
 
@@ -141,19 +138,18 @@ class Drag:
         # Convert from g/km^3 to kg/m^3
         return density * 1.0e-12
 
-    """
-        FUNCTION FRONTAL_AREA_FACTOR
-        Computes the frontal area in the direction of the velocity vector
-
-        INPUTS:
-            1. q - quaternion attitude from Body frame to ECI
-            2. v - velocity vector in ECI
-        
-        OUTPUTS
-            1. k - frontal area factor for drag calculations
-    """
-
     def frontal_area(self, q: np.ndarray, v: np.ndarray):
+        """
+            FUNCTION FRONTAL_AREA_FACTOR
+            Computes the frontal area in the direction of the velocity vector
+
+            INPUTS:
+                1. q - quaternion attitude from Body frame to ECI
+                2. v - velocity vector in ECI
+
+            OUTPUTS
+                1. k - frontal area factor for drag calculations
+        """
         R_BtoECI = quatrotation(q)
 
         k = (
