@@ -108,6 +108,8 @@ class Controller:
         
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
+ 
                 
         return actuator_cmd
+
         

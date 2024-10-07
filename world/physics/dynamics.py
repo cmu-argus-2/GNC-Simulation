@@ -194,7 +194,10 @@ class Dynamics:
         Re2b = quatrotation(state[self.Idx["X"]["QUAT"]]).T
         bfMAG_FIELD = Re2b @ self.state[self.Idx["X"]["MAG_FIELD"]] # convert ECI MAG FIELD 2 body frame
         for i, mtb in enumerate(self.Magnetorquers):
-            tau_mtb += crossproduct(input[self.Idx["U"]["MTB_TORQUE"]][i] * mtb.G_mtb_b) @ bfMAG_FIELD
+            # used 
+            Vi = mtb.convert_dipole_moment_to_voltage(input[self.Idx["U"]["MTB_TORQUE"]][i])
+            mtb_moment = mtb.convert_voltage_to_dipole_moment(Vi)
+            tau_mtb += crossproduct(mtb_moment * mtb.G_mtb_b) @ bfMAG_FIELD
             # mtb.get_torque(input[self.Idx["U"]["MTB_TORQUE"]][i], bfMAG_FIELD)
         # self.Magnetorquer.get_torque(self, state, Idx)
         

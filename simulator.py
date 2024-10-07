@@ -106,6 +106,9 @@ class Simulator:
             
             Results["WorldStates"][i, :] = self.world_state
             Results["ControlInputs"][i, :] = actuator_cmd[:, 0]
+            # self.world.Magnetorquers.get_power 
+            # self.world.ReactionWheels
+            # Results["PowerConsumption"][i] = self.actuation.get_power_consumption()
         
         return Results
 

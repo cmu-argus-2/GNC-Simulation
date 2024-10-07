@@ -32,7 +32,7 @@ mission:
       # initial state properties
       initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
       initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
-      initial_angular_rate : [0.0, 10.0, 0.0] # [deg/s]
+      initial_angular_rate : [0.0, 60.0, 0.0] # [deg/s]
       initial_rw_speed : [100.0]
       # Mode management
       pointing_mode: "detumble" # "Nadir" or "Sun" or "detumble" or "spin-stabilized"
