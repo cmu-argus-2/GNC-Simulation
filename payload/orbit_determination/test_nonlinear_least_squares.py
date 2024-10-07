@@ -24,8 +24,8 @@ def load_config() -> dict[str, Any]:
         config = yaml.safe_load(f)
 
     # decrease world update rate since we only care about position dynamics
-    config["solver"]["world_update_rate"] = 1  # Hz
-    config["mission"]["duration"] = 3 * 90 * 60  # s, roughly 3 orbits
+    config["solver"]["world_update_rate"] = 1 / 60  # Hz
+    config["mission"]["duration"] = 90 * 60  # s, roughly 1 orbit
 
     return config
 
@@ -87,7 +87,7 @@ def test_od():
     states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
 
     # set up arrays to store measurements
-    times = np.array([], dtype=int)  # every minute
+    times = np.array([], dtype=int)
     cubesat_attitudes = np.zeros(shape=(0, 4))
     pixel_coordinates = np.zeros(shape=(0, 2))
     landmarks = np.zeros(shape=(0, 3))
@@ -96,7 +96,7 @@ def test_od():
     for t in range(0, N - 1):
         states[t + 1, :] = f(states[t, :], od.dt)
 
-        if t % 60 == 0:  # take a set of measurements every minute, starting at the first iteration
+        if t % 5 == 0:  # take a set of measurements every 5 minutes
             measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
                 get_measurement_info(epoch, states[t, :], mock_vision_model)
             times = np.concatenate((times, np.repeat(t, measurement_cubesat_attitudes.shape[0])))
