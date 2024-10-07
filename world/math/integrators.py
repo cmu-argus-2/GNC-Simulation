@@ -1,16 +1,14 @@
-"""
-Runge-Kutta 4th Order integration
-Accepts the state transition function and current state to compute the next state
-
-INPUTS:
-    1. x - current state vector
-    2. u - current input
-    3. f - state transition function xdot = f(x,u)
-    4. sim_params - instance of class SimSetup and contains timestepping parameters
-"""
-
-
 def RK4(x, u, f, solver_timestep):
+    """
+    Runge-Kutta 4th Order integration
+    Accepts the state transition function and current state to compute the next state
+
+    INPUTS:
+        1. x - current state vector
+        2. u - current input
+        3. f - state transition function xdot = f(x,u)
+        4. sim_params - instance of class SimSetup and contains timestepping parameters
+    """
     h = solver_timestep
 
     # Deviations
