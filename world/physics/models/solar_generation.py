@@ -52,7 +52,7 @@ class SolarGeneration:
         :return: A boolean array of shape (n,) indicating whether the corresponding rays intersect the surface.
         """
         cos_theta = np.dot(surface.normal, ray_dir)
-        if cos_theta < 1e-3:
+        if np.abs(cos_theta) < 1e-3:
             # The rays are parallel to the surface.
             return np.zeros(ray_starts.shape[0], dtype=bool)
 
