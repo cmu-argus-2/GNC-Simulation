@@ -65,22 +65,30 @@ class SolarGeneration:
         return (ts > 0) & (np.abs(xs) <= surface.width / 2) & (np.abs(ys) <= surface.height / 2)
 
     @staticmethod
-    def in_earths_shadow(position_eci: np.ndarray, sun_vector_eci: np.ndarray) -> bool:
+    def in_earths_shadow(position_eci: np.ndarray, sun_dir_eci: np.ndarray) -> bool:
         """
         Check if the satellite is in the Earth's shadow.
 
         :param position_eci: The position of the satellite in ECI.
-        :param sun_vector_eci: The sun vector in the ECI frame.
+        :param sun_dir_eci: A unit vector pointing from the Earth to the Sun in ECI.
         :return: True if the satellite is in the Earth's shadow, False otherwise.
         """
-        a = np.dot(sun_vector_eci, sun_vector_eci)
+        """
+        We want to find if there exists a non-negative t such that ||position_eci + t * sun_vector_eci||^2 <= R_EARTH^2.
+        This simplifies to finding a non-negative value of t such that f(t) = a * t^2 + b * t + c <= 0, where:
+        a = np.dot(sun_vector_eci, sun_vector_eci) = 1, since sun_vector_eci is a unit vector.
         b = 2 * np.dot(position_eci, sun_vector_eci)
+        c = np.dot(position_eci, position_eci) - R_EARTH^2 > 0, since the satellite is outside the Earth.
+        For f(t) <= 0, we need the discriminant to be non-negative (i.e., b^2 - 4 * a * c >= 0).
+        Moreover, we need f'(0) = b < 0, so that the minimum of the parabola is in the t >= 0 region.
+        The condition on b also has a geometric interpretation: b = 2 * np.dot(position_eci, sun_vector_eci) >= 0 means
+        that the satellite is on the side of the Earth facing the Sun, so it cannot be in the Earth's shadow. 
+        """
+        b = 2 * np.dot(position_eci, sun_dir_eci)
+        if b >= 0:
+            return False
         c = np.dot(position_eci, position_eci) - R_EARTH ** 2
-        """
-        We want to find if there exists a t such that ||position_eci + t * sun_vector_eci||^2 <= R_EARTH^2.
-        This simplifies to a * t^2 + b * t + c <= 0, which is true if and only if the discriminant is non-negative.
-        """
-        return b ** 2 - 4 * a * c >= 0
+        return b ** 2 - 4 * c >= 0
 
     def get_power_output(self, epoch: Epoch, position_eci: np.ndarray, R_body_to_eci: np.ndarray) -> float:
         """
@@ -91,17 +99,18 @@ class SolarGeneration:
         :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame.
         :return: The power output of the solar panels, in Watts.
         """
-        sun_vector_eci = brahe.ephemerides.sun_position(epoch)
-        if SolarGeneration.in_earths_shadow(position_eci, sun_vector_eci):
+        sun_dir_eci = brahe.ephemerides.sun_position(epoch)
+        sun_dir_eci /= np.linalg.norm(sun_dir_eci)
+        if SolarGeneration.in_earths_shadow(position_eci, sun_dir_eci):
             return 0
 
-        sun_vector_body = R_body_to_eci.T @ sun_vector_eci
+        sun_dir_body = R_body_to_eci.T @ sun_dir_eci
         power_output = 0
         for i, surface in enumerate(self.surfaces):
             if not surface.is_solar_panel:
                 continue
 
-            cos_theta = np.dot(surface.normal, sun_vector_body)
+            cos_theta = np.dot(surface.normal, sun_dir_body)
             if cos_theta < 0:
                 continue  # The surface is facing away from the sun.
 
@@ -121,7 +130,7 @@ class SolarGeneration:
                     continue
                 # TODO: there are probably some simple heuristics we can use to skip some surfaces
 
-                occluded_rays |= SolarGeneration.get_intersections(other_surface, ray_starts, sun_vector_body)
+                occluded_rays |= SolarGeneration.get_intersections(other_surface, ray_starts, sun_dir_body)
 
             # Calculate the power output
             exposed_area = np.mean(~occluded_rays) * surface.width * surface.height
