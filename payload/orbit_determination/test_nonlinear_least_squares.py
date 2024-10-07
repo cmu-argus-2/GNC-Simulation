@@ -85,6 +85,7 @@ def test_od():
     N = int(np.ceil(config["mission"]["duration"] * config["solver"]["world_update_rate"]))
     states = np.zeros((N, 6))
     states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
+    epoch = starting_epoch
 
     # set up arrays to store measurements
     times = np.array([], dtype=int)
@@ -92,19 +93,30 @@ def test_od():
     pixel_coordinates = np.zeros(shape=(0, 2))
     landmarks = np.zeros(shape=(0, 3))
 
-    epoch = starting_epoch
+    def take_measurement(t_idx: int) -> None:
+        """
+        Take a set of measurements at the given time index.
+        Reads from the states, epoch, and mock_vision_model variables in the outer scope.
+        Appends to the times, cubesat_attitudes, pixel_coordinates, and landmarks arrays in the outer scope.
+
+        :param t_idx: The time index at which to take the measurements.
+        """
+        nonlocal times, cubesat_attitudes, pixel_coordinates, landmarks
+        measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
+            get_measurement_info(epoch, states[t_idx, :], mock_vision_model)
+        times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
+        cubesat_attitudes = np.vstack((cubesat_attitudes, measurement_cubesat_attitudes))
+        pixel_coordinates = np.vstack((pixel_coordinates, measurement_pixel_coordinates))
+        landmarks = np.vstack((landmarks, measurement_landmarks))
+
     for t in range(0, N - 1):
         states[t + 1, :] = f(states[t, :], od.dt)
 
         if t % 5 == 0:  # take a set of measurements every 5 minutes
-            measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
-                get_measurement_info(epoch, states[t, :], mock_vision_model)
-            times = np.concatenate((times, np.repeat(t, measurement_cubesat_attitudes.shape[0])))
-            cubesat_attitudes = np.vstack((cubesat_attitudes, measurement_cubesat_attitudes))
-            pixel_coordinates = np.vstack((pixel_coordinates, measurement_pixel_coordinates))
-            landmarks = np.vstack((landmarks, measurement_landmarks))
+            take_measurement(t)
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
+    take_measurement(N - 1)  # take a measurement at the last timestep so that estimated_states.shape[0] == N
 
     estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes)
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
