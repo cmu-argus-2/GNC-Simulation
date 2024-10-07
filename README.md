@@ -7,6 +7,9 @@ Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used 
 ## SPICE data download
 - use build_sim_debug.sh to download all necessary SPICE kernel files during build
 
+## venv
+- `python3 -m venv .venv --system-site-packages`
+
 ## Build Instructions
 - `git submodule update --recursive --init `
 - `mkdir build`
