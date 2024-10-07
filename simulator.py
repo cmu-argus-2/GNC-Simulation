@@ -93,7 +93,7 @@ class Simulator:
             self.date += (1 / self.update_rate) / (
                 24 * 60 * 60
             )  # 1 second into Julian date conversion
-            print(self.date, self.world_state)
+            print(f"{self.date:.2f}", np.round(self.world_state, 2))
 
 
 if __name__ == "__main__":
