@@ -31,12 +31,15 @@ class SolarGeneration:
     PANEL_EFFICIENCY = 0.2  # The efficiency of the solar panels, as a fraction in [0, 1].
 
     def __init__(self, config: dict) -> None:
-        self.surfaces = self.parse_config(config)
+        self.surfaces = SolarGeneration.parse_solar_config(config["satellite"]["solar"])
         self.sample_resolution = 0.05  # The resolution of the occlusion sampling grid, in meters.
 
     @staticmethod
-    def parse_config(config: dict) -> list[Surface]:
-        pass
+    def parse_solar_config(surfaces: list[dict[str, bool | list[float] | float]]) -> list[Surface]:
+        def to_np(surface: dict[str, bool | list[float] | float]) -> dict[str, bool | np.ndarray | float]:
+            return {key: np.array(value) if isinstance(value, list) else value
+                    for key, value in surface.items()}
+        return [Surface(**to_np(surface)) for surface in surfaces]
 
     @staticmethod
     def get_intersections(surface: Surface, ray_starts: np.ndarray, ray_dir: np.ndarray) -> np.ndarray:
