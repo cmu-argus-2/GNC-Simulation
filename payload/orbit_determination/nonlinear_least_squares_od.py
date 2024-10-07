@@ -90,24 +90,22 @@ class OrbitDetermination:
             Compute the residuals of the non-linear least squares problem.
 
             :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
-            :return: A numpy array of shape (3 * (N - 1) + 3 * len(times),) containing the residuals.
+            :return: A numpy array of shape (6 * (N - 1) + 3 * len(times),) containing the residuals.
             """
             states = X.reshape(-1, 6)
-            positions = states[:, :3]
-
-            res = np.zeros(3 * (N - 1) + 3 * len(times))
+            res = np.zeros(6 * (N - 1) + 3 * len(times))
 
             # dynamics residuals
             epoch = starting_epoch
             for i in range(N - 1):
-                res[3 * i:3 * (i + 1)] = positions[i + 1] - self.f(states[i, :], epoch)[:3]
+                res[6 * i:6 * (i + 1)] = states[i + 1, :] - self.f(states[i, :], epoch)
                 epoch = increment_epoch(epoch, self.dt)
 
             # measurement residuals
             for i, (time, landmark, eci_to_camera_rotation) in enumerate(zip(times, landmarks, eci_to_camera_rotations)):
-                cubesat_position = positions[time]
+                cubesat_position = states[time, :3]
                 predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)  # in camera frame
-                res[3 * (N - 1) + 3 * i:3 * (N - 1) + 3 * (i + 1)] = bearing_unit_vectors[i] - predicted_bearing / np.linalg.norm(predicted_bearing)
+                res[6 * (N - 1) + 3 * i:6 * (N - 1) + 3 * (i + 1)] = bearing_unit_vectors[i] - predicted_bearing / np.linalg.norm(predicted_bearing)
 
             return res
 
