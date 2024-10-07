@@ -62,7 +62,7 @@ class SolarGeneration:
         xs = intersection_point_offsets @ surface.x_dir
         ys = intersection_point_offsets @ surface.y_dir
 
-        return ts > 0 & (np.abs(xs) <= surface.width / 2) & (np.abs(ys) <= surface.height / 2)
+        return (ts > 0) & (np.abs(xs) <= surface.width / 2) & (np.abs(ys) <= surface.height / 2)
 
     @staticmethod
     def in_earths_shadow(position_eci: np.ndarray, sun_vector_eci: np.ndarray) -> bool:
