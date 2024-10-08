@@ -41,7 +41,15 @@ class MontecarloPlots:
 
         # ==========================================================================
         XYZt = itm.figure()
+
         ground_track = itm.figure()
+        m = Basemap()  # cylindrical projection by default
+        m.bluemarble(scale=0.1, alpha=0.4)
+        m.drawcoastlines(linewidth=0.5)
+        m.fillcontinents(color="0.8")
+        m.drawparallels(np.arange(-90, 90, 15), linewidth=0.2, labels=[1, 1, 0, 0])
+        m.drawmeridians(np.arange(-180, 180, 30), linewidth=0.2, labels=[0, 0, 0, 1])
+
         for i, trial_number in enumerate(self.trials):
             itm.figure(XYZt)
 
@@ -59,15 +67,9 @@ class MontecarloPlots:
 
             # https://matplotlib.org/basemap/stable/users/examples.html
             itm.figure(ground_track)
-            # create Basemap instance.
-            m = Basemap(llcrnrlon=-180, llcrnrlat=-90, urcrnrlon=180, urcrnrlat=90, projection="mill")
-            m.drawcoastlines(linewidth=0.5)
-            m.fillcontinents(color="0.9")
-            m.drawparallels(np.arange(-90, 90, 15), linewidth=0.2, labels=[1, 1, 0, 0])
-            m.drawmeridians(np.arange(-180, 180, 30), linewidth=0.2, labels=[0, 0, 0, 1])
             m.scatter(lon, lat, s=0.1, label=f"_{trial_number}", latlon=True)
-            m.scatter(lon[0], lat[0], marker="*", color="green", label="Start", latlon=True)
-            m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End", latlon=True)
+            m.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
+            m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
         itm.figure(XYZt)
         annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["x", "y", "z"])
         save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
