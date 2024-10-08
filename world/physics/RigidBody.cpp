@@ -2,9 +2,6 @@
 
 #include "gravity.h"
 #include "math/EigenWrapper.h"
-#include "utils_and_transforms.h"
-#include <iostream>
-#include "SRP.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -50,18 +47,17 @@ void RigidBody::clearAppliedForcesAndMoments() {
 
 StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
               const Matrix_3x3& InertiaTensorInverse, double mass) {
-    StateVector xdot;   // derivative of the state vector
+    StateVector xdot = StateVector::Zero();   // derivative of the state vector
 
     // aliases for brevity
-
-    auto r     = ::get_pos_b_wrt_g_in_g(x);
-    auto v     = ::get_vel_b_wrt_g_in_b(x);
-    auto q     = ::get_g_q_b(x);
-    auto f_b   = ::get_net_force_b(u);
-    auto J     = InertiaTensor;
-    auto Jinv  = InertiaTensorInverse;
-    auto tau_b = ::get_net_moment_b(u);
-    auto w     = ::get_omega_b_wrt_g_in_b(x);
+    auto r           = ::get_pos_b_wrt_g_in_g(x);
+    auto v_b         = ::get_vel_b_wrt_g_in_b(x);
+    auto q           = ::get_g_q_b(x);
+    auto f_b         = ::get_net_force_b(u);
+    const auto& J    = InertiaTensor;
+    const auto& Jinv = InertiaTensorInverse;
+    auto tau_b       = ::get_net_moment_b(u);
+    auto w           = ::get_omega_b_wrt_g_in_b(x);
 
     Matrix_4x4 L = Matrix_4x4::Zero();
     L << q.w(), -q.x(), -q.y(), -q.z(),   //
@@ -74,16 +70,13 @@ StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaT
     H(2, 1)      = 1;
     H(3, 2)      = 1;
 
-    // https://en.wikipedia.org/wiki/Standard_gravitational_parameter
-    // double mu           = 3.986004418e14;
-    // Vector3 gravity_g   = -((mu / r.stableNorm()) / r.stableNorm()) * r.stableNormalized();
     Vector3 gravity_g   = gravitational_acceleration(r);
     Vector3 gravity_b   = q.inverse() * gravity_g;
-    Vector3 rdot        = q * v;
+    Vector3 rdot        = q * v_b;
     auto G              = L * H;
     Vector4 qdot_coeffs = 0.5 * G * w;
     Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
-    Vector3 vdot = gravity_b + f_b / mass - w.cross(v);
+    Vector3 vdot = gravity_b + f_b / mass - w.cross(v_b);
     Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
 
     // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
