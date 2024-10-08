@@ -1,5 +1,6 @@
 #include "RigidBody.h"
 
+#include "gravity.h"
 #include "math/EigenWrapper.h"
 #include "utils_and_transforms.h"
 #include <iostream>
@@ -74,8 +75,9 @@ StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaT
     H(3, 2)      = 1;
 
     // https://en.wikipedia.org/wiki/Standard_gravitational_parameter
-    double mu           = 3.986004418e14;
-    Vector3 gravity_g   = -((mu / r.stableNorm()) / r.stableNorm()) * r.stableNormalized();
+    // double mu           = 3.986004418e14;
+    // Vector3 gravity_g   = -((mu / r.stableNorm()) / r.stableNorm()) * r.stableNormalized();
+    Vector3 gravity_g   = gravitational_acceleration(r);
     Vector3 gravity_b   = q.inverse() * gravity_g;
     Vector3 rdot        = q * v;
     auto G              = L * H;
