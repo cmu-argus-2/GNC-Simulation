@@ -15,7 +15,7 @@
  * @param m : satellite mass [kg]
  * @return drag acceleration in ECI frame [m/s^2]
  */
-Vector3 drag_acc(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m);
+Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m);
 
 /**
  * @brief Compute atmospheric density at current time

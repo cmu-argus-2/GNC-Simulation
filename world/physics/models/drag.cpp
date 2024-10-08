@@ -6,7 +6,7 @@
 #include "SRP.h"
 
 
-Vector3 drag_acc(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m)
+Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m)
 {
     // Get density
     double rho = density(r, t_J2000);
@@ -79,7 +79,6 @@ double density(Vector3 r, double t_J2000) {
             break;
         }
     }
-    printf("Reached here");
     double alt_MIN = ( Altitudes(ih) - Altitudes(ih+1) )/log( rho_MIN(ih+1)/rho_MIN(ih) );
     double alt_MAX = ( Altitudes(ih) - Altitudes(ih+1) )/log( rho_MAX(ih+1)/rho_MAX(ih) );
 
