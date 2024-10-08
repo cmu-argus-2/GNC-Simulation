@@ -120,31 +120,61 @@ def main():
     period = 2 * np.pi * np.sqrt((R_EARTH + 600e3) ** 3 / GM_EARTH)
     N = 1000
     dt = period / N
-    solar_generation = SolarGeneration(deployables_dir=np.array([0, 0, 1]), deployables_tilt_angle=np.pi / 4)
-    states, generated_power = propagate_orbit_and_solar(get_estimated_orbital_state(initial_epoch), solar_generation,
-                                                        initial_epoch, dt, N)
+
+    def get_power_curve(ltdn: float = 2 * np.pi * (22 / 24),
+                        deployables_dir: np.ndarray = np.array([0, 0, 1]),
+                        deployables_tilt_angle: float = np.pi / 4) -> np.ndarray:
+        """
+        Calculate the generated power of the satellite over the course of one orbit.
+
+        :param ltdn: The local time of day at the descending node. This is constant for a sun-synchronous orbit.
+                     This is represented as a float in the range [0, 2 * np.pi), where 0 corresponds to midnight,
+                     np.pi / 2 corresponds to 6am, np.pi corresponds to noon, and 3 * np.pi / 2 corresponds to 6pm.
+                     The default value is from the most recent SpaceX Transporter launch and corresponds to 10pm.
+        :param deployables_dir: A 3-element numpy array representing the direction of the deployable solar panels.
+                                Must be a unit vector with exactly one non-zero element.
+        :param deployables_tilt_angle: The angle in radians by which the deployable solar panels are tilted.
+                                       See the diagram in SolarGeneration.get_solar_config for the definition of the tilt angle.
+        :return: A numpy array of size (N,) containing the generated power of the satellite at each time step.
+        """
+        solar_generation = SolarGeneration(deployables_dir=deployables_dir,
+                                           deployables_tilt_angle=deployables_tilt_angle)
+        _, generated_power = propagate_orbit_and_solar(get_estimated_orbital_state(initial_epoch, ltdn),
+                                                       solar_generation,
+                                                       initial_epoch, dt, N)
+        return generated_power
 
     plt.figure()
-    plt.plot(np.arange(N) * dt, generated_power)
+    plt.plot(np.arange(N) * dt, get_power_curve())
     plt.xlabel("Time [s]")
     plt.ylabel("Power [W]")
-    plt.title(f"Generated Power vs. Time for LTDN of 10pm, Mean: {np.mean(generated_power):.2f} W")
+    plt.title(f"Generated Power vs. Time for LTDN=10pm and Default Solar Panel Configuration")
     plt.show()
 
     ltdns = np.linspace(0, 2 * np.pi, 96)  # every 15 minutes
-    mean_power = np.zeros_like(ltdns)
-    for i, ltdn in tqdm(enumerate(ltdns)):
-        _, generated_power = propagate_orbit_and_solar(get_estimated_orbital_state(initial_epoch, ltdn),
-                                                       solar_generation, initial_epoch, dt, N)
-        mean_power[i] = np.mean(generated_power)
+    mean_power = [np.mean(get_power_curve(ltdn=ltdn)) for ltdn in tqdm(ltdns)]
 
     plt.figure()
     plt.plot(np.rad2deg(ltdns), mean_power)
     plt.xlabel("Local Time of Descending Node [deg]")
     plt.ylabel("Mean Power [W]")
-    plt.title("Mean Generated Power vs. Local Time of Descending Node")
+    plt.title("Mean Generated Power vs. LTDN for Default Solar Panel Configuration")
     plt.show()
 
+    deployables_tilt_angles = np.linspace(0, np.pi / 2, 10)
+    for deployables_dir in np.row_stack((np.eye(3), -np.eye(3))):
+        print(f"Performing sweep for {deployables_dir=}")
+        mean_power = [np.mean(get_power_curve(deployables_dir=deployables_dir,
+                                              deployables_tilt_angle=deployables_tilt_angle))
+                      for deployables_tilt_angle in tqdm(deployables_tilt_angles)]
+
+        plt.figure()
+        plt.plot(np.rad2deg(deployables_tilt_angles), mean_power)
+        plt.xlabel("Deployables Tilt Angle [deg]")
+        plt.ylabel("Mean Power [W]")
+        plt.title(
+            f"Mean Generated Power vs. Deployables Tilt Angle for LTDN = 10pm and Deployables in {deployables_dir} Direction")
+        plt.show()
 
 
 if __name__ == "__main__":
