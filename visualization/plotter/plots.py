@@ -62,6 +62,7 @@ class MontecarloPlots:
                 seriesLabel=f"_{trial_number}",
             )
 
+            # TODO convert from ECI to ECEF
             lon = np.rad2deg(np.arctan2(y_km, x_km))
             lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
 
