@@ -1,5 +1,6 @@
 from functools import partial
 import yaml
+from tqdm import tqdm
 
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -132,7 +133,7 @@ def main():
 
     ltdns = np.linspace(0, 2 * np.pi, 96)  # every 15 minutes
     mean_power = np.zeros_like(ltdns)
-    for i, ltdn in enumerate(ltdns):
+    for i, ltdn in tqdm(enumerate(ltdns)):
         _, generated_power = propagate_orbit_and_solar(get_estimated_orbital_state(initial_epoch, ltdn),
                                                        solar_generation, initial_epoch, dt, N)
         mean_power[i] = np.mean(generated_power)
