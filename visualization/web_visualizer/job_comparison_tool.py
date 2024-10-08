@@ -5,7 +5,7 @@ from flask import Flask, render_template, abort, send_file, request
 
 app = Flask(__name__)
 
-RESULTS_FOLDER = "../../results"
+RESULTS_FOLDER = "../../montecarlo/results"
 
 
 def get_number_of_trials(job_name):

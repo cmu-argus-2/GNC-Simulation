@@ -1,37 +1,69 @@
 # 3dDynamicsSim
 
-This Repo contians C++ code for simulating the 3d Dynamics of a satellite  in orbit.
+This repo simulates the 3d Dynamics of a satellite in orbit. The core dynamics are comptued and the state is propogated in C++. This is exposed to python via pybind. 
 
-Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
+Credits to Derek Fan for his approach to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
 ## SPICE data download
-- use build_sim_debug.sh to download all necessary SPICE kernel files during build
+Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during build
 
-## venv
-- `python3 -m venv .venv --system-site-packages`
+## Setting Up
+### First time
+1. Run `git submodule update --recursive --init` to set up dependencies
+2. Run `sudo apt install python3-tk -y` to install tkinter
+3. Run `python -m venv .venv --system-site-packages` to create a virtual environment (venv)
+4. Run `source .venv/bin/activate` to activate the venv
+5. Run `pip install -r requirements.txt`
 
-## Build Instructions
-- `git submodule update --recursive --init `
-- `mkdir build`
-- `cd build`
-- `cmake ..`
-- `make`
+### Each time
+1. Run `source .venv/bin/activate` to activate the venv
+2. Once done with devlopment, run `deactivate` to exit the venv
 
 ## Running the sim
-- `cd montecarlo/`
-- Run `python3 run_job.py`
-- Results are written into the `results/` directory
+1. `cd simulation_manager/`
+2. Run `python3 run_job.py`
+3. Results and plots are written into the `results/` directory
  
+## Manual Build Instructions
+Run `./build_sim_debug.sh`
+
 ## Debugging
-- launch.json shows the configurations for debugging python and C++ code.
+Run `launch.json` shows the configurations for debugging python and C++ code.
 
 ## Visualization
-- `cd montecarlo/plots_and_analysis/web_visualizer`
-- `python3 job_comparison_tool.py`
+1. `cd visualization/web_visualizer`
+2. Open a web browser and go to `http://127.0.0.1:5000/`
+3. `python3 job_comparison_tool.py`
 
 ## Tweaking parameters
-- Edit `montecarlo/configs/params.yaml`
+Edit `montecarlo/configs/params.yaml`
 
+## Style Guide
+> [!IMPORTANT]
+> PEP8 formatting rules
 
-# Satellite orbit demo
-There are also 2 files for simulating orbital dynamics in the plane. SatelliteAroudnEarth is exactly what it sounds like. SatelliteAroundEarthAndMoon shows a satellite moving on a trajectory resembling a figure 8 around earth and moon. 
+1. Use <u> ruff </u> to auto-check formatting
+``` pip install ruff ``` or use VSCode Extension
+
+2. Before any function/class definition, provide the following details in a multi-line comment
+```
+    '''
+        FUNCTION <function name>
+
+        <function purpose>
+        
+        INPUTS:
+            <Numbered list of inputs>
+            
+        OUTPUTS:
+            <numbered list of outputs>
+    '''  
+```
+
+3. No Loose functions
+    - All files will have <u> one and only one </u> class definition within them
+    - There will not be any functions not present within a class definition
+    - If it does not make sense to have a class, consider merging the function with its caller
+
+## Code Architecture
+Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simulation-Architecture-10648018d82a80d4a90ce8fb38b47777">here</a>
