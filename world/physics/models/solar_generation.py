@@ -75,8 +75,7 @@ class SolarGeneration:
                                        See the diagram below for the definition of the tilt angle.
         :return: A list of Surface objects representing the configuration of the satellite.
         """
-        assert deployables_dir.shape == (3,), "deployables_dir must be a 3-element numpy array."
-        assert np.sum(np.abs(deployables_dir) == 1) == 1 and np.sum(deployables_dir == 0) == 2, \
+        assert deployables_dir in np.row_stack((np.eye(3), -np.eye(3))), \
             "deployables_dir must be a unit vector with exactly one non-zero element."
 
         R = 0.05  # Half the side length of the cubesat in meters
