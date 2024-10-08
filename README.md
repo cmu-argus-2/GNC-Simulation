@@ -29,6 +29,11 @@ Run `./build_sim_debug.sh`
 
 ## Debugging
 
+### Plot Visualization
+1. `cd visualization/web_visualizer`
+2. Open a web browser and go to `http://127.0.0.1:5000/`
+3. `python3 job_comparison_tool.py`
+
 ### ModuleNotFoundError: No module named XXXX
 Remember to run in a virtual environment
 
@@ -38,10 +43,6 @@ Inspect `montecarlo/results/<JOB_DIRECTORY>/trials/trialX/output.txt`
 ### GDB
 Run `launch.json` shows the configurations for debugging python and C++ code.
 
-## Visualization
-1. `cd visualization/web_visualizer`
-2. Open a web browser and go to `http://127.0.0.1:5000/`
-3. `python3 job_comparison_tool.py`
 
 ## Tweaking parameters
 Edit `montecarlo/configs/params.yaml`
