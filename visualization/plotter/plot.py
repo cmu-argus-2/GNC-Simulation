@@ -1,9 +1,7 @@
-#!/usr/bin/python3
 import inspect
 import traceback
 import numpy as np
 import os
-import sys
 from plots import MontecarloPlots
 from plot_menu import get_user_selections
 from matplotlib import pyplot as plt

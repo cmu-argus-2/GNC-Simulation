@@ -3,7 +3,6 @@ from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParam
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from time import time
-import datetime
 from simulation_manager import logger
 import os
 
@@ -116,30 +115,6 @@ WHITE = "\033[37m"
 RESET = "\033[0m"  # Resets all attributes
 
 if __name__ == "__main__":
-    # REPO_NAME = "GNC-Simulation"
-
-    # # "_rel" postfix indicates a relative filepath
-    # repo_root_rel = "."  # path to "REPO_NAME/"
-
-    # # paths relative to repo_root_rel:
-    # montecarlo_rel = "montecarlo/"
-
-    # # "_abs" suffix indicates an absolute filepath
-    # repo_root_abs = os.path.realpath(repo_root_rel)
-    # results_directory_abs = os.path.join(repo_root_abs, montecarlo_rel, "results/")
-    # os.system(f"mkdir -p {results_directory_abs}")
-    # # ensure repo_root_abs actually points to the REPO_NAME
-    # assert os.path.basename(repo_root_abs) == REPO_NAME
-
-    # # ensure paths exist
-    # assert os.path.exists(repo_root_abs), f"Nonexistent: {repo_root_abs}"
-    # assert os.path.exists(results_directory_abs), f"Nonexistent: {results_directory_abs}"
-
-    # job_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    # print(GREEN + f'job_name:{RESET} "{job_name}"')
-    # job_directory_abs = os.path.join(results_directory_abs, job_name)
-    # os.system(f"mkdir -p {job_directory_abs}")
-
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
     run(TRIAL_DIRECTORY, PARAMETER_FILEPATH)

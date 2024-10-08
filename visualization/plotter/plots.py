@@ -67,7 +67,7 @@ class MontecarloPlots:
 
             # https://matplotlib.org/basemap/stable/users/examples.html
             itm.figure(ground_track)
-            m.scatter(lon, lat, s=0.1, label=f"_{trial_number}", latlon=True)
+            m.scatter(lon, lat, s=0.1, marker=".", label=f"_{trial_number}", latlon=True)
             m.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
             m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
         itm.figure(XYZt)
