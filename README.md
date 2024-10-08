@@ -28,6 +28,14 @@ Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during b
 Run `./build_sim_debug.sh`
 
 ## Debugging
+
+### ModuleNotFoundError: No module named XXXX
+Remember to run in a virtual environment
+
+### Trial X finished with return code: Y
+Inspect `montecarlo/results/<JOB_DIRECTORY>/trials/trialX/output.txt` 
+
+### GDB
 Run `launch.json` shows the configurations for debugging python and C++ code.
 
 ## Visualization
