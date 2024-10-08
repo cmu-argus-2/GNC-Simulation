@@ -48,13 +48,19 @@ Run `launch.json` shows the configurations for debugging python and C++ code.
 Edit `montecarlo/configs/params.yaml`
 
 ## Style Guide
+### C++
+Install the following VSCode extensions:
+1. clangd for powerful C++ intellisense (identifier: `llvm-vs-code-extensions.vscode-clangd`)
+2. doxygen dostring generator (identifier: `cschlosser.doxdocgen`)
+
+### Python
 > [!IMPORTANT]
 > PEP8 formatting rules
 
 1. Use <u> ruff </u> to auto-check formatting
 ``` pip install ruff ``` or use VSCode Extension
 
-2. Before any function/class definition, provide the following details in a multi-line comment
+1. Before any function/class definition, provide the following details in a multi-line comment
 ```
     '''
         FUNCTION <function name>
@@ -69,7 +75,7 @@ Edit `montecarlo/configs/params.yaml`
     '''  
 ```
 
-3. No Loose functions
+1. No Loose functions
     - All files will have <u> one and only one </u> class definition within them
     - There will not be any functions not present within a class definition
     - If it does not make sense to have a class, consider merging the function with its caller
