@@ -62,7 +62,7 @@ class SolarGeneration:
 
     def __init__(self, deployables_dir: np.ndarray, deployables_tilt_angle: float) -> None:
         self.surfaces = SolarGeneration.get_solar_config(deployables_dir, deployables_tilt_angle)
-        self.sample_resolution = 0.05  # The resolution of the occlusion sampling grid, in meters.
+        self.sample_resolution = 0.01  # The resolution of the occlusion sampling grid, in meters.
 
     @staticmethod
     def get_solar_config(deployables_dir: np.ndarray, deployables_tilt_angle: float) -> list[Surface]:
