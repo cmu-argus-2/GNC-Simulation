@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 
-from build.tests.pymodels import magnetic_field_sez, magnetic_field
+from build.tests.pymodels import magnetic_field_sez
 
 import pytest
 import numpy as np
@@ -28,3 +28,6 @@ def test(r, date, truth):
     truth = np.array([-truth[0], truth[1], -truth[2]])
 
     assert np.linalg.norm(field-truth)*1e-9 <= 1e-8 # field error against ground truth <= 10nT
+
+# SEZ to ECEF verified by Wikipedia @ https://en.wikipedia.org/wiki/Geographic_coordinate_conversion#From_geodetic_to_ECEF_coordinates
+# ECEF to ECI using SPICE
