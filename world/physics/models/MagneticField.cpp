@@ -34,9 +34,11 @@ Vector3 MagneticFieldSEZ(Vector3 r_geod, double year)
     if (elong < 0) {elong = elong + 360.0;}
 
     // get magnetic field
+    int isv = 0;
+    int itype = 1;
     double Bn, Be, Bd, Bt;
-    igrf13syn_(0, year, 1, r_geod(2)/1000.0, colat, elong, 
-            &Bn, &Be, &Bd, &Bt);
+    double alt = r_geod(2)/1000.0; 
+    igrf13syn_(&isv, &year, &itype, &alt, &colat, &elong, &Bn, &Be, &Bd, &Bt);
     
     Vector3 B_sez (-Bn, Be, -Bd);
     return B_sez;

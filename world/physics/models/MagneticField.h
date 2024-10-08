@@ -2,7 +2,7 @@
 
 extern "C"
 {
-    extern void igrf13syn_(int, double, int, double, double, double,double*, double*, double*, double*); // Fortran version of IGRF13 model
+    extern void igrf13syn_(int*, double*, int*, double*, double*, double*,double*, double*, double*, double*); // Fortran version of IGRF13 model
 };
 
 /**
