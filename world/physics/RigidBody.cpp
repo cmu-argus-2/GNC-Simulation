@@ -53,6 +53,7 @@ StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaT
 
     // aliases for brevity
 
+    auto r     = ::get_pos_b_wrt_g_in_g(x);
     auto v     = ::get_vel_b_wrt_g_in_b(x);
     auto q     = ::get_g_q_b(x);
     auto f_b   = ::get_net_force_b(u);
@@ -72,12 +73,15 @@ StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaT
     H(2, 1)      = 1;
     H(3, 2)      = 1;
 
-    auto G = L * H;
-
+    // https://en.wikipedia.org/wiki/Standard_gravitational_parameter
+    double mu           = 3.986004418e14;
+    Vector3 gravity_g   = -((mu / r.stableNorm()) / r.stableNorm()) * r.stableNormalized();
+    Vector3 gravity_b   = q.inverse() * gravity_g;
     Vector3 rdot        = q * v;
+    auto G              = L * H;
     Vector4 qdot_coeffs = 0.5 * G * w;
     Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
-    Vector3 vdot = f_b / mass - w.cross(v);
+    Vector3 vdot = gravity_b + f_b / mass - w.cross(v);
     Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
 
     // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
