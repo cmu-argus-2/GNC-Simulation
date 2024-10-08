@@ -37,6 +37,20 @@ class Surface:
                        width=self.width,
                        height=self.height)
 
+    def flip_normal(self) -> "Surface":
+        """
+        Flips the normal vector of the surface.
+
+        :return: The resulting Surface.
+        """
+        return Surface(is_solar_panel=self.is_solar_panel,
+                       center=self.center,
+                       normal=-self.normal,
+                       x_dir=self.x_dir,
+                       y_dir=self.y_dir,
+                       width=self.width,
+                       height=self.height)
+
 
 class SolarGeneration:
     """
