@@ -30,15 +30,29 @@ Run `./build_sim_debug.sh`
 ## Debugging
 
 ### Plot Visualization
+
+#### Web Viewer Comparison tool 
 1. `cd visualization/web_visualizer`
 2. Open a web browser and go to `http://127.0.0.1:5000/`
 3. `python3 job_comparison_tool.py`
+
+#### Interactive - all trials
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME> -i`
+
+#### Interactive - specific trials
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME> -i -t [list of trail numbers to debug]`
+
+#### Replotting an existing job after changing the plotting scripts
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME>`
 
 ### ModuleNotFoundError: No module named XXXX
 Remember to run in a virtual environment
 
 ### Trial X finished with return code: Y
-Inspect `montecarlo/results/<JOB_DIRECTORY>/trials/trialX/output.txt` 
+Inspect `montecarlo/results/<JOB_NAME>/trials/trialX/output.txt` 
 
 ### GDB
 Run `launch.json` shows the configurations for debugging python and C++ code.
