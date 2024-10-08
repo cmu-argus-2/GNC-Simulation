@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 import brahe
 from brahe.epoch import Epoch
@@ -59,16 +60,82 @@ class SolarGeneration:
     SOLAR_FLUX = 1373  # The solar power flux at the Earth's orbital radius in W/m^2.
     PANEL_EFFICIENCY = 0.15  # The efficiency of the solar panels, as a fraction in [0, 1].
 
-    def __init__(self, config: dict) -> None:
-        self.surfaces = SolarGeneration.parse_solar_config(config["satellite"]["solar"])
+    def __init__(self, deployables_dir: np.ndarray, deployables_tilt_angle: float) -> None:
+        self.surfaces = SolarGeneration.get_solar_config(deployables_dir, deployables_tilt_angle)
         self.sample_resolution = 0.05  # The resolution of the occlusion sampling grid, in meters.
 
     @staticmethod
-    def parse_solar_config(surfaces: list[dict[str, bool | list[float] | float]]) -> list[Surface]:
-        def to_np(surface: dict[str, bool | list[float] | float]) -> dict[str, bool | np.ndarray | float]:
-            return {key: np.array(value) if isinstance(value, list) else value
-                    for key, value in surface.items()}
-        return [Surface(**to_np(surface)) for surface in surfaces]
+    def get_solar_config(deployables_dir: np.ndarray, deployables_tilt_angle: float) -> list[Surface]:
+        """
+        Returns a list of Surface objects representing the solar panels on the satellite.
+
+        :param deployables_dir: A 3-element numpy array representing the direction of the deployable solar panels.
+                                Must be a unit vector with exactly one non-zero element.
+        :param deployables_tilt_angle: The angle in radians by which the deployable solar panels are tilted.
+                                       See the diagram below for the definition of the tilt angle.
+        :return: A list of Surface objects representing the configuration of the satellite.
+        """
+        assert deployables_dir.shape == (3,), "deployables_dir must be a 3-element numpy array."
+        assert np.sum(np.abs(deployables_dir) == 1) == 1 and np.sum(deployables_dir == 0) == 2, \
+            "deployables_dir must be a unit vector with exactly one non-zero element."
+
+        R = 0.05  # Half the side length of the cubesat in meters
+
+        cube_surfaces = [Surface(is_solar_panel=True,
+                                 center=np.array([R, 0, 0]),
+                                 normal=np.array([1, 0, 0]),
+                                 x_dir=np.array([0, 1, 0]),
+                                 y_dir=np.array([0, 0, 1]),
+                                 width=0.1,
+                                 height=0.1)]  # +x face
+        cube_surfaces.append(cube_surfaces[0].transform(np.array([[0, 1, 0],
+                                                                  [1, 0, 0],
+                                                                  [0, 0, 1]])))  # +y face
+        cube_surfaces.append(cube_surfaces[0].transform(np.array([[0, 0, 1],
+                                                                  [0, 1, 0],
+                                                                  [1, 0, 0]])))  # +z face
+        cube_surfaces.append(cube_surfaces[0].transform(np.array([[-1, 0, 0],
+                                                                  [0, 1, 0],
+                                                                  [0, 0, 1]])))  # -x face
+        cube_surfaces.append(cube_surfaces[1].transform(np.array([[1, 0, 0],
+                                                                  [0, -1, 0],
+                                                                  [0, 0, 1]])))  # -y face
+        cube_surfaces.append(cube_surfaces[2].transform(np.array([[1, 0, 0],
+                                                                  [0, 1, 0],
+                                                                  [0, 0, -1]])))  # -z face
+
+        """
+        deployables_tilt_angle
+                |  /    deployables_dir
+                | /            ^
+        ________|/             |
+        |       |              |
+        |       |   --> deployables_offset_dir
+        |_______|
+        deployables_tilt_dir is into the page
+        """
+        deployables_tilt_dir = np.roll(deployables_dir, 1)  # doesn't matter which of the 4 perpendiculars we choose
+        deployables_offset_dir = np.cross(deployables_tilt_dir, deployables_dir)
+        deployables_tilt = Rotation.from_rotvec(deployables_tilt_angle * deployables_tilt_dir).as_matrix()
+
+        deployable_surfaces = [Surface(is_solar_panel=True,
+                                       center=(np.eye(3) + deployables_tilt) * R * deployables_dir + R * deployables_offset_dir,
+                                       normal=deployables_tilt @ deployables_offset_dir,
+                                       x_dir=deployables_tilt_dir,
+                                       y_dir=deployables_tilt @ deployables_dir,
+                                       width=0.1,
+                                       height=0.1)]
+
+        # add the 3 other rotated copies of the deployable surfaces
+        rot_90 = Rotation.from_rotvec((np.pi / 2) * deployables_dir).as_matrix()
+        for i in range(0, 4):
+            deployable_surfaces.append(deployable_surfaces[0].transform(rot_90 ** i))
+
+        # add deployable surfaces with flipped normals
+        for deployable_surface in deployable_surfaces:
+            deployable_surfaces.append(deployable_surface.flip_normal())
+
+        return cube_surfaces + deployable_surfaces
 
     @staticmethod
     def get_intersections(surface: Surface, ray_starts: np.ndarray, ray_dir: np.ndarray) -> np.ndarray:

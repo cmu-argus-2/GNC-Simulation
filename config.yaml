@@ -19,50 +19,6 @@ satellite:
       N_mtb : 3                                     # number of magnetorquers
       mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame
 
-      solar:
-            - is_solar_panel : true
-              center : [0.1, 0, 0]
-              normal : [1, 0, 0]
-              x_dir : [0, 1, 0]
-              y_dir : [0, 0, 1]
-              width : 0.1
-              height : 0.1
-            - is_solar_panel : true
-              center : [-0.1, 0, 0]
-              normal : [-1, 0, 0]
-              x_dir : [0, 1, 0]
-              y_dir : [0, 0, 1]
-              width : 0.1
-              height : 0.1
-            - is_solar_panel : true
-              center : [0, 0.1, 0]
-              normal : [0, 1, 0]
-              x_dir : [1, 0, 0]
-              y_dir : [0, 0, 1]
-              width : 0.1
-              height : 0.1
-            - is_solar_panel : true
-              center : [0, -0.1, 0]
-              normal : [0, -1, 0]
-              x_dir : [1, 0, 0]
-              y_dir : [0, 0, 1]
-              width : 0.1
-              height : 0.1
-            - is_solar_panel : true
-              center : [0, 0, 0.1]
-              normal : [0, 0, 1]
-              x_dir : [1, 0, 0]
-              y_dir : [0, 1, 0]
-              width : 0.1
-              height : 0.1
-            - is_solar_panel : true
-              center : [0, 0, -0.1]
-              normal : [0, 0, -1]
-              x_dir : [1, 0, 0]
-              y_dir : [0, 1, 0]
-              width : 0.1
-              height : 0.1
-
 
 solver:
       world_update_rate : 100 #Hz

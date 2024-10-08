@@ -119,7 +119,7 @@ def main():
     period = 2 * np.pi * np.sqrt((R_EARTH + 600e3) ** 3 / GM_EARTH)
     N = 1000
     dt = period / N
-    solar_generation = SolarGeneration(config)
+    solar_generation = SolarGeneration(deployables_dir=np.array([0, 0, 1]), deployables_tilt_angle=np.pi / 4)
     states, generated_power = propagate_orbit_and_solar(get_estimated_orbital_state(initial_epoch), solar_generation,
                                                         initial_epoch, dt, N)
 
