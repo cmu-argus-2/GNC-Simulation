@@ -22,6 +22,21 @@ class Surface:
     width: float  # The width of the surface in meters.
     height: float  # The height of the surface in meters.
 
+    def transform(self, transformation_matrix: np.ndarray) -> "Surface":
+        """
+        Transforms this Surface by applying the given transformation matrix to all of its constituent vectors.
+
+        :param transformation_matrix: The 3x3 transformation matrix to apply.
+        :return: The resulting Surface.
+        """
+        return Surface(is_solar_panel=self.is_solar_panel,
+                       center=transformation_matrix @ self.center,
+                       normal=transformation_matrix @ self.normal,
+                       x_dir=transformation_matrix @ self.x_dir,
+                       y_dir=transformation_matrix @ self.y_dir,
+                       width=self.width,
+                       height=self.height)
+
 
 class SolarGeneration:
     """
