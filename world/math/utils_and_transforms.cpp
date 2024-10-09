@@ -1,4 +1,5 @@
 #include "utils_and_transforms.h"
+#include <filesystem>
 
 #include "SpiceUsr.h"
 
@@ -63,14 +64,18 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
 
 // Basic Utility functions
 void loadAllKernels() {
-    std::string sol_system_spk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/de440.bsp";
-    std::string earth_rotation_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/earth_latest_high_prec.bpc";
-    std::string earth_dimensions_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
-    std::string leap_seconds_lsk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
+    std::filesystem::path path(__FILE__);
+    std::string root = path.parent_path().parent_path().parent_path().string(); // utils_and_transforms.cpp --> math --> world --> dynamics sim
+    std::string data_folder = root + "/data/";
+
+
+    std::string sol_system_spk = data_folder + "de440.bsp";
+    std::string earth_rotation_pck = data_folder + "earth_latest_high_prec.bpc";
+    std::string earth_dimensions_pck = data_folder + "pck00011.tpc";
+    std::string leap_seconds_lsk = data_folder + "pck00011.tpc";
     
     SpiceInt count;
     ktotal_c("ALL", &count);
-    printf("Count %d\n", count);
 
     if (count == 0) {
         furnsh_c(sol_system_spk.c_str());
@@ -78,6 +83,7 @@ void loadAllKernels() {
         furnsh_c(earth_dimensions_pck.c_str());
         furnsh_c(leap_seconds_lsk.c_str());
     }; // only load kernel if not already loaded
+    
     
 }
 
