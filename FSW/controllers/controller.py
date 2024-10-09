@@ -7,6 +7,7 @@ class Controller:
     def __init__(self, config, Idx) -> None:
         self.config = config
         self.pointing_mode    = config["mission"]["pointing_mode"]
+        self.pointing_target  = config["mission"]["pointing_target"]
         self.controller_algo  = config["controller"]["algorithm"]
         self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
@@ -23,9 +24,10 @@ class Controller:
         return gains
     
     # define feedforward torque and state profile
-    def define_att_profile(self, date, pointing_mode, est_world_states):
+    def define_att_profile(self, date, pointing_mode, pointing_target, est_world_states):
         ref_ctrl_states = np.zeros((7,))
-        if pointing_mode == "Sun":
+        
+        if pointing_target == "Sun":
             # Define reference torque as zero
             ref_torque = np.zeros((3,))
             
@@ -39,21 +41,26 @@ class Controller:
             y_body = np.cross(z_body, x_body)
             Rot_mat = np.vstack((x_body, y_body, z_body)).T
             q_ref = rotmat2quat(Rot_mat)
-            
-            ref_ctrl_states[:4] = q_ref
-            # reference angular velocity (approx zero)
-            omega_ref  = np.zeros((3,))
-            
-            ref_ctrl_states[4:7] = omega_ref
-        
         elif pointing_mode == "Nadir":
             att_states = est_world_states[6:13]
             # Default values if not sun pointing
             ref_ctrl_states = np.zeros((19,))
             ref_torque = np.zeros((3,))
-        elif  pointing_mode == "detumble":
+            
+        if  pointing_mode == "detumble":
             # Default values if not sun pointing
             ref_ctrl_states = np.zeros((19,))
+            ref_torque = np.zeros((3,))
+        elif pointing_mode == "spin-stabilized":
+            # Default values if not sun pointing
+            ref_ctrl_states = np.zeros((19,))
+            # reference angular velocity in pointing axis 
+            ref_ctrl_states[:4]  = q_ref
+            ref_ctrl_states[4:7] = np.array([0,0,np.deg2rad(1)])
+            ref_torque = np.zeros((3,))
+        elif pointing_mode == "3D-stabilized":
+            q_ref = rotmat2quat(Rot_mat)
+            ref_ctrl_states[:4] = q_ref
             ref_torque = np.zeros((3,))
         else:
             raise ValueError(f"Unrecognized pointing mode: {pointing_mode}")
@@ -66,12 +73,12 @@ class Controller:
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
             return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, 
-                                                            est_ctrl_states[Idx["X"]["ANG_VEL"]])
+                            (est_ctrl_states[Idx["X"]["ANG_VEL"]] - ref_ctrl_states[4:7]))
             
         q_ref = ref_ctrl_states[:4]
-        q_est = est_ctrl_states[6:10]
+        q_est = est_ctrl_states[Idx["X"]["QUAT"]]
         q_err = hamiltonproduct(q_ref, q_inv(q_est))
-        err_vec = np.hstack((q_err[1:], ref_ctrl_states[4:7] - est_ctrl_states[10:13]))
+        err_vec = np.hstack((q_err[1:], ref_ctrl_states[4:7] - est_ctrl_states[Idx["X"]["ANG_VEL"]]))
         
         torque = ref_torque + self.feedback_gains @ err_vec
         return torque
@@ -102,7 +109,7 @@ class Controller:
         
         self.est_world_states = est_world_states
         # define slew profile
-        ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, est_world_states)
+        ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, self.pointing_target, est_world_states)
         # feedforward and feedback controller
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states, Idx)
         

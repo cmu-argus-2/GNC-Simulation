@@ -3,7 +3,6 @@ import numpy as np
 import brahe
 from brahe.epoch import Epoch
 import pyIGRF
-
 """
     CLASS MAGNETICFIELD
 
@@ -40,6 +39,7 @@ class MagneticField:
             [BE, BN, -BD]
         )  # magnetic field vector in ENZ frame [UNITS: nT]
         B_ecef = brahe.coordinates.sENZtoECEF(r_ecef, B_enz)
+        B_ecef = B_ecef - brahe.coordinates.sENZtoECEF(r_ecef, np.array([BE, BN, 0]))
         B = R_ECI2ECEF.T @ B_ecef
 
         # Convert Units from nT to T
