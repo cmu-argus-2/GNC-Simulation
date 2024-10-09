@@ -148,7 +148,7 @@ def main():
     plt.plot(np.arange(N) * dt, get_power_curve())
     plt.xlabel("Time [s]")
     plt.ylabel("Power [W]")
-    plt.title(f"Generated Power vs. Time for LTDN=10pm and Default Solar Panel Configuration")
+    plt.title(f"Generated Power vs. Time\nfor LTDN=10pm and Default Solar Panel Configuration")
     plt.show()
 
     ltdns = np.linspace(0, 2 * np.pi, 96)  # every 15 minutes
@@ -158,7 +158,7 @@ def main():
     plt.plot(np.rad2deg(ltdns), mean_power)
     plt.xlabel("Local Time of Descending Node [deg]")
     plt.ylabel("Mean Power [W]")
-    plt.title("Mean Generated Power vs. LTDN for Default Solar Panel Configuration")
+    plt.title("Mean Generated Power vs. LTDN\nfor Default Solar Panel Configuration")
     plt.show()
 
     deployables_tilt_angles = np.linspace(0, np.pi / 2, 10)
@@ -173,7 +173,7 @@ def main():
         plt.xlabel("Deployables Tilt Angle [deg]")
         plt.ylabel("Mean Power [W]")
         plt.title(
-            f"Mean Generated Power vs. Deployables Tilt Angle for LTDN = 10pm and Deployables in {deployables_dir} Direction")
+            f"Mean Generated Power vs. Deployables Tilt Angle\nfor LTDN = 10pm and Deployables in {deployables_dir} Direction")
         plt.show()
 
 
