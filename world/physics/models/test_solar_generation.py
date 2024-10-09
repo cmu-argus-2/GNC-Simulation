@@ -161,7 +161,7 @@ def main():
     plt.title("Mean Generated Power vs. LTDN\nfor Default Solar Panel Configuration")
     plt.show()
 
-    deployables_tilt_angles = np.linspace(0, np.pi / 2, 10)
+    deployables_tilt_angles = np.linspace(0, np.pi / 2, 100)
     for deployables_dir in np.row_stack((np.eye(3), -np.eye(3))):
         print(f"Performing sweep for {deployables_dir=}")
         mean_power = [np.mean(get_power_curve(deployables_dir=deployables_dir,
