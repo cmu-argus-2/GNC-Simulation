@@ -16,8 +16,18 @@ satellite:
       max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
 
       # Magnetorquers
-      N_mtb : 3                                     # number of magnetorquers
-      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame 
+      mtb:
+            N_mtb : 6                                     # number of magnetorquers
+            mtb_orientation : [[1,0,0], [0,1,0], [0,0,1], [-1,0,0], [0,-1,0], [0,0,-1]] # alignment axis of each magnetorquer in the body frame
+            max_voltage : [5,5,5,5,5,5]                          # V maximum voltage that can be applied by each magnetorquer
+            coils_per_layer : [32.0,32.0,32.0,32.0,32.0,32.0]  # number of coils per layer
+            layers : [2.0,2.0,2.0,2.0,2.0,2.0]                 # number of layers
+            trace_width : [0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317]  # m
+            gap_width : [0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999]  # m
+            trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556]  # 1oz copper - 35um = 1.4 mils
+            max_current_rating : [1,1,1,1,1,1]  # A
+            max_power : [1,1,1,1,1,1]  # W
+       
 
 
 solver:
@@ -27,16 +37,16 @@ solver:
 
 mission:
       start_date : 60431.0 # MJD corresponding to midnight May 01 2024
-      duration : 1000 # s
+      duration : 3600 # s
       
       # initial state properties
       initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
       initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
-      initial_angular_rate : [0.0, 60.0, 0.0] # [deg/s]
+      initial_angular_rate : [0.0, 10.0, 0.0] # [deg/s]
       initial_rw_speed : [100.0]
       # Mode management
-      pointing_mode: "detumble" # "Nadir" or "Sun" or "detumble" or "spin-stabilized"
-
+      pointing_mode: "spin-stabilized" # "detumble" or "spin-stabilized" or "3D-stabilized"
+      pointing_target: "Sun" # "Nadir" or "Sun"
 
 complexity:
       use_drag : True

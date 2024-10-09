@@ -88,8 +88,8 @@ class Dynamics:
         self.state[self.Idx["X"]["MAG_FIELD"]] = self.magnetic_field.field(self.state[self.Idx["X"]["ECI_POS"]], self.epc)
     
         # Actuator specific data
-        
-        self.Magnetorquers = [Magnetorquer(self.config, IdMtb) for IdMtb in range(self.config["satellite"]["N_mtb"])]
+        mtb_config = self.config["satellite"]["mtb"]
+        self.Magnetorquers = [Magnetorquer(self.config["satellite"]["mtb"], IdMtb) for IdMtb in range(mtb_config["N_mtb"])]
         self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
         
         self.I_sat = np.array(self.config["satellite"]["inertia"])
@@ -97,7 +97,7 @@ class Dynamics:
         
         # Actuator Indexing
         N_rw  = self.config["satellite"]["N_rw"]
-        N_mtb = self.config["satellite"]["N_mtb"]
+        N_mtb = mtb_config["N_mtb"]
         self.Idx["NU"]    = N_rw + N_mtb
         self.Idx["N_rw"]  = N_rw
         self.Idx["N_mtb"] = N_mtb

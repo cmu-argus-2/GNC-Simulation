@@ -20,25 +20,26 @@ class Magnetorquer:
         max_current_rating=1,  # A
         max_power=1,  # W
     ) -> None:
-        self.max_voltage = max_voltage
-        self.N = coils_per_layer
-        self.pcb_layers = layers
-        self.N_per_face = coils_per_layer * layers
-        self.trace_thickness = trace_thickness
-        self.trace_width = trace_width
-        self.gap_width = gap_width
-        self.coil_width = trace_width + gap_width
-        self.max_power = max_power
-        self.max_current_rating = max_current_rating
-        self.max_current = max_power / max_voltage
-        # I_max = min Imax, Vmax / R
-        # D_max = N * I_max * A * G 
+        self.max_voltage = config["max_voltage"][IdMtb]
+        self.N = config["coils_per_layer"][IdMtb]
+        self.pcb_layers = config["layers"][IdMtb]
+        self.N_per_face = self.N * self.pcb_layers
+        self.trace_thickness = config["trace_thickness"][IdMtb] 
+        self.trace_width = config["trace_width"][IdMtb] 
+        self.gap_width = config["gap_width"][IdMtb] 
+        self.coil_width =  self.trace_width + self.gap_width
+        self.max_power = config["max_power"][IdMtb]
+        self.max_current_rating = config["max_current_rating"][IdMtb] 
+        self.max_current = np.min([self.max_power / self.max_voltage, self.max_current_rating])
+        # I_max = min Imax, Vmax / R 
+        # D_max = N * I_max * A * G  
 
         self.pcb_side_max = 0.1
         self.A_cross = (self.pcb_side_max - self.N * self.coil_width) ** 2
         self.R = self.compute_coil_resistance()
+        self.max_dipole_moment = self.N_per_face * self.max_current * self.A_cross  # A*m^2
 
-        self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"][IdMtb]).T
+        self.G_mtb_b = np.array(config["mtb_orientation"][IdMtb]).T
         self.dipole_moment = np.zeros(3,)
         self.current = 0.0
         self.voltage = 0.0

@@ -12,7 +12,9 @@ class Controller:
         self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
         self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
-        self.G_mtb_b = np.array(config["satellite"]["mtb_orientation"])
+        self.lyapsunpointctr = LyapBasedSunPointingController(config["satellite"]["inertia"], 
+                                                              config["satellite"]["mtb"])
+        self.G_mtb_b = np.array(config["satellite"]["mtb"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
        
@@ -93,9 +95,10 @@ class Controller:
         mag_field = state[Idx["X"]["MAG_FIELD"]]
         Re2b = quatrotation(state[Idx["X"]["QUAT"]]).T
         bfMAG_FIELD = Re2b @ mag_field
-        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(bfMAG_FIELD)  @ self.G_mtb_b
+        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(bfMAG_FIELD)  @ self.G_mtb_b.T
         
-        self.allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
+        self.allocation_mat = np.vstack((np.zeros((1, 3)), np.linalg.pinv(self.G_mtb_b.T)))
+        
         # np.linalg.pinv(B_mat)
         
         # Normalize columns of the allocation matrix

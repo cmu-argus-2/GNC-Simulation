@@ -85,7 +85,7 @@ class Simulator:
         Results["WorldStates"]   = WorldStates
         Results["ControlInputs"] = np.zeros((NT, self.Idx["NU"]))
         Results["PowerConsumption"] = {}
-        Results["PowerConsumption"]["MTB"] = np.zeros((self.config["satellite"]["N_mtb"], NT))
+        Results["PowerConsumption"]["MTB"] = np.zeros((self.config["satellite"]["mtb"]["N_mtb"], NT))
         
         for i, _ in enumerate(TimeVec):
             self.world_state = self.world.state
