@@ -17,7 +17,7 @@ satellite:
 
       # Magnetorquers
       N_mtb : 3                                     # number of magnetorquers
-      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame 
+      mtb_orientation : [[1,0,0], [0,1,0], [0,0,1]] # alignment axis of each magnetorquer in the body frame
 
 
 solver:
