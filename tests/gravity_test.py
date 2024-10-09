@@ -17,7 +17,7 @@ for R in range(6371000, 7500000, 5000):
             test_cases.append((R*np.sin(phi)*np.cos(theta), R*np.sin(phi)*np.sin(theta), R*np.cos(phi)))
 
 @pytest.mark.parametrize("v", test_cases)
-def sph_test(v):
+def test(v):
     v = np.array(v)
     v_hat = v/np.linalg.norm(v)
 
