@@ -176,6 +176,14 @@ def main():
             f"Mean Generated Power vs. Deployables Tilt Angle\nfor LTDN = 10pm and Deployables in {deployables_dir} Direction")
         plt.show()
 
+    # do a 2d sweep of ltdn, and deployables_tilt_angle and store the results in a csv file
+    # this will take a long time to run
+    data = np.array([[np.mean(get_power_curve(ltdn=ltdn, deployables_tilt_angle=deployables_tilt_angle,
+                                              deployables_dir=np.array([-1, 0, 0])))
+                      for ltdn in ltdns] for deployables_tilt_angle in tqdm(deployables_tilt_angles)])
+    np.savetxt("plots/-x_power_sweep.csv", data, delimiter=",",
+               comments="Rows are deployables_tilt_angle (0deg - 90deg), columns are ltdn (0deg - 360deg)")
+
 
 if __name__ == "__main__":
     main()
