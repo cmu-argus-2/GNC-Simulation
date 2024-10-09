@@ -63,7 +63,7 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
 
 // Basic Utility functions
 void loadAllKernels() {
-    std::string sol_system_spk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/de440.bsp";
+    std::string sol_system_spk = "data/de440.bsp";
     std::string earth_rotation_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/earth_latest_high_prec.bpc";
     std::string earth_dimensions_pck = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
     std::string leap_seconds_lsk = "/home/kmkar/Documents/CMU/F24/Spacecraft_Lab/simulations/cpp_dynamics_sim/data/pck00011.tpc";
