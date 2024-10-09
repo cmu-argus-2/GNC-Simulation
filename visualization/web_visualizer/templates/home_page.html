@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <form name=form1 method=post>
+        <table>
+            <tr>
+                <th>Compare?</th>
+                <th>Job Name</th>
+                <th>Number of Trials</th>
+                <th>Description</th>
+                <th>Size</th>
+            </tr>
+
+            {% for job in job_list %}
+            <tr>
+                <td> <input class="single-checkbox" , type="checkbox" , name="{{ job.name }}" ,
+                        onclick="toggleButton(this)"> </td>
+                <td>{{job.name}}</td>
+                <td>{{job.trial_count}}</td>
+                <td>{{job.description}}</td>
+                <td>{{job.size}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </form>
+
+    <button type="button" , onclick="compare()">Compare Jobs</button>
+
+    <script>
+        function toggleButton(button) {
+            var number_of_jobs_selected = 0;
+            for (var i = 0; i < document.form1.length; i++) {
+                if (document.form1[i].checked) {
+                    number_of_jobs_selected = number_of_jobs_selected + 1;
+                }
+            }
+            button.classList.toggle("active");
+        }
+
+        function compare() {
+            var jobs_to_compare = new Set();
+            for (var i = 0; i < document.form1.length; i++) {
+                if (document.form1[i].checked) {
+                    jobs_to_compare.add(document.form1[i].name)
+                }
+            }
+            if (jobs_to_compare.size < 1) {
+                alert("Need to select at least 1 job")
+                return
+            }
+            const params = new URLSearchParams({ "jobs_to_compare": Array.from(jobs_to_compare).join(',') });
+            newURL = `/compare?${params.toString()}`
+            window.location.href=newURL;
+            // fetch(newURL)
+            // console.log(newURL)
+        }
+    </script>
+</body>
+
+</html>

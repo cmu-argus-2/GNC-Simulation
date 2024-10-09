@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+    <div id="column_content">
+        {% for job in jobs_to_compare %}
+        <ol>
+            <h3>{{ job.name }}</h3>
+            <h4>{{ job.description }}</h4>
+
+            {% for file in job.files %}
+            {% if file.endswith('.png') %}
+            <li>
+                <a href="/{{ job.name + '/plots/' + file}}">
+                    <img class="image" src="/{{ job.name + '/plots/' + file}}" />
+                </a>
+                <figcaption>{{file}}</figcaption>
+                <br>
+                <br>
+                <br>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ol>
+        {% endfor %}
+    </div>
+
+
+</body>
+
+</html>

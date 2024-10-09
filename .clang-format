@@ -1,0 +1,14 @@
+BasedOnStyle: Google
+IndentWidth: 4
+SpacesBeforeTrailingComments: 3
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
+AllowShortEnumsOnASingleLine: false
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true
+ColumnLimit: 120

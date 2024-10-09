@@ -1,0 +1,43 @@
+body {
+    text-align: center;
+}
+
+#column_content {
+    display: grid;
+    grid-auto-flow: column;
+    margin: auto;
+}
+
+img {
+    width: 100%;
+    object-fit: cover;
+}
+
+ol,
+ul,
+li {
+    list-style-type: none;
+    padding: 0;
+}
+
+table {
+    width: 100%;
+}
+
+tr:nth-child(even) {
+    background-color: #ffc0c0;
+}
+
+tr:nth-child(odd) {
+    background-color: #c7c7c7;
+}
+
+th,
+td {
+    text-align: left;
+}
+
+figcaption {
+    font-size: smaller;
+    text-decoration-line: underline;
+}
