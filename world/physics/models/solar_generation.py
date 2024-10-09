@@ -130,10 +130,8 @@ class SolarGeneration:
         for i in range(0, 4):
             deployable_surfaces.append(deployable_surfaces[0].transform(rot_90 ** i))
 
-        # add deployable surfaces with flipped normals
-        for deployable_surface in deployable_surfaces:
-            deployable_surfaces.append(deployable_surface.flip_normal())
-
+        # add solar panels on the other side of the extendable panels
+        deployable_surfaces.extend([deployable_surface.flip_normal() for deployable_surface in deployable_surfaces])
         return cube_surfaces + deployable_surfaces
 
     @staticmethod
