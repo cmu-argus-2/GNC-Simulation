@@ -118,7 +118,7 @@ class SolarGeneration:
         deployables_tilt = Rotation.from_rotvec(deployables_tilt_angle * deployables_tilt_dir).as_matrix()
 
         deployable_surfaces = [Surface(is_solar_panel=True,
-                                       center=(np.eye(3) + deployables_tilt) * R * deployables_dir + R * deployables_offset_dir,
+                                       center=R * (np.eye(3) + deployables_tilt) @ deployables_dir + R * deployables_offset_dir,
                                        normal=deployables_tilt @ deployables_offset_dir,
                                        x_dir=deployables_tilt_dir,
                                        y_dir=deployables_tilt @ deployables_dir,
