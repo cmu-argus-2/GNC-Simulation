@@ -1,3 +1,11 @@
+/**
+ * @file main.cpp
+ * @author Tushaar Jain (tushaarj@andrew.cmu.edu)
+ * @brief Main entry point for each trial in a C++ Job
+ * @date 2024-10-09
+ *
+ */
+
 #include <iostream>
 #include <random>
 

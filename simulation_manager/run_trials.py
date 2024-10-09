@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+# Starts up trials and manages them to ensure no more than a specified number run concurrently.
+
 import os
 import sys
 import time

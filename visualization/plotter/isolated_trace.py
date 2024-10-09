@@ -1,3 +1,7 @@
+# This file is bascially a giant wrapper aroudn matplotlib's pyplot.
+# reason for wrapping is these plots allow you to select, with your cursor, indiviusal traces and see their labels.
+# This helps with debugging specific trails in a montecarlo analysis by knowing which rtrials is responsible for a strange plot
+
 import matplotlib
 from matplotlib import pyplot as plt
 

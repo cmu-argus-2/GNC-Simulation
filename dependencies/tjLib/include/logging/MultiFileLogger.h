@@ -1,3 +1,10 @@
+/**
+ * @file MultiFileLogger.h
+ * @author Tushaar Jain (tushaarj@andrew.cmu.edu)
+ * @brief Logs double precision data to files.
+ * @date 2024-10-09
+ *
+ */
 #ifndef _TJLIB_MULTI_FILE_LOGGER_
 #define _TJLIB_MULTI_FILE_LOGGER_
 #include <fstream>
@@ -6,12 +13,51 @@
 #include "math/EigenWrapper.h"
 class MultiFileLogger {
    public:
+    /**
+     * @brief Log a single double value to a file
+     *
+     * @param file_name name of logfile
+     * @param x value to log
+     * @param label description of the value
+     */
     void log(const std::string &file_name, double x, const std::string &label);
+
+    /**
+     * @brief Log a single double value along with a timestamp to a file
+     *
+     * @param file_name name of logfile
+     * @param t timestamp
+     * @param x value to log
+     * @param t_label description of the timestamp
+     * @param x_label description of the value
+     */
     void log(const std::string &file_name, double t, double x, const std::string &t_label = "t",
              const std::string &x_label = "x");
+
+    /**
+     * @brief Log a single double value along with its timestamp when the value changes, or if enough time has elapsed
+     * since the last time the value was logged to the file
+     *
+     * @param file_name name of logfile
+     * @param t timestamp
+     * @param x value to log
+     * @param period amount that 't' must change before letting a duplicate value get written
+     * @param t_label description of the timestamp
+     * @param x_label description of the value
+     */
     void log_on_change_and_timer(const std::string &file_name, double t, double x, double period,
                                  const std::string &t_label = "t", const std::string &x_label = "x");
 
+    /**
+     * @brief Log an array of doubles along with a common timestamp to a file
+     *
+     * @tparam N number of elments in the arrays
+     * @param file_name name of the logfile
+     * @param t timestamp
+     * @param x values to log
+     * @param t_label description of the timestamp
+     * @param x_label descriptions of the values
+     */
     template <size_t N>
     void log(const std::string &file_name, double t, const std::array<double, N> &x, const std::string &t_label,
              const std::array<std::string, N> &x_labels) {
@@ -35,6 +81,16 @@ class MultiFileLogger {
         }
     }
 
+    /**
+     * @brief Log an Eigen vector of doubles along with a common timestamp to a file
+     *
+     * @tparam N number of elments in the vector
+     * @param file_name name of the logfile
+     * @param t timestamp
+     * @param x values to log
+     * @param t_label description of the timestamp
+     * @param x_label descriptions of the values
+     */
     template <std::size_t N>
     void log(const std::string &file_name, double t, const Eigen::Matrix<double, (int)N, 1> &x,
              const std::string &t_label, const std::array<std::string, N> &x_labels) {

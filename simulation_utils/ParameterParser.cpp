@@ -15,13 +15,8 @@
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
-
-#ifdef print
-#undef print   // we defined our own print funciton that clasehes with pybind's internal print; ignore ours
-#endif
 #include "pybind11/eigen.h"
 #include "pybind11/pybind11.h"
-
 #pragma GCC diagnostic pop
 #endif
 

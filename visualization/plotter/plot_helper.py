@@ -6,9 +6,20 @@ import os
 itm.rcParams["axes.grid"] = True
 
 
-def plotWrapper(
-    x, y, sublpotRows, subplotCols, positionInSubplot, label, title, xlabel, ylabel
-):
+def plotWrapper(x, y, sublpotRows, subplotCols, positionInSubplot, label, title, xlabel, ylabel):
+    """All-in-1 utiltiy function for creating a single subplot in a grid of plots
+
+    Args:
+        x (Nx1 list): x data
+        y (Nx1 list): y data
+        sublpotRows (int): same as the arg passed into plt.subplot()
+        subplotCols (int): same as the arg passed into plt.subplot()
+        positionInSubplot (int): same as the arg passed into plt.subplot()
+        label (str): label to display in legend
+        title (str): title
+        xlabel (str): xlabel
+        ylabel (str): ylabel
+    """
     itm.subplot(sublpotRows, subplotCols, positionInSubplot)
     itm.named_plot(label, x, y)
     itm.title(title)
@@ -20,34 +31,14 @@ def plotWrapper(
     itm.grid(True)
 
 
-def plotUncertaintyEnvelope(time, x, stddev_x, sigmas):
-    # 1-sigma envelope
-    itm.fill_between(
-        time, x - stddev_x, x + stddev_x, color="green", alpha=0.4, label="1-sigma"
-    )
+def multiPlot(time, multiSeries, seriesLabel=None, **kwargs):
+    """Plots Multiple time series stacked vertically
 
-    if sigmas != 1.0:  # multi-sigma envelope. purposely comapring to float
-        # lower envelope
-        itm.fill_between(
-            time,
-            x - sigmas * stddev_x,
-            x - stddev_x,
-            color="red",
-            alpha=0.4,
-            label=f"{sigmas:.3f}-sigma",
-        )
-
-        # upper envelope
-        itm.fill_between(
-            time, x + stddev_x, x + sigmas * stddev_x, color="green", alpha=0.4
-        )
-    itm.legend()
-
-
-# TOOD optional scale factor?
-def multiPlot(time, multiSeries, color=None, seriesLabel=None, **kwargs):
-    if color is not None:
-        kwargs["color"] = color
+    Args:
+        time (Nx1 list): timestamps
+        multiSeries (M x N list): M time series each with N datapoints
+        seriesLabel (str, optional): The label for legend. Defaults to None.
+    """
     if seriesLabel is not None:
         kwargs["label"] = seriesLabel
 
@@ -64,6 +55,14 @@ def multiPlot(time, multiSeries, color=None, seriesLabel=None, **kwargs):
 
 
 def annotatePlot(title=None, xlabel=None, ylabel=None, seriesLabel=None):
+    """Label a single plot
+
+    Args:
+        title (str, optional): Defaults to None.
+        xlabel (str, optional): Defaults to None.
+        ylabel (str, optional): Defaults to None.
+        seriesLabel (str, optional): The label to shows in the legend. Defaults to None.
+    """
     if title is not None:
         itm.title(title)
     if xlabel is not None:
@@ -75,19 +74,15 @@ def annotatePlot(title=None, xlabel=None, ylabel=None, seriesLabel=None):
     itm.grid(True, linewidth=0.4)
 
 
-def plot_orientations(time, orientations, series_label, title, labelDegrees, color):
-    euler_angles = []
-    for orientation in orientations:
-        euler_angle = intrinsic_zyx_decomposition(orientation)
-        if labelDegrees:
-            euler_angle = RAD_2_DEG(euler_angle)
-        euler_angles.append(euler_angle)
-    triPlot(time, euler_angles, color=color)
+def annotateTriPlot(y_units=None, title=None, ylabels=["x", "y", "z"], seriesLabel=None):
+    """Like annotatePlot but specifically for figures with 3 plots stacked verically.
 
-
-def annotateTriPlot(
-    y_units=None, title=None, ylabels=["x", "y", "z"], seriesLabel=None
-):
+    Args:
+        y_units (list[str], optional): _description_. Defaults to None.
+        title (str, optional): _description_. Defaults to None.
+        ylabels (list[str], optional): _description_. Defaults to ["x", "y", "z"].
+        seriesLabel (list[str], optional): _description_. Defaults to None.
+    """
     if title is not None:
         itm.suptitle(title)
 
@@ -101,6 +96,14 @@ def annotateTriPlot(
 
 
 def annotateMultiPlot(y_units=None, title=None, ylabels=None, seriesLabel=None):
+    """Like annotateTriPlot() but nothing is limitsed to 2 options.
+
+    Args:
+        y_units (_type_, optional): _description_. Defaults to None.
+        title (_type_, optional): _description_. Defaults to None.
+        ylabels (_type_, optional): _description_. Defaults to None.
+        seriesLabel (_type_, optional): _description_. Defaults to None.
+    """
     if title is not None:
         itm.suptitle(title)
 
@@ -112,51 +115,27 @@ def annotateMultiPlot(y_units=None, title=None, ylabels=None, seriesLabel=None):
             if y_units is not None:
                 units_suffix = " [" + y_units + "]"
                 full_y_label += units_suffix
-            annotatePlot(
-                xlabel="time [s]", ylabel=full_y_label, seriesLabel=seriesLabel
-            )
-
-
-# TOOD optional scale factor?
-def triBounds(time, stddev_series):
-    itm.subplot(3, 1, 1)
-    plotUncertaintyEnvelope(time, np.zeros(len(time)), stddev_series.x, 3)
-
-    itm.subplot(3, 1, 2)
-    plotUncertaintyEnvelope(time, np.zeros(len(time)), stddev_series.y, 3)
-
-    itm.subplot(3, 1, 3)
-    plotUncertaintyEnvelope(time, np.zeros(len(time)), stddev_series.z, 3)
-
-
-def comparePlots(time, true_series, estimated_series, y_units, title, ylabels):
-    triPlot(time, true_series)
-    annotateTriPlot(y_units, title, ylabels)
-    triPlot(time, estimated_series)
-    annotateTriPlot(y_units, title, ylabels)
-
-    for i in range(3):
-        itm.subplot(3, 1, i + 1)
-        itm.legend({"True", "estimated"})
-
-
-def showError(time, trueSeries, estimatedSeries, color):
-    triPlot(time, trueSeries - estimatedSeries, color)
+            annotatePlot(xlabel="time [s]", ylabel=full_y_label, seriesLabel=seriesLabel)
 
 
 def draw_vertical_line(color, x, label):
-    return itm.axvline(
-        x, color=color, label=rf"{label}: {x:.4g}", linestyle="dashed", linewidth=2
-    )
+    return itm.axvline(x, color=color, label=rf"{label}: {x:.4g}", linestyle="dashed", linewidth=2)
 
 
 def draw_horizontal_line(color, y, label=None, linestyle="dashed", linewidth=2):
-    return itm.axhline(
-        y, color=color, label=label, linestyle=linestyle, linewidth=linewidth
-    )
+    return itm.axhline(y, color=color, label=label, linestyle=linestyle, linewidth=linewidth)
 
 
 def plot_hist(figure, data, xlabel, title, density=False):
+    """Convenience function for creating and annoting a histogram in 1 go. Also automatically computes and plots the mean .median, 1 and 3 sigma bounds
+
+    Args:
+        figure (plt.figure): figure onwhic to plot the histogram
+        data (Nx1 list): data
+        xlabel (_type_):
+        title (_type_):
+        density (bool, optional): Whether to make a pdf. Defaults to False.
+    """
     itm.figure(figure)
     itm.grid(True, zorder=1)  # render grid behind the histogram
     itm.hist(
@@ -192,6 +171,14 @@ def plot_hist(figure, data, xlabel, title, density=False):
 
 
 def save_figure(figure, folder, filename, close_after_saving=True):
+    """Saves an image of the figure to the filesystem
+
+    Args:
+        figure (plt.figure): _description_
+        folder (str): directory in which to save the image
+        filename (str): the img name ot save
+        close_after_saving (bool, optional): Whether to close the figure with plt.close(). Defaults to True.
+    """
     itm.figure(figure)
 
     # Adjust figure size to match maximized window

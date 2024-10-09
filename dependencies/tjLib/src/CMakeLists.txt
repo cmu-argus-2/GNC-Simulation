@@ -1,5 +1,5 @@
 add_library(tjMathLib STATIC math/conversions.cpp math/vector_math.cpp
-                             math/kinematics.cpp math/random.cpp)
+                              math/random.cpp)
 target_compile_options(tjMathLib PUBLIC -fPIC)
 
 add_library(tjLogLib STATIC logging/MultiFileLogger.cpp)

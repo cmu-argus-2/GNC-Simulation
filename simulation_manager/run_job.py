@@ -1,4 +1,9 @@
-#!/usr/bin/python3
+# Runs a simulation job from start to finish. This involves:
+# 1. Building the C++ core libraries
+# 2. Creating the job's directory where results from each trial are logged
+# 3. Recording the state of the repo (git hash + uncommitted changes) so we know the exact state of the simulation that led to certain results. For repeatability.
+# 4. Launching the trials manager (run_trials.py)
+# 5. Plotting the results once all trials have finished
 
 import os
 import time
@@ -21,7 +26,7 @@ TRIALS = [str(x + 1) for x in list(range(NUM_TRIALS))]
 # "_rel" postfix indicates a relative filepath
 repo_root_rel = "../"
 
-# paths relative to "moonranger-rover-flight/":
+# paths relative to "GNC-Simulation/":
 pose_simulator_build_script_rel = "build_sim_debug.sh"
 montecarlo_rel = "montecarlo/"
 
