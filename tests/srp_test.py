@@ -29,6 +29,7 @@ def utc2tJ2000(Y, M, D):
 
     return tJ2000
 
+# convert JDUTC to TDB using ttrans spice
 
 # generate truth data
 # Sends a POST request, parses the html result and stores positions in a csv file
