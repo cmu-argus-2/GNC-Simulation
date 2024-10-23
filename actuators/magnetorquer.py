@@ -67,7 +67,7 @@ class Magnetorquer:
         self.voltage = voltage
         self.current = voltage / self.R
         self.power   = self.R * self.current ** 2
-        if self.current > self.max_current:
+        if abs(self.current) > self.max_current:
             raise ValueError(
                 f"Current exceeds maximum power limit of {self.max_power} W."
             )
@@ -121,7 +121,7 @@ class Magnetorquer:
         self,
         dipole_moment: np.ndarray,
     ) -> float:
-        return np.linalg.norm(dipole_moment) / self.N_per_face / self.A_cross
+        return dipole_moment / self.N_per_face / self.A_cross
 
     def compute_coil_resistance(self):
         coil_length = 4 * (self.pcb_side_max - self.N*self.coil_width) \

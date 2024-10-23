@@ -13,7 +13,11 @@ class Controller:
         self.est_world_states = None
         self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
         self.lyapsunpointctr = LyapBasedSunPointingController(config["satellite"]["inertia"], 
-                                                              config["satellite"]["mtb"])
+                                                              config["satellite"]["mtb"],
+                                                              config["controller"]["bcrossgain"])
+        self.basesunpointctr = BaselineSunPointingController(config["satellite"]["inertia"], 
+                                                              config["satellite"]["mtb"],
+                                                              config["controller"]["bcrossgain"])
         self.G_mtb_b = np.array(config["satellite"]["mtb"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
@@ -58,7 +62,7 @@ class Controller:
             ref_ctrl_states = np.zeros((19,))
             # reference angular velocity in pointing axis 
             ref_ctrl_states[:4]  = q_ref
-            ref_ctrl_states[4:7] = np.array([0,0,np.deg2rad(1)])
+            ref_ctrl_states[4:7] = np.array([0,0,np.deg2rad(0.1)])
             ref_torque = np.zeros((3,))
         elif pointing_mode == "3D-stabilized":
             q_ref = rotmat2quat(Rot_mat)
@@ -76,7 +80,24 @@ class Controller:
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
             return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, 
                             (est_ctrl_states[Idx["X"]["ANG_VEL"]] - ref_ctrl_states[4:7]))
-            
+        elif self.controller_algo == "Lyapunov":
+            Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
+            magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+            angular_velocity = est_ctrl_states[Idx["X"]["ANG_VEL"]]
+            ref_angular_velocity = ref_ctrl_states[4:7]
+            sun_vector       = Re2b @ est_ctrl_states[Idx["X"]["SUN_POS"]]
+            sun_vector       = sun_vector / np.linalg.norm(sun_vector)
+            return self.lyapsunpointctr.get_dipole_moment_command(magnetic_field, angular_velocity,
+                                                                  ref_angular_velocity, sun_vector) 
+        elif self.controller_algo == "BaseSP":
+            Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
+            magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+            angular_velocity = est_ctrl_states[Idx["X"]["ANG_VEL"]]
+            ref_angular_velocity = ref_ctrl_states[4:7]
+            sun_vector       = Re2b @ est_ctrl_states[Idx["X"]["SUN_POS"]]
+            sun_vector       = sun_vector / np.linalg.norm(sun_vector)
+            return self.basesunpointctr.get_dipole_moment_command(magnetic_field, angular_velocity,
+                                                                  ref_angular_velocity, sun_vector) 
         q_ref = ref_ctrl_states[:4]
         q_est = est_ctrl_states[Idx["X"]["QUAT"]]
         q_err = hamiltonproduct(q_ref, q_inv(q_est))
@@ -95,7 +116,7 @@ class Controller:
         mag_field = state[Idx["X"]["MAG_FIELD"]]
         Re2b = quatrotation(state[Idx["X"]["QUAT"]]).T
         bfMAG_FIELD = Re2b @ mag_field
-        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(bfMAG_FIELD)  @ self.G_mtb_b.T
+        B_mat[:,Idx["U"]["MTB_TORQUE"]] = -crossproduct(bfMAG_FIELD)  @ self.G_mtb_b.T
         
         self.allocation_mat = np.vstack((np.zeros((1, 3)), np.linalg.pinv(self.G_mtb_b.T)))
         

@@ -206,7 +206,7 @@ class Dynamics:
             # used 
             Vi = mtb.convert_dipole_moment_to_voltage(input[self.Idx["U"]["MTB_TORQUE"]][i])
             mtb_moment = mtb.convert_voltage_to_dipole_moment(Vi)
-            tau_mtb += crossproduct(mtb_moment * mtb.G_mtb_b) @ bfMAG_FIELD
+            tau_mtb += crossproduct(mtb_moment) @ bfMAG_FIELD
             # mtb.get_torque(input[self.Idx["U"]["MTB_TORQUE"]][i], bfMAG_FIELD)
         # self.Magnetorquer.get_torque(self, state, Idx)
         
