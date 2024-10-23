@@ -42,8 +42,10 @@ class OrbitDetermination:
         assert landmarks.shape[1] == 3, "landmarks must have 3 columns"
         assert len(pixel_coordinates.shape) == 2, "pixel_coordinates must be a 2D array"
         assert pixel_coordinates.shape[1] == 2, "pixel_coordinates must have 2 columns"
-        assert len(times) == len(landmarks) == len(pixel_coordinates), \
-            "times, landmarks, and pixel_coordinates must have the same length"
+        assert len(cubesat_attitudes.shape) == 2, "cubesat_attitudes must be a 2D array"
+        assert cubesat_attitudes.shape[1] == 4, "cubesat_attitudes must have 4 columns"
+        assert len(times) == len(landmarks) == len(pixel_coordinates) == len(cubesat_attitudes), \
+            "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
 
         bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
         bearing_unit_vectors = np.linalg.norm(bearing_vectors, axis=1)
