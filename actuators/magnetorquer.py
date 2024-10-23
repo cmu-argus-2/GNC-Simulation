@@ -18,7 +18,7 @@ class Magnetorquer:
         gap_width=8.999 * 10**-5,  # m
         trace_thickness=3.556 * 10**-5,  # 1oz copper - 35um = 1.4 mils
         max_current_rating=1,  # A
-        max_power=1,  # W
+        max_power=0.25,  # W
     ) -> None:
         self.max_voltage = config["max_voltage"][IdMtb]
         self.N = config["coils_per_layer"][IdMtb]
@@ -91,14 +91,15 @@ class Magnetorquer:
         current: float,
     ) -> np.ndarray:
         #TODO: confirm that G_mtb_b is unit vector
+        current = np.clip(a=current, a_min=-self.max_current, a_max=self.max_current)
         return self.N_per_face * current * self.A_cross * self.G_mtb_b
     
     def convert_dipole_moment_to_voltage(
         self,
         dipole_moment: np.ndarray,
     ) -> float:
-        self.dipole_moment = dipole_moment
-        I = self.convert_dipole_moment_to_current(dipole_moment)
+        self.dipole_moment = np.clip(a=dipole_moment, a_min=-self.max_dipole_moment, a_max=self.max_dipole_moment)
+        I = self.convert_dipole_moment_to_current(self.dipole_moment)
         self.current = np.clip(a=I, a_min=-self.max_current, a_max=self.max_current)
         # clip voltage to max voltage
         self.voltage = np.clip(a=self.current * self.R, a_min=-self.max_voltage, a_max=self.max_voltage)
@@ -121,6 +122,7 @@ class Magnetorquer:
         self,
         dipole_moment: np.ndarray,
     ) -> float:
+        dipole_moment = np.clip(a=dipole_moment, a_min=-self.max_dipole_moment, a_max=self.max_dipole_moment)
         return dipole_moment / self.N_per_face / self.A_cross
 
     def compute_coil_resistance(self):

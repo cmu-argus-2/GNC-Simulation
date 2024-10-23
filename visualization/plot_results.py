@@ -2,7 +2,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import sys 
+import os 
+current_folder = os.path.dirname(os.path.abspath(__file__))
+if os.path.basename(current_folder) == "visualization":
+    sys.path.append("..") # Adds higher directory to python modules path.
+
 from world.math.quaternions import quatrotation
+
 
 def plot_position(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
@@ -10,7 +17,6 @@ def plot_position(time, world_states, Idx, fignum):
     plt.title('Position [m]')
     plt.xlabel('Time [s]')
     plt.ylabel('Position ECI')
-    plt.show()
     plt.savefig('position_ECI.png')
 
 def plot_velocity(time, world_states, Idx, fignum):
@@ -19,7 +25,6 @@ def plot_velocity(time, world_states, Idx, fignum):
     plt.title('Velocity [m/s]')
     plt.xlabel('Time [s]')
     plt.ylabel('Velocity')
-    plt.show()
     plt.savefig('velocity_ECI.png')
 
 def plot_quaternion(time, world_states, Idx, fignum):
@@ -28,7 +33,6 @@ def plot_quaternion(time, world_states, Idx, fignum):
     plt.title('Quaternion')
     plt.xlabel('Time [s]')
     plt.ylabel('Quaternion')
-    plt.show()
     plt.savefig('quaternion.png')
     
 def plot_angular_velocity(time, world_states, Idx, fignum):
@@ -44,7 +48,6 @@ def plot_angular_velocity(time, world_states, Idx, fignum):
     plt.title('Angular Velocity [deg/s]')
     plt.xlabel('Time [s]')
     plt.ylabel('Angular Velocity')
-    plt.show()
     plt.savefig('ang_velocity.png')
     
 
@@ -57,7 +60,6 @@ def plot_magnetorquer_power_consumption(time, power_consumption, Idx, fignum):
     plt.title('Magnetorquer Power Consumption')
     plt.xlabel('Time [s]')
     plt.ylabel('Power Consumption')
-    plt.show()
     plt.savefig('magnetorquer_power_consumption.png')    
 
 def plot_magnetorquer_inputs(time, control_inputs, Idx, fignum):
@@ -66,7 +68,6 @@ def plot_magnetorquer_inputs(time, control_inputs, Idx, fignum):
     plt.title('Magnetorquer Dipole Moment')
     plt.xlabel('Time [s]')
     plt.ylabel('Magnetorquer Inputs')
-    plt.show()
     plt.savefig('magnetorquer_inputs.png')
     # add upper limit on moment
     # add lower limit on moment
@@ -79,7 +80,6 @@ def plot_control_inputs(time, control_inputs, Idx, fignum):
     plt.title('Control Inputs')
     plt.xlabel('Time [s]')
     plt.ylabel('Control Inputs')
-    plt.show()
 
 
 def plot_sun_pointing_error(time, world_states, Idx, fignum):
@@ -88,7 +88,7 @@ def plot_sun_pointing_error(time, world_states, Idx, fignum):
     quaternion = world_states[:, Idx["X"]["QUAT"]]
     sun_vec_rotated = np.zeros((len(time), 3))
     for i in range(len(time)):
-        sun_vec_rotated[i] = quatrotation(quaternion[i]).T @ sun_vector[i]
+        sun_vec_rotated[i] = quatrotation(quaternion[i]).T @ sun_vector[i] / np.linalg.norm(sun_vector[i])
     sun_pointing_error = np.zeros((len(time), 1))
     for i in range(len(time)):
         sun_pointing_error[i] = np.arccos(np.clip(np.dot(sun_vec_rotated[i], np.array([0.0,0.0,1.0])), -1.0, 1.0))
@@ -96,7 +96,6 @@ def plot_sun_pointing_error(time, world_states, Idx, fignum):
     plt.title('Sun Pointing Error')
     plt.xlabel('Time [s]')
     plt.ylabel('Sun Pointing Error [deg]')
-    plt.show()
     plt.savefig('sun_pointing_error.png')
 
 
@@ -106,7 +105,7 @@ def plot_nadir_pointing_error(time, world_states, Idx, fignum):
     quaternion = world_states[:, Idx["X"]["QUAT"]]
     nadir_vec_rotated = np.zeros((len(time), 3))
     for i in range(len(time)):
-        nadir_vec_rotated[i] = quatrotation(quaternion[i]).T @ nadir_vector[i]
+        nadir_vec_rotated[i] = quatrotation(quaternion[i]).T @ nadir_vector[i] / np.linalg.norm(nadir_vector[i])
     nadir_pointing_error = np.zeros((len(time), 1))
     for i in range(len(time)):
         nadir_pointing_error[i] = np.arccos(np.clip(np.dot(nadir_vec_rotated[i], np.array([0.0,0.0,-1.0])), -1.0, 1.0))
@@ -114,7 +113,6 @@ def plot_nadir_pointing_error(time, world_states, Idx, fignum):
     plt.title('Nadir Pointing Error')
     plt.xlabel('Time [s]')
     plt.ylabel('Nadir Pointing Error [deg]')
-    plt.show()
     plt.savefig('nadir_pointing_error.png')
 
 def main_plotter(results, Idx):
@@ -134,7 +132,7 @@ def main_plotter(results, Idx):
     plot_sun_pointing_error(results["Time"], results["WorldStates"], Idx, fignum)
     fignum += 1
     plot_nadir_pointing_error(results["Time"], results["WorldStates"], Idx, fignum)
-    
+    plt.show()
 # Example usage
 # main_plotter(Results)
 if __name__ == "__main__":

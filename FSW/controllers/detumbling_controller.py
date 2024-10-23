@@ -235,11 +235,16 @@ class BcrossController():
         self,
         magnetic_field: np.ndarray,
         angular_velocity: np.ndarray,
+        ref_angular_velocity: np.ndarray,
     ) -> np.ndarray:
         """
         B-cross law: https://arc.aiaa.org/doi/epdf/10.2514/1.53074
         """
-        magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
-        unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
-        m_cmd = -self.k @ np.cross(unit_magnetic_field, angular_velocity).reshape(3,1)
+        refomega_norm = np.linalg.norm(ref_angular_velocity)
+        if np.linalg.norm(angular_velocity - ref_angular_velocity) / refomega_norm >= np.deg2rad(5):
+            magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
+            unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
+            m_cmd = -self.k @ np.cross(unit_magnetic_field, angular_velocity - ref_angular_velocity).reshape(3,1)
+        else:
+            m_cmd = np.zeros((3,1))
         return np.clip(a=m_cmd, a_min=self.lbm, a_max=self.ubm)

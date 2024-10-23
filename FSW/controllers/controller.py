@@ -79,7 +79,7 @@ class Controller:
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
             return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, 
-                            (est_ctrl_states[Idx["X"]["ANG_VEL"]] - ref_ctrl_states[4:7]))
+                            est_ctrl_states[Idx["X"]["ANG_VEL"]], ref_ctrl_states[4:7])
         elif self.controller_algo == "Lyapunov":
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
