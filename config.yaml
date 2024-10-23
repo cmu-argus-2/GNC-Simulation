@@ -4,7 +4,7 @@ satellite:
       # physical properties
       mass : 1.0 # kg
       area : 0.01 # face area m^2
-      inertia : [[0.002, 0, 0], [0, 0.002, 0], [0, 0, 0.002]]
+      inertia : [[0.002, 0, 0], [0, 0.002, 0], [0, 0, 0.001]]
       Cd : 2.2 # Drag coefficient
       
       # Reaction Wheels
@@ -37,12 +37,12 @@ solver:
 
 mission:
       start_date : 60431.0 # MJD corresponding to midnight May 01 2024
-      duration : 3600 # s
+      duration : 7200 # s
       
       # initial state properties
       initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
       initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
-      initial_angular_rate : [0.0, 10.0, 0.0] # [deg/s]
+      initial_angular_rate : [0.0, 3.0, 0.0] # [deg/s]
       initial_rw_speed : [100.0]
       # Mode management
       pointing_mode: "spin-stabilized" # "detumble" or "spin-stabilized" or "3D-stabilized"
@@ -55,7 +55,7 @@ complexity:
 
 controller:
       # assuming controller states are angular velocity and quaternion imaginary components
-      algorithm: "Bcross" # "BCROSS" or "PID" or whatever
+      algorithm: "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
       bcrossgain: [[0.0028, 0.0, 0.0],
                   [0.0, 0.0028, 0.0],
                   [0.0, 0.0, 0.0028]]
