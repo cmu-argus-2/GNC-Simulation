@@ -131,7 +131,7 @@ def test_od():
 
     estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes)
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
-    rms_position_error = np.sqrt(np.sum(position_errors ** 2))
+    rms_position_error = np.sqrt(np.mean(position_errors ** 2))
     print(f"RMS position error: {rms_position_error}")
 
 
