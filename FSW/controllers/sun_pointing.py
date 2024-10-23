@@ -5,31 +5,13 @@ class LyapunovSunPointingController():
     def __init__(
         self,
         inertia_tensor: np.ndarray,
-        mtb_config: dict,
+        dipole_moment_lower_bound=np.finfo(np.float64).min,
+        dipole_moment_upper_bound=np.finfo(np.float64).max,
     ) -> None:
         # [TODO] max moment should be defined per axis based on all magnetorquers, not just first
         self.J = inertia_tensor
-        max_voltage = mtb_config["max_voltage"][0]
-        max_power = mtb_config["max_power"][0]
-        max_current_rating = mtb_config["max_current_rating"][0]
-        max_current = np.min([max_power / max_voltage, max_current_rating])
-        trace_thickness = mtb_config["trace_thickness"][0]
-        N = mtb_config["coils_per_layer"][0]
-        trace_width = mtb_config["trace_width"][0]
-        gap_width = mtb_config["gap_width"][0]
-        coil_width = trace_width + gap_width
-        pcb_layers = mtb_config["layers"][0]
-        N_per_face = N * pcb_layers
-        pcb_side_max = 0.1
-        A_cross = (pcb_side_max - N * coil_width) ** 2
-        coil_length = 4 * (pcb_side_max - N*coil_width) \
-                        * N * pcb_layers
-        COPPER_RESISTIVITY = 1.724 * 10**-8
-
-        R =  COPPER_RESISTIVITY * coil_length \
-            / (trace_width * trace_thickness)
-
-        self.ubm = N_per_face * max_current * A_cross
+        self.lbm = dipole_moment_lower_bound
+        self.ubm = dipole_moment_upper_bound
 
     def get_dipole_moment_command(
         self,
@@ -63,6 +45,5 @@ class LyapunovSunPointingController():
             u = max_dipole_moment * u/np.linalg.norm(u)
         else:
             u = np.zeros(3)
-
         return u
 

@@ -9,41 +9,34 @@ COPPER_RESISTIVITY = 1.724 * 10**-8
 class Magnetorquer:
     def __init__(
         self,
-        config,
-        IdMtb,
-        max_voltage=5,
-        coils_per_layer=32.0,
-        layers=2.0,
-        trace_width=0.0007317,  # m
-        gap_width=8.999 * 10**-5,  # m
-        trace_thickness=3.556 * 10**-5,  # 1oz copper - 35um = 1.4 mils
-        max_current_rating=1,  # A
-        max_power=1,  # W
+        mtb_config: dict,
+        mtb_id: int,
     ) -> None:
-        self.max_voltage = config["max_voltage"][IdMtb]
-        self.N = config["coils_per_layer"][IdMtb]
-        self.pcb_layers = config["layers"][IdMtb]
+        self.max_voltage = mtb_config["max_voltage"][mtb_id]
+        self.N = mtb_config["coils_per_layer"][mtb_id]
+        self.pcb_layers = mtb_config["layers"][mtb_id]
         self.N_per_face = self.N * self.pcb_layers
-        self.trace_thickness = config["trace_thickness"][IdMtb] 
-        self.trace_width = config["trace_width"][IdMtb] 
-        self.gap_width = config["gap_width"][IdMtb] 
+        self.trace_thickness = mtb_config["trace_thickness"][mtb_id]
+        self.trace_width = mtb_config["trace_width"][mtb_id]
+        self.gap_width = mtb_config["gap_width"][mtb_id]
         self.coil_width =  self.trace_width + self.gap_width
-        self.max_power = config["max_power"][IdMtb]
-        self.max_current_rating = config["max_current_rating"][IdMtb] 
-        self.max_current = np.min([self.max_power / self.max_voltage, self.max_current_rating])
-        # I_max = min Imax, Vmax / R 
-        # D_max = N * I_max * A * G  
+        self.max_power = mtb_config["max_power"][mtb_id]
+        self.max_current_rating = mtb_config["max_current_rating"][mtb_id]
+        self.max_current = np.min([
+            self.max_power / self.max_voltage, self.max_current_rating])
+        # I_max = min Imax, Vmax / R
+        # D_max = N * I_max * A * G
 
         self.pcb_side_max = 0.1
         self.A_cross = (self.pcb_side_max - self.N * self.coil_width) ** 2
         self.R = self.compute_coil_resistance()
-        self.max_dipole_moment = self.N_per_face * self.max_current * self.A_cross  # A*m^2
 
-        self.G_mtb_b = np.array(config["mtb_orientation"][IdMtb]).T
-        self.dipole_moment = np.zeros(3,)
         self.current = 0.0
         self.voltage = 0.0
         self.power   = 0.0
+        self.G_mtb_b = np.array(mtb_config["mtb_orientation"][mtb_id]).T
+        self.dipole_moment = np.zeros(3,)
+        self.max_dipole_moment = self.current_to_dipole_moment(self.max_current)
 
     def get_torque(self, MAG_FIELD):
         """
@@ -53,10 +46,10 @@ class Magnetorquer:
         return np.crossproduct(
             self.dipole_moment, MAG_FIELD
         )
-        
+
     def get_power(self):
-        return  self.R * self.current ** 2
-    
+        return self.R * self.current ** 2
+
     def set_voltage(
         self,
         voltage: float,
@@ -71,7 +64,7 @@ class Magnetorquer:
             raise ValueError(
                 f"Current exceeds maximum power limit of {self.max_power} W."
             )
-        self.dipole_moment = self.convert_current_to_dipole_moment(self.current)
+        self.dipole_moment = self.current_to_dipole_moment(self.current)
 
     def set_current(
         self,
@@ -81,43 +74,44 @@ class Magnetorquer:
             raise ValueError(
                 f"Current exceeds maximum power limit of {self.max_power} W."
             )
-        self.dipole_moment = self.convert_current_to_dipole_moment(current)
+        self.dipole_moment = self.current_to_dipole_moment(current)
 
     def get_dipole_moment_over_current(self) -> float:
         return self.N_per_face * self.A_cross
-    
-    def convert_current_to_dipole_moment(
+
+    def current_to_dipole_moment(
         self,
         current: float,
     ) -> np.ndarray:
         #TODO: confirm that G_mtb_b is unit vector
         return self.N_per_face * current * self.A_cross * self.G_mtb_b
-    
-    def convert_dipole_moment_to_voltage(
+
+    def dipole_moment_to_voltage(
         self,
         dipole_moment: np.ndarray,
     ) -> float:
         self.dipole_moment = dipole_moment
-        I = self.convert_dipole_moment_to_current(dipole_moment)
-        self.current = np.clip(a=I, a_min=-self.max_current, a_max=self.max_current)
+        I = self.dipole_moment_to_current(dipole_moment)
+        self.current = np.clip(I, -self.max_current, self.max_current)
         # clip voltage to max voltage
-        self.voltage = np.clip(a=self.current * self.R, a_min=-self.max_voltage, a_max=self.max_voltage)
+        self.voltage = np.clip(
+            self.current * self.R, -self.max_voltage, self.max_voltage)
         self.power   = self.R * self.current ** 2
         return self.voltage
-    
-    def convert_voltage_to_dipole_moment(
+
+    def voltage_to_dipole_moment(
         self,
         voltage: float,
     ) -> np.ndarray:
         self.voltage = voltage
         I = voltage / self.R
         # clip current to max current
-        self.current = np.clip(a=I, a_min=-self.max_current, a_max=self.max_current)
-        self.dipole_moment = self.convert_current_to_dipole_moment(self.current)
+        self.current = np.clip(I, -self.max_current, self.max_current)
+        self.dipole_moment = self.current_to_dipole_moment(self.current)
         self.power   = self.R * self.current ** 2
         return self.dipole_moment
-    
-    def convert_dipole_moment_to_current(
+
+    def dipole_moment_to_current(
         self,
         dipole_moment: np.ndarray,
     ) -> float:

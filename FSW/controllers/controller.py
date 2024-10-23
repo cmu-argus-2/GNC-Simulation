@@ -1,5 +1,8 @@
 import configparser
+from typing import List
+
 import numpy as np
+
 from world.math.quaternions import *
 from FSW.controllers.detumbling import *
 from FSW.controllers.sun_pointing import *
@@ -8,17 +11,38 @@ from FSW.controllers.sun_pointing import *
 class Controller:
     def __init__(self, config, Idx) -> None:
         self.config = config
-        self.pointing_mode    = config["mission"]["pointing_mode"]
-        self.pointing_target  = config["mission"]["pointing_target"]
-        self.controller_algo  = config["controller"]["algorithm"]
-        self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
+        self.pointing_mode = config["mission"]["pointing_mode"]
+        self.pointing_target = config["mission"]["pointing_target"]
+        self.controller_algo = config["controller"]["algorithm"]
+        self.feedback_gains = np.array(
+            config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
-        self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
-        self.lyapsunpointctr = LyapunovSunPointingController(config["satellite"]["inertia"],
-                                                              config["satellite"]["mtb"])
         self.G_mtb_b = np.array(config["satellite"]["mtb"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
+
+        mtb_config = config["satellite"]["mtb"]
+        self.mtb_models = [
+            Magnetorquer(mtb_config, i) for i in range(mtb_config["N_mtb"])]
+        self.max_dipole_moment = self._get_max_dipole_moment(self.mtb_models)
+
+        self.Bcrossctr = BcrossController(
+            config["controller"]["bcrossgain"],
+            -self.max_dipole_moment,
+            self.max_dipole_moment
+        )
+        self.lyapsunpointctr = LyapunovSunPointingController(
+            config["satellite"]["inertia"],
+            -self.max_dipole_moment,
+            self.max_dipole_moment
+        )
+
+    def _get_max_dipole_moment(
+        self,
+        mtb_models: List[np.ndarray]
+    ) -> np.ndarray:
+        max_moments = [mtb.max_dipole_moment for mtb in mtb_models]
+        return np.sum(max_moments, axis=0)
 
     def _load_gains(self):
         gains = {}
@@ -45,7 +69,7 @@ class Controller:
             y_body = np.cross(z_body, x_body)
             Rot_mat = np.vstack((x_body, y_body, z_body)).T
             q_ref = rotmat2quat(Rot_mat)
-        elif pointing_mode == "Nadir":
+        elif pointing_target == "Nadir":
             att_states = est_world_states[6:13]
             # Default values if not sun pointing
             ref_ctrl_states = np.zeros((19,))
@@ -76,8 +100,9 @@ class Controller:
         if self.controller_algo == "Bcross":
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
-            return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD,
+            torque = self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD,
                             (est_ctrl_states[Idx["X"]["ANG_VEL"]] - ref_ctrl_states[4:7]))
+            return torque
 
         q_ref = ref_ctrl_states[:4]
         q_est = est_ctrl_states[Idx["X"]["QUAT"]]
@@ -111,16 +136,14 @@ class Controller:
         return actuator_cmd
 
     def run(self, date, est_world_states, Idx):
-
         self.est_world_states = est_world_states
+
         # define slew profile
         ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, self.pointing_target, est_world_states)
+
         # feedforward and feedback controller
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states, Idx)
 
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
-
-
         return actuator_cmd
-

@@ -27,7 +27,7 @@ class NonMonotonicController():
         time_step: float,
         alpha=100.0,
         beta=1.0,
-        dipole_moment_lower_bound=np.zeros(3),
+        dipole_moment_lower_bound=np.finfo(np.float64).min,
         dipole_moment_upper_bound=np.finfo(np.float64).max,
     ) -> None:
         self.J = inertia_tensor
@@ -71,7 +71,7 @@ class BcrossController():
     def __init__(
         self,
         b_dot_gain: float,
-        dipole_moment_lower_bound=np.zeros(3),
+        dipole_moment_lower_bound=np.finfo(np.float64).min,
         dipole_moment_upper_bound=np.finfo(np.float64).max,
     ) -> None:
         self.k = np.array(b_dot_gain)
@@ -90,4 +90,4 @@ class BcrossController():
         unit_magnetic_field = magnetic_field / magnetic_field_norm
         m_cmd = -self.k / magnetic_field_norm \
                         @ np.cross(unit_magnetic_field, angular_velocity).reshape(3,1)
-        return np.clip(a=m_cmd, a_min=self.lbm.reshape(3,1), a_max=self.ubm)
+        return np.clip(a=m_cmd, a_min=self.lbm.reshape(3,1), a_max=self.ubm.reshape(3,1))
