@@ -29,18 +29,18 @@ satellite:
 
 
 solver:
-      world_update_rate : 100 #Hz
+      world_update_rate : 10 #Hz
       controller_update_rate : 10 #Hz
       payload_update_rate : 0.001 #Hz
 
 mission:
       start_date : 60431.0 # MJD corresponding to midnight May 01 2024
-      duration : 100 # s
+      duration : 1000 # s
       
       # initial state properties
       initial_orbital_elements : [1.0E+7, 0.005, 96, 192, 21, 135] # [a, e, i, RAAN, AOP, M] NOTE: brahe takes Mean Anomaly and not true anomaly. Need to change code if we absolutely require true anomaly
       initial_attitude : [1.0, 0.0, 0.0, 0.0] # these quaternions represent a transformation from body-frame to ECI
-      initial_angular_rate : [0.0, 0.00001, 0.0]
+      initial_angular_rate : [0.0, 60.0, 0.0] # [deg/s]
       initial_rw_speed : [100.0]
       # Mode management
       pointing_mode: "detumble" # "Nadir" or "Sun" or "detumble" or "spin-stabilized"
@@ -53,7 +53,7 @@ complexity:
 
 controller:
       # assuming controller states are angular velocity and quaternion imaginary components
-      algorithm: "BCROSS" # "BCROSS" or "PID" or whatever
+      algorithm: "Bcross" # "BCROSS" or "PID" or whatever
       bcrossgain: [[0.0028, 0.0, 0.0],
                   [0.0, 0.0028, 0.0],
                   [0.0, 0.0, 0.0028]]
