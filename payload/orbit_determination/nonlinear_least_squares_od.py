@@ -24,7 +24,7 @@ class OrbitDetermination:
         self.dt = dt
 
     def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, pixel_coordinates: np.ndarray,
-                  cubesat_attitudes: np.ndarray) -> np.ndarray:
+                  cubesat_attitudes: np.ndarray, N: int = None) -> np.ndarray:
         """
         Solve the orbit determination problem using non-linear least squares.
 
@@ -33,6 +33,7 @@ class OrbitDetermination:
         :param landmarks: A numpy array of shape (n, 3) containing the ECI coordinates of the landmarks.
         :param pixel_coordinates: A numpy array of shape (n, 2) containing the pixel coordinates of the landmarks.
         :param cubesat_attitudes: A numpy array of shape (n, 4) containing the quaternions representing the attitude of the satellite.
+        :param N: The number of time steps. If None, it will be set to the maximum value in times plus one.
         :return: A numpy array of shape (max(times) + 1, 6) containing the ECI position and velocity of the satellite at each time step.
         """
         assert len(times.shape) == 1, "times must be a 1D array"
@@ -46,6 +47,10 @@ class OrbitDetermination:
         assert cubesat_attitudes.shape[1] == 4, "cubesat_attitudes must have 4 columns"
         assert len(times) == len(landmarks) == len(pixel_coordinates) == len(cubesat_attitudes), \
             "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
+        if N is None:
+            N = times[-1] + 1  # number of time steps
+        else:
+            assert N > times[-1], "N must be greater than the maximum value in times"
 
         bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
         bearing_unit_vectors = np.linalg.norm(bearing_vectors, axis=1)
@@ -53,8 +58,6 @@ class OrbitDetermination:
         eci_to_camera_rotations = np.zeros((len(times), 3, 3))
         for i in range(len(times)):
             eci_to_camera_rotations[i, ...] = self.camera.R_sat_cam @ Rotation.from_quat(q_inv(cubesat_attitudes[i, :]), scalar_first=True).as_matrix()
-
-        N = times[-1] + 1  # number of time steps
 
         def residuals(X: np.ndarray) -> np.ndarray:
             """
