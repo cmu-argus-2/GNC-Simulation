@@ -60,12 +60,13 @@ class Controller:
             
         return ref_torque, ref_ctrl_states
     
-    def get_torque(self, date, ref_torque, ref_ctrl_states, est_ctrl_states):
+    def get_torque(self, date, ref_torque, ref_ctrl_states, est_ctrl_states, Idx):
         # from the reference and estimated quaternions, get the error quaternion for control
         if self.controller_algo == "Bcross":
-            Re2b = quatrotation(est_ctrl_states[self.Idx["X"]["QUAT"]]).T
+            Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
-            return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, est_ctrl_states[10:13], est_ctrl_states[10:13])
+            return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, 
+                                                            est_ctrl_states[Idx["X"]["ANG_VEL"]])
             
         q_ref = ref_ctrl_states[:4]
         q_est = est_ctrl_states[6:10]
@@ -82,7 +83,10 @@ class Controller:
         
         B_mat = np.zeros((3, Idx["NU"]))
         B_mat[:,Idx["U"]["RW_TORQUE"]]  = self.G_rw_b.T
-        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(state[Idx["X"]["MAG_FIELD"]])  @ self.G_mtb_b
+        mag_field = state[Idx["X"]["MAG_FIELD"]]
+        Re2b = quatrotation(state[Idx["X"]["QUAT"]]).T
+        bfMAG_FIELD = Re2b @ mag_field
+        B_mat[:,Idx["U"]["MTB_TORQUE"]] = crossproduct(bfMAG_FIELD)  @ self.G_mtb_b
         
         self.allocation_mat = np.vstack((np.zeros((1, 3)), np.eye(3)))
         # np.linalg.pinv(B_mat)
@@ -100,10 +104,12 @@ class Controller:
         # define slew profile
         ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, est_world_states)
         # feedforward and feedback controller
-        torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states)
+        torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states, Idx)
         
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
+ 
                 
         return actuator_cmd
+
         

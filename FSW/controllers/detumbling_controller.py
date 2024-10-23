@@ -73,7 +73,7 @@ class BcrossController():
         dipole_moment_lower_bound=np.zeros(3),
         dipole_moment_upper_bound=np.finfo(np.float64).max,
     ) -> None:
-        self.k = b_dot_gain
+        self.k = np.array(b_dot_gain)
         self.lbm = dipole_moment_lower_bound
         self.ubm = dipole_moment_upper_bound
 
@@ -88,5 +88,5 @@ class BcrossController():
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
         unit_magnetic_field = magnetic_field / magnetic_field_norm
         m_cmd = -self.k / magnetic_field_norm \
-                        * np.cross(unit_magnetic_field, angular_velocity)
-        return np.clip(a=m_cmd, a_min=self.lbm, a_max=self.ubm)
+                        @ np.cross(unit_magnetic_field, angular_velocity).reshape(3,1)
+        return np.clip(a=m_cmd, a_min=self.lbm.reshape(3,1), a_max=self.ubm)
