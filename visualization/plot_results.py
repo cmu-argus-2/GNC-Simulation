@@ -2,9 +2,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+from world.math.quaternions import quatrotation
 
-def plot_position(time, world_states, Idx):
-    plt.figure()
+def plot_position(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, world_states[:, Idx["X"]["ECI_POS"]])
     plt.title('Position [m]')
     plt.xlabel('Time [s]')
@@ -12,8 +13,8 @@ def plot_position(time, world_states, Idx):
     plt.show()
     plt.savefig('position_ECI.png')
 
-def plot_velocity(time, world_states, Idx):
-    plt.figure()
+def plot_velocity(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, world_states[:, Idx["X"]["ECI_VEL"]])
     plt.title('Velocity [m/s]')
     plt.xlabel('Time [s]')
@@ -21,8 +22,8 @@ def plot_velocity(time, world_states, Idx):
     plt.show()
     plt.savefig('velocity_ECI.png')
 
-def plot_quaternion(time, world_states, Idx):
-    plt.figure()
+def plot_quaternion(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, world_states[:, Idx["X"]["QUAT"]])
     plt.title('Quaternion')
     plt.xlabel('Time [s]')
@@ -30,8 +31,8 @@ def plot_quaternion(time, world_states, Idx):
     plt.show()
     plt.savefig('quaternion.png')
     
-def plot_angular_velocity(time, world_states, Idx):
-    plt.figure()
+def plot_angular_velocity(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
     angular_velocity = world_states[:, Idx["X"]["ANG_VEL"]] * 180/np.pi
     plt.plot(time, angular_velocity[:, 0], label='X Angular Velocity')
     plt.plot(time, angular_velocity[:, 1], label='Y Angular Velocity')
@@ -47,8 +48,8 @@ def plot_angular_velocity(time, world_states, Idx):
     plt.savefig('ang_velocity.png')
     
 
-def plot_magnetorquer_power_consumption(time, power_consumption, Idx):
-    plt.figure()
+def plot_magnetorquer_power_consumption(time, power_consumption, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, power_consumption["MTB"][0, :], label='MTB 1')
     plt.plot(time, power_consumption["MTB"][1, :], label='MTB 2')
     plt.plot(time, power_consumption["MTB"][2, :], label='MTB 3')
@@ -59,8 +60,8 @@ def plot_magnetorquer_power_consumption(time, power_consumption, Idx):
     plt.show()
     plt.savefig('magnetorquer_power_consumption.png')    
 
-def plot_magnetorquer_inputs(time, control_inputs, Idx):
-    plt.figure()
+def plot_magnetorquer_inputs(time, control_inputs, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, control_inputs[Idx["U"]["MTB_TORQUE"]])
     plt.title('Magnetorquer Dipole Moment')
     plt.xlabel('Time [s]')
@@ -72,8 +73,8 @@ def plot_magnetorquer_inputs(time, control_inputs, Idx):
     # dip_moment =  
     
     
-def plot_control_inputs(time, control_inputs, Idx):
-    plt.figure()
+def plot_control_inputs(time, control_inputs, Idx, fignum):
+    plt.figure(num=fignum)
     plt.plot(time, control_inputs)
     plt.title('Control Inputs')
     plt.xlabel('Time [s]')
@@ -81,14 +82,59 @@ def plot_control_inputs(time, control_inputs, Idx):
     plt.show()
 
 
+def plot_sun_pointing_error(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
+    sun_vector = world_states[:, Idx["X"]["SUN_POS"]]
+    quaternion = world_states[:, Idx["X"]["QUAT"]]
+    sun_vec_rotated = np.zeros((len(time), 3))
+    for i in range(len(time)):
+        sun_vec_rotated[i] = quatrotation(quaternion[i]).T @ sun_vector[i]
+    sun_pointing_error = np.zeros((len(time), 1))
+    for i in range(len(time)):
+        sun_pointing_error[i] = np.arccos(np.clip(np.dot(sun_vec_rotated[i], np.array([0.0,0.0,1.0])), -1.0, 1.0))
+    plt.plot(time, np.rad2deg(sun_pointing_error))
+    plt.title('Sun Pointing Error')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Sun Pointing Error [deg]')
+    plt.show()
+    plt.savefig('sun_pointing_error.png')
+
+
+def plot_nadir_pointing_error(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
+    nadir_vector = -world_states[:, Idx["X"]["ECI_POS"]]
+    quaternion = world_states[:, Idx["X"]["QUAT"]]
+    nadir_vec_rotated = np.zeros((len(time), 3))
+    for i in range(len(time)):
+        nadir_vec_rotated[i] = quatrotation(quaternion[i]).T @ nadir_vector[i]
+    nadir_pointing_error = np.zeros((len(time), 1))
+    for i in range(len(time)):
+        nadir_pointing_error[i] = np.arccos(np.clip(np.dot(nadir_vec_rotated[i], np.array([0.0,0.0,-1.0])), -1.0, 1.0))
+    plt.plot(time, np.rad2deg(nadir_pointing_error))
+    plt.title('Nadir Pointing Error')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Nadir Pointing Error [deg]')
+    plt.show()
+    plt.savefig('nadir_pointing_error.png')
+
 def main_plotter(results, Idx):
+    fignum = 1
+    plot_position(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_velocity(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_quaternion(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_angular_velocity(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_control_inputs(results["Time"], results["ControlInputs"], Idx, fignum)
+    fignum += 1
+    plot_magnetorquer_power_consumption(results["Time"], results["PowerConsumption"], Idx, fignum)
+    fignum += 1
+    plot_sun_pointing_error(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_nadir_pointing_error(results["Time"], results["WorldStates"], Idx, fignum)
     
-    plot_position(results["Time"], results["WorldStates"], Idx)
-    plot_velocity(results["Time"], results["WorldStates"], Idx)
-    plot_quaternion(results["Time"], results["WorldStates"], Idx)
-    plot_angular_velocity(results["Time"], results["WorldStates"], Idx)
-    plot_control_inputs(results["Time"], results["ControlInputs"], Idx)
-    plot_magnetorquer_power_consumption(results["Time"], results["PowerConsumption"], Idx)
 # Example usage
 # main_plotter(Results)
 if __name__ == "__main__":
