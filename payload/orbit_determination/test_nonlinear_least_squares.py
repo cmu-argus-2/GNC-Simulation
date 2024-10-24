@@ -127,9 +127,8 @@ def test_od():
             take_measurement(t)
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
-    take_measurement(N - 1)  # take a measurement at the last timestep so that estimated_states.shape[0] == N
 
-    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes)
+    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes, N)
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
     rms_position_error = np.sqrt(np.mean(position_errors ** 2))
     print(f"RMS position error: {rms_position_error}")
