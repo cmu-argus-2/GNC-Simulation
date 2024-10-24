@@ -53,7 +53,7 @@ class OrbitDetermination:
             assert N > times[-1], "N must be greater than the maximum value in times"
 
         bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
-        bearing_unit_vectors = np.linalg.norm(bearing_vectors, axis=1)
+        bearing_unit_vectors = bearing_vectors / np.linalg.norm(bearing_vectors, axis=1, keepdims=True)
 
         eci_to_camera_rotations = np.zeros((len(times), 3, 3))
         for i in range(len(times)):
