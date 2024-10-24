@@ -66,7 +66,7 @@ class OrbitDetermination:
             :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
             :return: A numpy array of shape (6 * (N - 1) + 3 * len(times),) containing the residuals.
             """
-            states = X.reshape(-1, 6)
+            states = X.reshape(N, 6)
             res = np.zeros(6 * (N - 1) + 3 * len(times))
 
             # dynamics residuals
@@ -88,7 +88,7 @@ class OrbitDetermination:
             :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
             :return: A numpy array of shape (6 * (N - 1) + 3 * len(times), 6 * N) containing the Jacobian of the residuals.
             """
-            states = X.reshape(-1, 6)
+            states = X.reshape(N, 6)
             jac = np.zeros((6 * (N - 1) + 3 * len(times), 6 * N), dtype=X.dtype)
             # Note that indices into the columns of jac are 6 * i : 6 * (i + 1) for the ith state
 
@@ -111,4 +111,4 @@ class OrbitDetermination:
 
         initial_guess = np.ones(6 * N)  # TODO: improve initial guess
         result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
-        return result.x.reshape(-1, 6)
+        return result.x.reshape(N, 6)
