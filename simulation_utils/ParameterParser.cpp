@@ -13,6 +13,8 @@
 #include "misc.h"
 #include "yaml-cpp/yaml.h"
 #include "utils_and_transforms.h"
+#include "ReactionWheel.h"
+#include "Magnetorquer.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -29,8 +31,8 @@
 // ==========================================================================
 // ==========================================================================
 
-void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
-    
+Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MTB(filename))
+{
     YAML::Node params = YAML::LoadFile(filename);
     
     // Parse parameters
@@ -45,8 +47,6 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
     G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
 
-    num_MTBs = params["N_mtb"].as<int>();
-    G_mtb_b = Eigen::Map<Eigen::MatrixXd>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
 
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
@@ -67,6 +67,14 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
     initial_state = initializeSatellite(earliest_sim_start_unix);
 }
 
+/*
+void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
+    
+    // TODO : Disperse params loaded from init for MC
+
+}
+*/
+
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {
     VectorXd State(13+num_RWs);
@@ -82,11 +90,34 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 
 }
 
+Magnetorquer Simulation_Parameters::load_MTB(std::string filename)
+{
+    YAML::Node params = YAML::LoadFile(filename);
+
+    num_MTBs = params["N_mtb"].as<int>();
+    G_mtb_b = Eigen::Map<Eigen::MatrixXd>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
+
+    Magnetorquer magnetorquer = Magnetorquer(
+                                    params["N_mtb"].as<int>(),
+                                    params["max_voltage"].as<double>(),
+                                    params["coils_per_layer"].as<double>(),
+                                    params["layers"].as<double>(),
+                                    params["trace_width"].as<double>(),
+                                    params["gap_width"].as<double>(),
+                                    params["trace_thickness"].as<double>(),
+                                    params["max_power"].as<double>(),
+                                    params["max_current_rating"].as<double>(),
+                                    G_mtb_b
+                                    );
+    
+    return magnetorquer;
+}
+
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysim_utils, m) {
     pybind11::class_<Simulation_Parameters>(m, "Simulation_Parameters")
-        .def(pybind11::init<>())
-        .def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
+        .def(pybind11::init<std::string>())
+        //.def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
         //.def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia", &Simulation_Parameters::I_sat)

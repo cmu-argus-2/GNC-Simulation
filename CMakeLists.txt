@@ -34,5 +34,5 @@ add_compile_options(
 add_subdirectory(dependencies)
 add_subdirectory(world)
 add_subdirectory(sensors)
-add_subdirectory(actuators)
 add_subdirectory(simulation_utils)
+add_subdirectory(actuators)

@@ -4,10 +4,12 @@
 #include "math/EigenWrapper.h"
 #include "math/vector_math.h"
 #include "ParameterParser.h"
+#include "Magnetorquer.h"
 
 #include "gravity.h"
 #include "drag.h"
 #include "SRP.h"
+#include "MagneticField.h"
 
 
 #ifdef USE_PYBIND_TO_COMPILE
@@ -21,7 +23,7 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
 {
 
     auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, t_J2000);
-    xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, sc.I_rw, sc.I_sat);
+    xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, sc.I_rw, sc.I_sat, sc.MTB, t_J2000);
 
     return xdot;
 }
@@ -57,7 +59,7 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 
 VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
                              const Eigen::MatrixXd& G_rw_b, const Eigen::MatrixXd& G_mtb_b,
-                             double I_rw, const Matrix_3x3 I_sat)
+                             double I_rw, const Matrix_3x3 I_sat, Magnetorquer MTB, double t_J2000)
 {
     
     // Assert matrix sizes
@@ -71,6 +73,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     VectorXd xdot = VectorXd::Zero(x.size());
 
     // Extract elements of state vector
+    Vector3 r = x(Eigen::seqN(0, 3));
     Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
     Vector3 omega{x(10), x(11), x(12)};
     VectorXd omega_rw(num_RWs);
@@ -86,7 +89,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     auto tau_rw = u(Eigen::seqN(num_MTBs, num_RWs));
     
     // Magnetorquers
-    Vector3 tau_mtb = (G_mtb_b*u(Eigen::seqN(0, num_MTBs)).asDiagonal()).rowwise().sum();
+    Vector3 tau_mtb = MTB.getTorque(u(Eigen::seqN(0,num_MTBs)), q, MagneticField(r, t_J2000));
 
     // Gyrostat Equation
     Vector3 h_sc = I_sat*omega + G_rw_b*h_rw;

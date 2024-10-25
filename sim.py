@@ -25,8 +25,7 @@ def estimator(w):
 def run(log_directory, config_path):
     logr = logger.MultiFileLogger(log_directory)
 
-    params = SimParams()
-    params.getParamsFromFileAndSample(config_path)
+    params = SimParams(config_path)
 
     initial_state = np.array(params.initial_state) # Get initial state
     num_RWs = params.num_RWs
@@ -39,16 +38,14 @@ def run(log_directory, config_path):
     last_print_time = -1e99
 
     current_time = 0
+    controller_command = np.zeros((num_MTBs + num_RWs, 1))
     while current_time <= params.MAX_TIME:
-        
-        # Get controller Command
-        controller_output = np.zeros((num_MTBs + num_RWs, 1))
 
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
             state_estimate = true_state  # TODO fix me
-            controller_output = controller(state_estimate)
-            assert(len(controller_output) == (num_RWs + num_MTBs))
+            controller_command = controller(state_estimate)
+            assert(len(controller_command) == (num_RWs + num_MTBs))
             last_controller_update = current_time
 
         # Update Estimator Prediction at Estimator Update Frequency
@@ -75,7 +72,7 @@ def run(log_directory, config_path):
             ] + ["x [rad/s]"]*num_RWs),
         )
 
-        true_state = rk4(true_state, controller_output, params, current_time, params.dt)
+        true_state = rk4(true_state, controller_command, params, current_time, params.dt)
         current_time += params.dt
 
     elapsed_seconds_wall_clock = time() - START_TIME

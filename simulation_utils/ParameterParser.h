@@ -4,10 +4,12 @@
 #include <string>
 
 #include "math/EigenWrapper.h"
+#include "Magnetorquer.h"
 
 class Simulation_Parameters {
    public:
-    void getParamsFromFileAndSample(std::string filename);
+    Simulation_Parameters(std::string filename);
+    //void getParamsFromFileAndSample(std::string filename);
     VectorXd initializeSatellite(double epoch);
 
     // void dumpSampledParametersToYAML(std::string absolute_filename); TODO
@@ -34,6 +36,15 @@ class Simulation_Parameters {
     // Magnetorquers
     int num_MTBs;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
+    double max_voltage;
+    double coils_per_layer;
+    double layers;
+    double trace_width;
+    double gap_width;
+    double trace_thickness;
+    double max_current_rating;
+    double max_power;
+    Magnetorquer MTB; // Magnetorquer class object
 
     
     /* Simulation Settings */ 
@@ -54,6 +65,9 @@ class Simulation_Parameters {
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
+
+    private:
+    Magnetorquer load_MTB(std::string filename);
 };
 
 #endif
