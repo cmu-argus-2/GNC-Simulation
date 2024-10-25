@@ -23,7 +23,7 @@ add_compile_options(
     -Wunused-function
     -Wreturn-type
     -Wunused-value
-    -Wswitch-default
+    #-Wswitch-default
     -Wuninitialized
     -Winit-self
     -Wno-comment            # Don't warn about /* in comments, it's common in the codebase and seems fine
@@ -36,4 +36,3 @@ add_subdirectory(world)
 add_subdirectory(sensors)
 add_subdirectory(actuators)
 add_subdirectory(simulation_utils)
-add_subdirectory(simulation_manager)

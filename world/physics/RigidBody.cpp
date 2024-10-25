@@ -1,7 +1,14 @@
 #include "RigidBody.h"
+#include <iostream>
+
+#include "math/EigenWrapper.h"
+#include "math/vector_math.h"
+#include "ParameterParser.h"
 
 #include "gravity.h"
-#include "math/EigenWrapper.h"
+#include "drag.h"
+#include "SRP.h"
+
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -10,197 +17,166 @@
 #pragma GCC diagnostic pop
 #endif
 
-RigidBody::RigidBody(double mass, const Matrix_3x3& InertiaTensor, const Vector3& init_pos_b_wrt_g_in_g,
-                     const Quaternion& init_g_q_b, const Vector3& init_vel_b_wrt_g_in_b,
-                     const Vector3& init_omega_b_wrt_g_in_b)
-    : mass_(mass), InertiaTensor_(InertiaTensor) {
-    InertiaTensorInverse_ = InertiaTensor.inverse();
+VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, double t_J2000) 
+{
 
-    set_pos_b_wrt_g_in_g(init_pos_b_wrt_g_in_g);
-    set_g_q_b(init_g_q_b);
-    set_vel_b_wrt_g_in_b(init_vel_b_wrt_g_in_b);
-    set_omega_b_wrt_g_in_b(init_omega_b_wrt_g_in_b);
-
-    u_ = Vector6::Zero();
-}
-
-Vector3 RigidBody::get_gravity_b() {
-    // TODO(Amaar): gravity and J2 computations here
-    return Vector3::Zero();
-}
-
-void RigidBody::applyForce(const Vector3& force_b, const Vector3& pointOfApplication_b) {
-    set_net_force_b(get_net_force_b() + force_b);
-
-    // accounting for the applied body force's resulting moment
-    applyMoment(pointOfApplication_b.cross(force_b));
-}
-
-void RigidBody::applyMoment(const Vector3& moment_b) {
-    set_net_moment_b(get_net_moment_b() + moment_b);
-}
-
-void RigidBody::clearAppliedForcesAndMoments() {
-    set_net_force_b(Vector3::Zero());
-    set_net_moment_b(Vector3::Zero());
-}
-
-StateVector f(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
-              const Matrix_3x3& InertiaTensorInverse, double mass) {
-    StateVector xdot = StateVector::Zero();   // derivative of the state vector
-
-    // aliases for brevity
-    auto r           = ::get_pos_b_wrt_g_in_g(x);
-    auto v_b         = ::get_vel_b_wrt_g_in_b(x);
-    auto q           = ::get_g_q_b(x);
-    auto f_b         = ::get_net_force_b(u);
-    const auto& J    = InertiaTensor;
-    const auto& Jinv = InertiaTensorInverse;
-    auto tau_b       = ::get_net_moment_b(u);
-    auto w           = ::get_omega_b_wrt_g_in_b(x);
-
-    Matrix_4x4 L = Matrix_4x4::Zero();
-    L << q.w(), -q.x(), -q.y(), -q.z(),   //
-        q.x(), q.w(), -q.z(), q.y(),      //
-        q.y(), q.z(), q.w(), -q.x(),      //
-        q.z(), -q.y(), q.x(), q.w();
-
-    Matrix_4x3 H = Matrix_4x3::Zero();
-    H(1, 0)      = 1;
-    H(2, 1)      = 1;
-    H(3, 2)      = 1;
-
-    Vector3 gravity_g   = gravitational_acceleration(r);
-    Vector3 gravity_b   = q.inverse() * gravity_g;
-    Vector3 rdot        = q * v_b;
-    auto G              = L * H;
-    Vector4 qdot_coeffs = 0.5 * G * w;
-    Quaternion qdot{qdot_coeffs(0), qdot_coeffs(1), qdot_coeffs(2), qdot_coeffs(3)};
-    Vector3 vdot = gravity_b + f_b / mass - w.cross(v_b);
-    Vector3 wdot = Jinv * (tau_b - w.cross(J * w));
-
-    // the functions are called set_X but using them to set derivatives of X quantities in the correct positions of the
-    // state vector
-    ::set_pos_b_wrt_g_in_g(xdot, rdot);
-    ::set_g_q_b(xdot, qdot, false);
-    ::set_vel_b_wrt_g_in_b(xdot, vdot);
-    ::set_omega_b_wrt_g_in_b(xdot, wdot);
+    auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, t_J2000);
+    xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, sc.I_rw, sc.I_sat);
 
     return xdot;
 }
 
-StateVector rk4(const StateVector& x, const Vector6& u, const Matrix_3x3& InertiaTensor,
-                const Matrix_3x3& InertiaTensorInverse, double mass, double dt) {
-    double half_dt    = dt * 0.5;
-    StateVector k1    = f(x, u, InertiaTensor, InertiaTensorInverse, mass);
-    StateVector k2    = f(x + half_dt * k1, u, InertiaTensor, InertiaTensorInverse, mass);
-    StateVector k3    = f(x + half_dt * k2, u, InertiaTensor, InertiaTensorInverse, mass);
-    StateVector k4    = f(x + dt * k3, u, InertiaTensor, InertiaTensorInverse, mass);
-    StateVector x_new = x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, double A, 
+                                bool useDrag, bool useSRP, double t_J2000)
+{
+    VectorXd xdot = VectorXd::Zero(x.size());
 
-    // renormalize the attitude quaternion (taken care of by set_g_q_b())
-    set_g_q_b(x_new, get_g_q_b(x_new), true);
+    // Extract elements from state vector
+    Vector3 r = x(Eigen::seqN(0, 3));
+    Vector3 v = x(Eigen::seqN(3, 3));
+    Quaternion q{x(6), x(7), x(8), x(9)};
+
+    // Physics Models
+    Vector3 vdot = gravitational_acceleration(r);
+
+    
+    if (useDrag){ 
+        vdot = vdot + drag_acceleration(r, v, q, t_J2000, Cd, A, mass);
+    }
+
+    if (useSRP){
+        vdot = vdot + SRP_acceleration(q, t_J2000, CR, A, mass);
+    }
+    
+    // Pack acceleration back into the state vector
+    xdot(Eigen::seqN(0,3)) = v;
+    xdot(Eigen::seqN(3,3)) = vdot;
+
+    return xdot;
+}
+
+VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
+                             const Eigen::MatrixXd& G_rw_b, const Eigen::MatrixXd& G_mtb_b,
+                             double I_rw, const Matrix_3x3 I_sat)
+{
+    
+    // Assert matrix sizes
+    assert(x.size() == (13 + num_RWs)); // State vector = 13x1 vector + RW speeds
+    assert(u.size() == (num_MTBs + num_RWs)); // num_MTB + num_RWs torques
+    assert(G_rw_b.rows() == 3); // Orientation matrix has 3 element vectors
+    assert(G_rw_b.cols() == num_RWs); // 1 column for each RW
+    assert(G_mtb_b.rows() == 3); // 3D vector for each MTB
+    assert(G_mtb_b.cols() == num_MTBs); // 1 column for each MTB
+
+    VectorXd xdot = VectorXd::Zero(x.size());
+
+    // Extract elements of state vector
+    Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
+    Vector3 omega{x(10), x(11), x(12)};
+    VectorXd omega_rw(num_RWs);
+    omega_rw = x(Eigen::seqN(13, num_RWs));
+    
+    /* Attitude Dynamics */
+    Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
+    Quaternion qdot_quat = 0.5*omega_quat*q;
+    Vector4 qdot{qdot_quat.w(), qdot_quat.x(), qdot_quat.y(), qdot_quat.z()};
+
+    // Reaction Wheels
+    auto h_rw = I_rw*omega_rw;
+    auto tau_rw = u(Eigen::seqN(num_MTBs, num_RWs));
+    
+    // Magnetorquers
+    Vector3 tau_mtb = (G_mtb_b*u(Eigen::seqN(0, num_MTBs)).asDiagonal()).rowwise().sum();
+
+    // Gyrostat Equation
+    Vector3 h_sc = I_sat*omega + G_rw_b*h_rw;
+    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) + G_rw_b*tau_rw + tau_mtb);
+    
+    // Reaction wheel speeds
+    auto omega_dot_rw = tau_rw/I_rw;
+    
+    // Pack into state derivative vector
+    xdot(Eigen::seqN(6,4)) = qdot;
+    xdot(Eigen::seqN(10,3)) = omega_dot;
+    xdot(Eigen::seqN(13,num_RWs)) = omega_dot_rw;
+
+    return xdot;
+}
+
+VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, double t_J2000, double dt) 
+{
+    VectorXd x_new(x.size());
+    double half_dt    = dt * 0.5;
+
+    auto k1    = f(x, u, SC, t_J2000);
+    auto k2    = f(x + half_dt * k1, u, SC, t_J2000 + half_dt);
+    auto k3    = f(x + half_dt * k2, u, SC, t_J2000 + half_dt);
+    auto k4    = f(x + dt * k3, u, SC, t_J2000 + dt);
+    x_new = x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+
+    // renormalize the attitude quaternion
+    x_new(Eigen::seqN(6, 4)) = x_new(Eigen::seqN(6, 4))/x_new(Eigen::seqN(6, 4)).norm();
+
     return x_new;
 }
 
-void RigidBody::set_pos_b_wrt_g_in_g(const Vector3& new_pos_b_wrt_g_in_g) {
-    ::set_pos_b_wrt_g_in_g(x_, new_pos_b_wrt_g_in_g);
-}
-void RigidBody::set_g_q_b(const Quaternion& new_g_q_b) {
-    ::set_g_q_b(x_, new_g_q_b, true);
-}
-void RigidBody::set_b_q_g(const Quaternion& new_b_q_g) {
-    ::set_b_q_g(x_, new_b_q_g, true);
-}
-void RigidBody::set_vel_b_wrt_g_in_b(const Vector3& new_vel_b_wrt_g_in_b) {
-    ::set_vel_b_wrt_g_in_b(x_, new_vel_b_wrt_g_in_b);
-}
-void RigidBody::set_omega_b_wrt_g_in_b(const Vector3& new_omega_b_wrt_g_in_b) {
-    ::set_omega_b_wrt_g_in_b(x_, new_omega_b_wrt_g_in_b);
-}
-void RigidBody::set_net_force_b(const Vector3& new_net_force_b) {
-    ::set_net_force_b(u_, new_net_force_b);
-}
-void RigidBody::set_net_moment_b(const Vector3& new_net_moment_b) {
-    ::set_net_moment_b(u_, new_net_moment_b);
+
+/* UTILITY FUNCTIONS */
+void set_pos_in_state(VectorXd &x, const Vector3 &pos)
+{
+    x(Eigen::seqN(0,3)) = pos;
 }
 
-Vector3 RigidBody::get_pos_b_wrt_g_in_g() {
-    return ::get_pos_b_wrt_g_in_g(x_);
-}
-Quaternion RigidBody::get_g_q_b() {
-    return ::get_g_q_b(x_);
-}
-Quaternion RigidBody::get_b_q_g() {
-    return ::get_b_q_g(x_);
-}
-Vector3 RigidBody::get_vel_b_wrt_g_in_b() {
-    return ::get_vel_b_wrt_g_in_b(x_);
-}
-Vector3 RigidBody::get_omega_b_wrt_g_in_b() {
-    return ::get_omega_b_wrt_g_in_b(x_);
-}
-Vector3 RigidBody::get_net_force_b() {
-    return ::get_net_force_b(u_);
-}
-Vector3 RigidBody::get_net_moment_b() {
-    return ::get_net_moment_b(u_);
+void set_vel_in_state(VectorXd &x, const Vector3 &vel)
+{
+    x(Eigen::seqN(3,3)) = vel;
 }
 
-void set_pos_b_wrt_g_in_g(StateVector& x, const Vector3& new_pos_b_wrt_g_in_g) {
-    x.block<3, 1>(0, 0) = new_pos_b_wrt_g_in_g;
-}
-void set_g_q_b(StateVector& x, const Quaternion& new_g_q_b, bool normalize) {
-    auto copy = new_g_q_b;
-    if (normalize) {
-        copy = copy.normalized();
-    }
-    x(3) = copy.x();
-    x(4) = copy.y();
-    x(5) = copy.z();
-    x(6) = copy.w();
-}
-void set_b_q_g(StateVector& x, const Quaternion& new_b_q_g, bool normalize) {
-    ::set_g_q_b(x, new_b_q_g.inverse(), normalize);
-}
-void set_vel_b_wrt_g_in_b(StateVector& x, const Vector3& new_vel_b_wrt_g_in_b) {
-    x.block<3, 1>(7, 0) = new_vel_b_wrt_g_in_b;
-}
-void set_omega_b_wrt_g_in_b(StateVector& x, const Vector3& new_omega_b_wrt_g_in_b) {
-    x.block<3, 1>(10, 0) = new_omega_b_wrt_g_in_b;
-}
-void set_net_force_b(Vector6& u, const Vector3& new_net_force_b) {
-    u.block<3, 1>(0, 0) = new_net_force_b;
-}
-void set_net_moment_b(Vector6& u, const Vector3& new_net_moment_b) {
-    u.block<3, 1>(3, 0) = new_net_moment_b;
+void set_quaternion_in_state(VectorXd &x, const Quaternion &quat)
+{
+    x(Eigen::seqN(6,4)) << quat.w(), quat.x(), quat.y(), quat.z();
 }
 
-Vector3 get_pos_b_wrt_g_in_g(const StateVector& x) {
-    return x.block<3, 1>(0, 0);
+void set_omega_in_state(VectorXd &x, const Vector3 &omega)
+{
+    x(Eigen::seqN(10,3)) = omega;
 }
-Quaternion get_g_q_b(const StateVector& x) {
-    return Quaternion{x(6), x(3), x(4), x(5)};
+
+void set_omegaRW_in_state(VectorXd &x, const Vector3 &omegaRW)
+{
+    x(Eigen::seqN(13, x.size() - 13)) = omegaRW;
 }
-Quaternion get_b_q_g(const StateVector& x) {
-    return get_g_q_b(x).inverse();
+
+Vector3 get_pos_from_state(VectorXd &x)
+{
+    return x(Eigen::seqN(0,3));
 }
-Vector3 get_vel_b_wrt_g_in_b(const StateVector& x) {
-    return x.block<3, 1>(7, 0);
+
+Vector3 get_vel_from_state(VectorXd &x)
+{
+    return x(Eigen::seqN(3,3));
 }
-Vector3 get_omega_b_wrt_g_in_b(const StateVector& x) {
-    return x.block<3, 1>(10, 0);
+
+Quaternion get_quaternion_from_state(VectorXd &x)
+{
+    Quaternion q{x(6), x(7), x(8), x(9)};
+    return q;
 }
-Vector3 get_net_force_b(const Vector6& u) {
-    return u.block<3, 1>(0, 0);
+
+Vector3 get_omega_from_state(VectorXd &x)
+{
+    return x(Eigen::seqN(10,3));
 }
-Vector3 get_net_moment_b(const Vector6& u) {
-    return u.block<3, 1>(3, 0);
+
+VectorXd get_omegaRW_from_state(VectorXd &x)
+{
+    return x(Eigen::seqN(13, x.size()-13));
 }
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pyphysics, m) {
-    m.doc() = "pybind11 physics plugin";   // module docstring
+    m.doc() = "pybind11 physics plugin";   // module docstring    
+
     m.def("rk4", &rk4, "rk4 integrator");
 }
 #endif

@@ -5,10 +5,10 @@ target_include_directories(math PUBLIC "math")
 add_subdirectory(physics/models)
 
 add_library(physics SHARED physics/RigidBody.cpp)
-target_link_libraries(physics PUBLIC Eigen3::Eigen tjLib models math)
+target_link_libraries(physics PUBLIC Eigen3::Eigen tjLib models math sim_utils)
 target_include_directories(physics PUBLIC "physics")
 
 pybind11_add_module(pyphysics SHARED physics/RigidBody.cpp)
-target_link_libraries(pyphysics PUBLIC Eigen3::Eigen tjLib models math)
+target_link_libraries(pyphysics PUBLIC Eigen3::Eigen tjLib models math sim_utils)
 target_include_directories(pyphysics PUBLIC "physics")
 target_compile_definitions(pyphysics PRIVATE USE_PYBIND_TO_COMPILE)

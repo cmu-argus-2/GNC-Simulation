@@ -43,7 +43,7 @@ trial_command = "'python3 sim.py'"
 trial_command_dir = repo_root_abs
 
 # ensure repo_root_abs actually points to the "GNC-SIMULATION" repo
-assert os.path.basename(repo_root_abs) == "GNC-Simulation"
+assert os.path.basename(repo_root_abs) == "GNC_simulation"
 
 # ensure paths exist
 assert os.path.exists(repo_root_abs), f"Nonexistent: {repo_root_abs}"
@@ -147,6 +147,7 @@ if __name__ == "__main__":
     # ======================================= actually run the montecarlo trials ======================================
     trials_manager_process = subprocess.Popen(
         [
+            "python3",
             os.path.join(os.getcwd(), "run_trials.py"),
             trial_command,
             trial_command_dir,

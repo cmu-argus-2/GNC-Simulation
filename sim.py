@@ -15,7 +15,7 @@ estimator_dt = 1
 
 
 def controller(state_estimate):
-    return np.array([0, 0, 0, 0, 0, 1])
+    return np.array([0, 0, 0, 0, 0, 0, 0])
 
 
 def estimator(w):
@@ -28,30 +28,11 @@ def run(log_directory, config_path):
     params = SimParams()
     params.getParamsFromFileAndSample(config_path)
 
-    init_pos_b_wrt_ECI_in_ECI = np.array([params.EARTH_RADIUS + params.init_altitute, 0, 0])  # [m]
-    init_pos_b_wrt_ECI_in_ECI_normalized = init_pos_b_wrt_ECI_in_ECI / np.linalg.norm(init_pos_b_wrt_ECI_in_ECI)
-    init_ECI_q_b = R.from_quat([0, 0, 0, 1])
-    init_vel_b_wrt_ECI_in_ECI = params.orbital_velocity * np.cross(
-        params.orbital_plane_normal, init_pos_b_wrt_ECI_in_ECI_normalized
-    )  # [m/s]
-    init_vel_b_wrt_ECI_in_b = init_ECI_q_b.as_matrix().T @ init_vel_b_wrt_ECI_in_ECI  # [m/s]
-    init_omega_b_wrt_ECI_in_b = np.array([0, 0, np.deg2rad(3)])  # [rad/s]
+    initial_state = np.array(params.initial_state) # Get initial state
+    num_RWs = params.num_RWs
+    num_MTBs = params.num_MTBs
 
-    # assert the initial position vector is orthogonal to the satellite's orbital plane normal vector
-    angle_between_pos_vector_and_orbital_plane_normal = np.arccos(
-        params.orbital_plane_normal.dot(init_pos_b_wrt_ECI_in_ECI_normalized)
-    )
-    assert abs(angle_between_pos_vector_and_orbital_plane_normal - np.pi / 2) < 1e-10
-
-    true_initial_state = np.array(
-        [
-            *init_pos_b_wrt_ECI_in_ECI,
-            *init_ECI_q_b.as_quat(),  # [x, y, z, w]
-            *init_vel_b_wrt_ECI_in_b,
-            *init_omega_b_wrt_ECI_in_b,
-        ]
-    )
-    true_state = true_initial_state
+    true_state = initial_state
 
     last_controller_update = 0
     last_estimator_update = 0
@@ -59,47 +40,42 @@ def run(log_directory, config_path):
 
     current_time = 0
     while current_time <= params.MAX_TIME:
-        controller_output = np.zeros((6, 1))
+        
+        # Get controller Command
+        controller_output = np.zeros((num_MTBs + num_RWs, 1))
+
+        # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
             state_estimate = true_state  # TODO fix me
             controller_output = controller(state_estimate)
+            assert(len(controller_output) == (num_RWs + num_MTBs))
             last_controller_update = current_time
-            # print(f"Controller update: {current_time}")
+
+        # Update Estimator Prediction at Estimator Update Frequency
         if current_time >= last_estimator_update + estimator_dt:
             # w = get_gyro_measurement()
             # estimator(w)
             last_estimator_update = current_time
             # print(f"Estimator update: {current_time}")
 
-        # state = propogate(state, sim_dt)
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
             last_print_time = current_time
 
-        u = np.zeros((6, 1))
-
-        vel_body_wrt_ECI_in_body = true_state[7:10]
-        ECI_R_b = R.from_quat(true_state[3:7]).as_matrix()
-        vel_body_wrt_ECI_in_body = ECI_R_b @ vel_body_wrt_ECI_in_body
-
-        true_state_modified_vel = true_state.copy()
-        true_state_modified_vel[7:10] = vel_body_wrt_ECI_in_body
-        logr.log_v(
+        logr.log_v( # TODO : Log Control Input and State Estimate at each time
             "state_true.bin",
             current_time,
-            true_state_modified_vel,
+            true_state,
             "time [s]",
-            [
+            ([
                 *["x ECI [m]", "y ECI [m]", "z ECI [m]"],
-                *["x", "y", "z", "w"],
                 *["x ECI [m/s]", "y ECI [m/s]", "z ECI [m/s]"],
+                *["x", "y", "z", "w"],
                 *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
-            ],
+            ] + ["x [rad/s]"]*num_RWs),
         )
 
-        true_state = rk4(
-            true_state, u, params.InertiaTensor, params.InertiaTensorInverse, params.satellite_mass, params.dt
-        )
+        true_state = rk4(true_state, controller_output, params, current_time, params.dt)
         current_time += params.dt
 
     elapsed_seconds_wall_clock = time() - START_TIME

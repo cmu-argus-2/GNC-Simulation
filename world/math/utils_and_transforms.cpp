@@ -2,6 +2,7 @@
 #include <filesystem>
 
 #include "SpiceUsr.h"
+#include <cmath>
 
 // rotation matrix elements under this threshhold will be reset to 0
 static constexpr double ROT_MAT_0_THRESH = 1e-10;
@@ -73,6 +74,7 @@ void loadAllKernels() {
     std::string earth_rotation_pck = data_folder + "earth_latest_high_prec.bpc";
     std::string earth_dimensions_pck = data_folder + "pck00011.tpc";
     std::string leap_seconds_lsk = data_folder + "pck00011.tpc";
+    std::string leap_seconds_lsk2 = data_folder + "naif0012.tls";
     
     SpiceInt count;
     ktotal_c("ALL", &count);
@@ -82,6 +84,7 @@ void loadAllKernels() {
         furnsh_c(earth_rotation_pck.c_str());
         furnsh_c(earth_dimensions_pck.c_str());
         furnsh_c(leap_seconds_lsk.c_str());
+        furnsh_c(leap_seconds_lsk2.c_str());
     }; // only load kernel if not already loaded
     
     
@@ -147,6 +150,34 @@ Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude)
     return r_ecef;
 }
 
+Vector6 KOE2ECI(Vector6 KOE, double t_J2000)
+{
+    loadAllKernels();
+
+    SpiceDouble conics[8];
+    
+    conics[0] = KOE(0)*(1 - KOE(1))/1000.0;
+    conics[1] = KOE(1);
+    conics[2] = RAD_2_DEG(KOE(2));
+    conics[3] = RAD_2_DEG(KOE(3));
+    conics[4] = RAD_2_DEG(KOE(4));
+
+    double f = RAD_2_DEG(KOE(5));
+    conics[5] = atan2(-sqrt(1-pow(KOE(1),2))*sin(f), -KOE(1)-cos(f)) + M_PI - 
+                KOE(1)*(sqrt(1-pow(KOE(1),2))*sin(f))/(1 + KOE(1)*cos(f)); // True anomaly to mean anomaly calculation
+
+    conics[6] = t_J2000;
+    conics[7] = 3.98600435507e5; // km^3/s^2
+
+    SpiceDouble s[6];
+    conics_c(conics, t_J2000, s);
+
+    Vector6 state;
+    state << s[0], s[1], s[2], s[3], s[4], s[5];
+    state = state*1000; // convert km, km/s to m and m/s
+    return state;
+}
+
 
 /* TIME UTILITIES */
 Vector5 TJ2000toUTC(double t_J2000)
@@ -165,4 +196,17 @@ Vector5 TJ2000toUTC(double t_J2000)
     utc_date(4) = atof(datestring.substr(15,6).c_str());
 
     return utc_date;
+}
+
+double UTCStringtoTJ2000 (std::string UTC)
+{
+    loadAllKernels();
+
+    std::replace(UTC.begin(), UTC.end(), ' ', 'T'); // replaces space in string with a T to follow ISO format
+    const char * UTC_char = UTC.c_str();
+
+    double t_J2000;
+    utc2et_c(UTC_char, &t_J2000);
+
+    return t_J2000;
 }

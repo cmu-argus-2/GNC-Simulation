@@ -1,5 +1,6 @@
 #include "gravity.h"
 
+#include <iostream>
 #include "math/EigenWrapper.h"
 #include <math.h>
 
@@ -11,9 +12,7 @@ Vector3 gravitational_acceleration(Vector3 r)
 
 Vector3 spherical_acceleration(Vector3 r)
 {
-
-    Vector3 acceleration;
-    acceleration = - (mu/pow(r.norm(), 3))*r;
+    Vector3 acceleration = - (mu/pow(r.norm(), 3.0))*r;
 
     return acceleration;
 }

@@ -140,11 +140,28 @@ Vector3 ECEF2GEOD(Vector3 v_ecef);
 Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude);
 
 /**
+ * @brief Converts Keplerian Elements into ECI state
+ *
+ * @param KOE - Keplerian Orbital Lement vector
+ * @param t_J2000 - seconds past J2000
+ * @return position and velocity vector in ECI coordinates
+ */
+Vector6 KOE2ECI(Vector6 KOE, double t_J2000);
+
+/**
  * @brief Converts time from seconds past J2000 to UTC date vector
  *
  * @param t_J2000 - seconds past J2000
  * @return UTC date as a 6 element vector [Y, doy, h, m, s]
  */
 Vector5 TJ2000toUTC(double t_J2000);
+
+/**
+ * @brief Converts time from UTC string in format 'YYYY-MM-DD HH:MM:SS' to seconds past J2000
+ *
+ * @param UTC - UTC string
+ * @return t_J2000 : seconds past J2000
+ */
+double UTCStringtoTJ2000 (std::string UTC);
 
 #endif   //_POSE_EKF_UTILS_AND_TRANSFORMS_ header
