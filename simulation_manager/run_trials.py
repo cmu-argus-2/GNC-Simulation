@@ -97,8 +97,8 @@ if __name__ == "__main__":
                             "PARAMETER_FILEPATH": parameter_file_abs,
                         },
                         cwd=trial_command_dir,
-                        #stderr=outfile,
-                        #stdout=outfile,
+                        stderr=outfile,
+                        stdout=outfile,
                     )
 
                     process_info = {
