@@ -52,12 +52,11 @@ class MontecarloPlots:
 
         for i, trial_number in enumerate(self.trials):
             itm.figure(XYZt)
-
-            x_km = data_dicts[i]["x ECI [m]"] / 1000
-            y_km = data_dicts[i]["y ECI [m]"] / 1000
-            z_km = data_dicts[i]["z ECI [m]"] / 1000
+            x_km = data_dicts[i]["r_x ECI [m]"] / 1000
+            y_km = data_dicts[i]["r_y ECI [m]"] / 1000
+            z_km = data_dicts[i]["r_z ECI [m]"] / 1000
             multiPlot(
-                data_dicts[i]["time [s]"],
+                data_dicts[i]["Time [s]"],
                 [x_km, y_km, z_km],
                 seriesLabel=f"_{trial_number}",
             )
@@ -72,7 +71,7 @@ class MontecarloPlots:
             m.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
             m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
         itm.figure(XYZt)
-        annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["x", "y", "z"])
+        annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["$r_x$", "$r_y$", "$r_z$"])
         save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
 
         itm.figure(ground_track)
@@ -83,30 +82,30 @@ class MontecarloPlots:
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
-                np.array([data_dicts[i]["x ECI [m/s]"], data_dicts[i]["y ECI [m/s]"], data_dicts[i]["z ECI [m/s]"]])
+                data_dicts[i]["Time [s]"],
+                np.array([data_dicts[i]["v_x ECI [m/s]"], data_dicts[i]["v_y ECI [m/s]"], data_dicts[i]["v_z ECI [m/s]"]])
                 / 1000,
                 seriesLabel=f"_{trial_number}",
             )
-        annotateMultiPlot(title="True Velocity (ECI) [km/s]", ylabels=["x", "y", "z"])
+        annotateMultiPlot(title="True Velocity (ECI) [km/s]", ylabels=["$v_x$", "$v_y$", "$v_z$"])
         save_figure(itm.gcf(), self.plot_dir, "velocity_ECI_true.png", self.close_after_saving)
         # ==========================================================================
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
-                [data_dicts[i]["w"], data_dicts[i]["x"], data_dicts[i]["y"], data_dicts[i]["z"]],
+                data_dicts[i]["Time [s]"],
+                [data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]],
                 seriesLabel=f"_{trial_number}",
             )
-        annotateMultiPlot(title="True attitude [-]", ylabels=["w", "x", "y", "z"])
+        annotateMultiPlot(title="True attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
         save_figure(itm.gcf(), self.plot_dir, "attitude_true.png", self.close_after_saving)
         # ==========================================================================
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
-                np.rad2deg([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]]),
+                data_dicts[i]["Time [s]"],
+                np.rad2deg([data_dicts[i]["omega_x [rad/s]"], data_dicts[i]["omega_y [rad/s]"], data_dicts[i]["omega_z [rad/s]"]]),
                 seriesLabel=f"_{trial_number}",
             )
-        annotateMultiPlot(title="True body angular rate [deg/s]", ylabels=["x", "y", "z"])
+        annotateMultiPlot(title="True body angular rate [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
         save_figure(itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving)
