@@ -1,2 +1,6 @@
+numpy
+matplotlib
+basemap
+psutil
 brahe
 pyigrf

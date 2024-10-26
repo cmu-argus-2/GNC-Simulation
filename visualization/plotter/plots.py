@@ -7,7 +7,8 @@ from plot_helper import (
 )
 from isolated_trace import itm
 import numpy as np
-from parse_bin_file import parse_bin_file, parse_bin_file_wrapper
+from parse_bin_file import parse_bin_file_wrapper
+from mpl_toolkits.basemap import Basemap
 import os
 
 
@@ -40,7 +41,15 @@ class MontecarloPlots:
 
         # ==========================================================================
         XYZt = itm.figure()
+
         ground_track = itm.figure()
+        m = Basemap()  # cylindrical projection by default
+        m.bluemarble(scale=0.1, alpha=0.4)
+        m.drawcoastlines(linewidth=0.5)
+        m.fillcontinents(color="0.8")
+        m.drawparallels(np.arange(-90, 90, 15), linewidth=0.2, labels=[1, 1, 0, 0])
+        m.drawmeridians(np.arange(-180, 180, 30), linewidth=0.2, labels=[0, 0, 0, 1])
+
         for i, trial_number in enumerate(self.trials):
             itm.figure(XYZt)
 
@@ -53,22 +62,20 @@ class MontecarloPlots:
                 seriesLabel=f"_{trial_number}",
             )
 
-            itm.figure(ground_track)
+            # TODO convert from ECI to ECEF
             lon = np.rad2deg(np.arctan2(y_km, x_km))
             lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
-            itm.scatter(lon, lat, s=0.1, label=f"_{trial_number}")
-            itm.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
-            itm.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
 
+            # https://matplotlib.org/basemap/stable/users/examples.html
+            itm.figure(ground_track)
+            m.scatter(lon, lat, s=0.1, marker=".", label=f"_{trial_number}", latlon=True)
+            m.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
+            m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
         itm.figure(XYZt)
         annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["x", "y", "z"])
         save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
 
         itm.figure(ground_track)
-        itm.xlabel("Longitude [deg]")
-        itm.ylabel("Latitude [deg]")
-        itm.xlim([-185, 185])
-        itm.ylim([-95, 95])
         itm.gca().set_aspect("equal")
         itm.title("Ground Track [Green: Start    Red: End]")
         save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)

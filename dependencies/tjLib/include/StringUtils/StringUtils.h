@@ -1,7 +1,22 @@
+/**
+ * @file StringUtils.h
+ * @author Tushaar Jain (tushaarj@andrew.cmu.edu)
+ * @brief String parsing utilitites  
+ * @date 2024-10-09
+ * 
+ */
 #include <cassert>
 #include <stdexcept>
 #include <string>
 
+/**
+ * @brief Extracts the first number in the string
+ * 
+ * @tparam T numeric type
+ * @param str the string
+ * @return T the parsed number 
+ * @throws std::runtime_error if string doesn't contain a number
+ */
 template <typename T>
 T parseNumber(const std::string& str) {
     assert(not str.empty());
@@ -37,6 +52,22 @@ T parseNumber(const std::string& str) {
     throw std::runtime_error("No numeric value found in the string");
 }
 
+/**
+ * @brief Parse string to determine if it represents true or false
+ * 
+ * @param str the string
+ * @return true if string matches one of: ['true' 'True' '1']
+ * @return false if string matches one of: ['false' 'False' '0']
+ * @throws std::invalid_argument otherwise
+ */
 bool parseBool(const std::string& str);
 
+/**
+ * @brief Determines if a string ends with a given suffix
+ * 
+ * @param str the string
+ * @param suffix the suffix
+ * @return true if the string ends with the suffix
+ * @return false otherwise
+ */
 bool ends_with(const std::string& str, const std::string& suffix);

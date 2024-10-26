@@ -1,31 +1,71 @@
 # 3dDynamicsSim
 
-This Repo contains C++ code for simulating the 3d Dynamics of a satellite  in orbit.
+This repo simulates the 3d Dynamics of a satellite in orbit. The core dynamics are comptued and the state is propogated in C++. This is exposed to python via pybind. 
 
-Credits to Derek Fan for his appraoch to C++ Eigen <--> Python bindings. I used his method with pybind11. 
+Credits to Derek Fan for his approach to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
 ## SPICE data download
-- run the data_downloader.py to download 'de440.bsp' from https://ssd.jpl.nasa.gov/ftp/eph/planets/bsp/ and place within data/, or do it manually
+Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during build
 
-## Build Instructions
-- `git submodule update --recursive --init `
-- run build_sim_debug.sh
+## Setting Up
+### First time
+1. Run `git submodule update --recursive --init` to set up dependencies
+2. Run `sudo apt install python3-tk -y` to install tkinter
+3. Run `python -m venv .venv --system-site-packages` to create a virtual environment (venv)
+4. Run `source .venv/bin/activate` to activate the venv
+5. Run `pip install -r requirements.txt`
+
+### Each time
+1. Run `source .venv/bin/activate` to activate the venv
+2. Once done with devlopment, run `deactivate` to exit the venv
 
 ## Running the sim
-- `cd montecarlo/`
-- Run `python3 run_job.py`
-- Results are written into the `results/` directory
+1. `cd simulation_manager/`
+2. Run `python3 run_job.py`
+3. Results and plots are written into the `results/` directory
  
-## Debugging
-- launch.json shows the configurations for debugging python and C++ code.
+## Manual Build Instructions
+Run `./build_sim_debug.sh`
 
-## Visualization
-- `cd montecarlo/plots_and_analysis/web_visualizer`
-- `python3 job_comparison_tool.py`
+## Debugging
+
+### Plot Visualization
+
+#### Web Viewer Comparison tool 
+1. `cd visualization/web_visualizer`
+2. Open a web browser and go to `http://127.0.0.1:5000/`
+3. `python3 job_comparison_tool.py`
+
+#### Interactive - all trials
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME> -i`
+
+#### Interactive - specific trials
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME> -i -t [list of trail numbers to debug]`
+
+#### Replotting an existing job after changing the plotting scripts
+1. `cd visualization/plotter`
+2. `python3 plot.py <JOB_NAME>`
+
+### ModuleNotFoundError: No module named XXXX
+Remember to run in a virtual environment
+
+### Trial X finished with return code: Y
+Inspect `montecarlo/results/<JOB_NAME>/trials/trialX/output.txt` 
+
+### GDB
+Run `launch.json` shows the configurations for debugging python and C++ code.
+
 
 ## Tweaking parameters
-- Edit `montecarlo/configs/params.yaml`
+Edit `montecarlo/configs/params.yaml`
 
+## Style Guide
+### C++
+Install the following VSCode extensions:
+1. clangd for powerful C++ intellisense (identifier: `llvm-vs-code-extensions.vscode-clangd`)
+2. doxygen dostring generator (identifier: `cschlosser.doxdocgen`)
 
-# Satellite orbit demo
-There are also 2 files for simulating orbital dynamics in the plane. SatelliteAroudnEarth is exactly what it sounds like. SatelliteAroundEarthAndMoon shows a satellite moving on a trajectory resembling a figure 8 around earth and moon. 
+## Code Architecture
+Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simulation-Architecture-10648018d82a80d4a90ce8fb38b47777">here</a>

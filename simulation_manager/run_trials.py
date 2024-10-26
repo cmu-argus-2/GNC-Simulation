@@ -1,4 +1,5 @@
-#!/usr/bin/python3
+# Starts up trials and manages them to ensure no more than a specified number run concurrently.
+
 import os
 import sys
 import time
@@ -96,8 +97,8 @@ if __name__ == "__main__":
                             "PARAMETER_FILEPATH": parameter_file_abs,
                         },
                         cwd=trial_command_dir,
-                        stderr=outfile,
-                        stdout=outfile,
+                        #stderr=outfile,
+                        #stdout=outfile,
                     )
 
                     process_info = {
@@ -113,4 +114,4 @@ if __name__ == "__main__":
                 TRIALS_STARTED += 1
         updated_process_list()
         time.sleep(0.01)
-    print(GREEN + f"All trials finished for job: {job_name}" + RESET)
+    print(GREEN + f"All trials finished for job: {job_name}" + RESET)#

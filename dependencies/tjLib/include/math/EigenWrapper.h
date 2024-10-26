@@ -13,6 +13,7 @@ typedef Eigen::Matrix<double, 6, 1> Vector6;
 typedef Eigen::Matrix<double, 8, 1> Vector8;
 typedef Eigen::Matrix<double, 9, 1> Vector9;
 typedef Eigen::Matrix<double, 13, 1> Vector13;
+typedef Eigen::VectorXd VectorXd;
 
 typedef Eigen::Matrix2d Matrix_2x2;
 typedef Eigen::Matrix3d Matrix_3x3;
@@ -37,6 +38,7 @@ typedef Eigen::Matrix<double, 9, 2> Matrix_9x2;
 typedef Eigen::Matrix<double, 9, 3> Matrix_9x3;
 typedef Eigen::Matrix<double, 9, 6> Matrix_9x6;
 typedef Eigen::Matrix<double, 9, 8> Matrix_9x8;
+typedef Eigen::MatrixXd MatrixXd;
 
 typedef Eigen::Quaterniond Quaternion;
 

@@ -1,3 +1,7 @@
+# This file is bascially a giant wrapper aroudn matplotlib's pyplot.
+# reason for wrapping is these plots allow you to select, with your cursor, indiviusal traces and see their labels.
+# This helps with debugging specific trails in a montecarlo analysis by knowing which rtrials is responsible for a strange plot
+
 import matplotlib
 from matplotlib import pyplot as plt
 
@@ -156,14 +160,14 @@ class IsolatableTraceManager:
         self.latest_itf = None
         self.rcParams = plt.rcParams
 
-    def figure(self, itf=None):
+    def figure(self, itf=None, **kwargs):
         if itf is None:
             itf = IsolatableTraceFigure()
             self.latest_itf = itf
             return itf
         else:
             self.latest_itf = itf
-            plt.figure(itf.figure)
+            plt.figure(itf.figure, **kwargs)
 
     def subplot(self, *args, **kwargs):
         return self.latest_itf.subplot(*args, **kwargs)
@@ -218,6 +222,9 @@ class IsolatableTraceManager:
 
     def tick_params(self, *args, **kwargs):
         plt.tick_params(*args, **kwargs)
+
+    def add_axes(self, *args, **kwargs):
+        plt.add_axes(*args, **kwargs)
 
     def grid(self, *args, **kwargs):
         plt.grid(*args, **kwargs)

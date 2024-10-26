@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 .vscode/
 data/de440.bsp
+data/earth_latest_high_prec.bpc
+data/
+montecarlo/results/
 *.pyc
 venv/
-data/earth_latest_high_prec.bpc

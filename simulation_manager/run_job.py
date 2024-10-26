@@ -1,4 +1,9 @@
-#!/usr/bin/python3
+# Runs a simulation job from start to finish. This involves:
+# 1. Building the C++ core libraries
+# 2. Creating the job's directory where results from each trial are logged
+# 3. Recording the state of the repo (git hash + uncommitted changes) so we know the exact state of the simulation that led to certain results. For repeatability.
+# 4. Launching the trials manager (run_trials.py)
+# 5. Plotting the results once all trials have finished
 
 import os
 import time
@@ -8,7 +13,7 @@ import datetime
 import subprocess
 
 # ============================================= JOB CONFIGURATION CONSTANTS ===========================================
-NUM_TRIALS = 15
+NUM_TRIALS = 1
 TIMEOUT = 300  # [s] kill a trial that takes longer than this amount
 MAX_CONCURRENT_TRIALS = 10
 
@@ -21,7 +26,7 @@ TRIALS = [str(x + 1) for x in list(range(NUM_TRIALS))]
 # "_rel" postfix indicates a relative filepath
 repo_root_rel = "../"
 
-# paths relative to "moonranger-rover-flight/":
+# paths relative to "GNC-Simulation/":
 pose_simulator_build_script_rel = "build_sim_debug.sh"
 montecarlo_rel = "montecarlo/"
 
@@ -38,7 +43,7 @@ trial_command = "'python3 sim.py'"
 trial_command_dir = repo_root_abs
 
 # ensure repo_root_abs actually points to the "GNC-SIMULATION" repo
-assert os.path.basename(repo_root_abs) == "GNC-Simulation"
+assert os.path.basename(repo_root_abs) == "GNC_simulation"
 
 # ensure paths exist
 assert os.path.exists(repo_root_abs), f"Nonexistent: {repo_root_abs}"
@@ -142,6 +147,7 @@ if __name__ == "__main__":
     # ======================================= actually run the montecarlo trials ======================================
     trials_manager_process = subprocess.Popen(
         [
+            "python3",
             os.path.join(os.getcwd(), "run_trials.py"),
             trial_command,
             trial_command_dir,

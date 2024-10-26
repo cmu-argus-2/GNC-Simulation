@@ -91,12 +91,11 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion &q);
 // CSPICE COORDINATE TRANSFORMS
 
 /**
- * @brief Load a SPICE kernel from provided path
+ * @brief Load all kernels from datapaths necessary for SPICE
  *
- * @param kernel_file absolute path to data file
- * @param kernel_type type of kernel according to SPICE [read https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Kernel%20Types]
+ * TOREAD : types of kernel according to SPICE [read https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Kernel%20Types]
  */
-void loadKernel(std::string kernel_file, std::string kernel_type);
+void loadAllKernels();
 
 /**
  * @brief Cast a double[3][3] into an Eigen <double, 3, 3> matrix
@@ -121,5 +120,48 @@ Matrix_3x3 ECI2ECEF(double t_J2000);
  * @return R Eigen 3x3 matrix representing roation from ECEF to ECI
  */
 Matrix_3x3 ECEF2ECI(double t_J2000);
+
+/**
+ * @brief Transforms a vector in ECEF frame to Geodetic coordinates
+ *
+ * @param v_ecef - vector in ECEF frame [UNITS : m]
+ * @return vector in Geodetic coordinates (long, lat, alt) [rad, rad, m]
+ */
+Vector3 ECEF2GEOD(Vector3 v_ecef);
+
+/**
+ * @brief Transforms a vector in SEZ frame to ECEF
+ *
+ * @param r_sez - vector in ECEF frame
+ * @param latitude - latitude where SEZ vector is constructed
+ * @param longitude - longitude where SEZ vector is constructed
+ * @return vector in ECEF coordinates
+ */
+Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude);
+
+/**
+ * @brief Converts Keplerian Elements into ECI state
+ *
+ * @param KOE - Keplerian Orbital Lement vector
+ * @param t_J2000 - seconds past J2000
+ * @return position and velocity vector in ECI coordinates
+ */
+Vector6 KOE2ECI(Vector6 KOE, double t_J2000);
+
+/**
+ * @brief Converts time from seconds past J2000 to UTC date vector
+ *
+ * @param t_J2000 - seconds past J2000
+ * @return UTC date as a 6 element vector [Y, doy, h, m, s]
+ */
+Vector5 TJ2000toUTC(double t_J2000);
+
+/**
+ * @brief Converts time from UTC string in format 'YYYY-MM-DD HH:MM:SS' to seconds past J2000
+ *
+ * @param UTC - UTC string
+ * @return t_J2000 : seconds past J2000
+ */
+double UTCStringtoTJ2000 (std::string UTC);
 
 #endif   //_POSE_EKF_UTILS_AND_TRANSFORMS_ header
