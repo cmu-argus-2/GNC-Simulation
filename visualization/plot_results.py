@@ -13,7 +13,10 @@ from world.math.quaternions import quatrotation
 
 def plot_position(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
-    plt.plot(time, world_states[:, Idx["X"]["ECI_POS"]])
+    plt.plot(time, world_states[:, Idx["X"]["ECI_POS"]][:, 0], label='X')
+    plt.plot(time, world_states[:, Idx["X"]["ECI_POS"]][:, 1], label='Y')
+    plt.plot(time, world_states[:, Idx["X"]["ECI_POS"]][:, 2], label='Z')
+    plt.legend() 
     plt.title('Position [m]')
     plt.xlabel('Time [s]')
     plt.ylabel('Position ECI')
@@ -21,7 +24,10 @@ def plot_position(time, world_states, Idx, fignum):
 
 def plot_velocity(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
-    plt.plot(time, world_states[:, Idx["X"]["ECI_VEL"]])
+    plt.plot(time, world_states[:, Idx["X"]["ECI_VEL"]][:, 0], label='Vx')
+    plt.plot(time, world_states[:, Idx["X"]["ECI_VEL"]][:, 1], label='Vy')
+    plt.plot(time, world_states[:, Idx["X"]["ECI_VEL"]][:, 2], label='Vz')
+    plt.legend() 
     plt.title('Velocity [m/s]')
     plt.xlabel('Time [s]')
     plt.ylabel('Velocity')
@@ -29,7 +35,11 @@ def plot_velocity(time, world_states, Idx, fignum):
 
 def plot_quaternion(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
-    plt.plot(time, world_states[:, Idx["X"]["QUAT"]])
+    plt.plot(time, world_states[:, Idx["X"]["QUAT"]][:, 0], label='q0')
+    plt.plot(time, world_states[:, Idx["X"]["QUAT"]][:, 1], label='q1')
+    plt.plot(time, world_states[:, Idx["X"]["QUAT"]][:, 2], label='q2')
+    plt.plot(time, world_states[:, Idx["X"]["QUAT"]][:, 3], label='q3')
+    plt.legend() 
     plt.title('Quaternion')
     plt.xlabel('Time [s]')
     plt.ylabel('Quaternion')
@@ -38,9 +48,9 @@ def plot_quaternion(time, world_states, Idx, fignum):
 def plot_angular_velocity(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
     angular_velocity = world_states[:, Idx["X"]["ANG_VEL"]] * 180/np.pi
-    plt.plot(time, angular_velocity[:, 0], label='X Angular Velocity')
-    plt.plot(time, angular_velocity[:, 1], label='Y Angular Velocity')
-    plt.plot(time, angular_velocity[:, 2], label='Z Angular Velocity')
+    plt.plot(time, angular_velocity[:, 0], label='X')
+    plt.plot(time, angular_velocity[:, 1], label='Y')
+    plt.plot(time, angular_velocity[:, 2], label='Z')
     angular_velocity_norm = np.linalg.norm(angular_velocity, axis=1)
     plt.plot(time, angular_velocity_norm, label='L2 Norm of Angular Velocity')
     plt.legend()
@@ -52,20 +62,42 @@ def plot_angular_velocity(time, world_states, Idx, fignum):
     
 
 def plot_magnetorquer_power_consumption(time, power_consumption, Idx, fignum):
-    plt.figure(num=fignum)
-    plt.plot(time, power_consumption["MTB"][0, :], label='MTB 1')
-    plt.plot(time, power_consumption["MTB"][1, :], label='MTB 2')
-    plt.plot(time, power_consumption["MTB"][2, :], label='MTB 3')
+    plt.figure(num=fignum, figsize=(10, 8))
+
+    # X-axis magnetorquers
+    plt.subplot(3, 1, 1)
+    plt.plot(time, power_consumption["MTB"][0, :], label='MTB X1')
+    plt.plot(time, power_consumption["MTB"][3, :], label='MTB X2')
     plt.legend()
-    plt.title('Magnetorquer Power Consumption')
+    plt.title('Magnetorquer Power Consumption - X Axis')
     plt.xlabel('Time [s]')
     plt.ylabel('Power Consumption')
-    plt.savefig('magnetorquer_power_consumption.png')    
+
+    # Y-axis magnetorquers
+    plt.subplot(3, 1, 2)
+    plt.plot(time, power_consumption["MTB"][1, :], label='MTB Y1')
+    plt.plot(time, power_consumption["MTB"][4, :], label='MTB Y2')
+    plt.legend()
+    plt.title('Magnetorquer Power Consumption - Y Axis')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Power Consumption')
+
+    # Z-axis magnetorquers
+    plt.subplot(3, 1, 3)
+    plt.plot(time, power_consumption["MTB"][2, :], label='MTB Z1')
+    plt.plot(time, power_consumption["MTB"][5, :], label='MTB Z2')
+    plt.legend()
+    plt.title('Magnetorquer Power Consumption - Z Axis')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Power Consumption')
+
+    plt.tight_layout()
+    plt.savefig('magnetorquer_power_consumption.png')
 
 def plot_magnetorquer_inputs(time, control_inputs, Idx, fignum):
     plt.figure(num=fignum)
     plt.plot(time, control_inputs[Idx["U"]["MTB_TORQUE"]])
-    plt.title('Magnetorquer Dipole Moment')
+    plt.title('Magnetorquer Dipole Moment [Cm]')
     plt.xlabel('Time [s]')
     plt.ylabel('Magnetorquer Inputs')
     plt.savefig('magnetorquer_inputs.png')
@@ -99,6 +131,20 @@ def plot_sun_pointing_error(time, world_states, Idx, fignum):
     plt.savefig('sun_pointing_error.png')
 
 
+def plot_sun_vector_ECI(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
+    sun_vector = world_states[:, Idx["X"]["SUN_POS"]]
+    quaternion = world_states[:, Idx["X"]["QUAT"]]
+    plt.plot(time, sun_vector[:, 0], label='X')
+    plt.plot(time, sun_vector[:, 1], label='Y')
+    plt.plot(time, sun_vector[:, 2], label='Z')
+    plt.legend()
+    plt.title('Sun Vector_ECI')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Sun Vector [m]')
+    plt.savefig('sun_vector_ECI.png')
+    
+    
 def plot_nadir_pointing_error(time, world_states, Idx, fignum):
     plt.figure(num=fignum)
     nadir_vector = -world_states[:, Idx["X"]["ECI_POS"]]
@@ -115,6 +161,18 @@ def plot_nadir_pointing_error(time, world_states, Idx, fignum):
     plt.ylabel('Nadir Pointing Error [deg]')
     plt.savefig('nadir_pointing_error.png')
 
+def plot_magnetic_field_ECI(time, world_states, Idx, fignum):
+    plt.figure(num=fignum)
+    magnetic_field = world_states[:, Idx["X"]["MAG_FIELD"]]
+    plt.plot(time, magnetic_field[:, 0], label='X')
+    plt.plot(time, magnetic_field[:, 1], label='Y')
+    plt.plot(time, magnetic_field[:, 2], label='Z')
+    plt.legend()
+    plt.title('Magnetic Field ECI')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Magnetic Field [T]')
+    plt.savefig('magnetic_field_ECI.png')
+
 def main_plotter(results, Idx):
     fignum = 1
     plot_position(results["Time"], results["WorldStates"], Idx, fignum)
@@ -125,6 +183,10 @@ def main_plotter(results, Idx):
     fignum += 1
     plot_angular_velocity(results["Time"], results["WorldStates"], Idx, fignum)
     fignum += 1
+    plot_sun_vector_ECI(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
+    plot_magnetic_field_ECI(results["Time"], results["WorldStates"], Idx, fignum)
+    fignum += 1
     plot_control_inputs(results["Time"], results["ControlInputs"], Idx, fignum)
     fignum += 1
     plot_magnetorquer_power_consumption(results["Time"], results["PowerConsumption"], Idx, fignum)
@@ -133,6 +195,7 @@ def main_plotter(results, Idx):
     fignum += 1
     plot_nadir_pointing_error(results["Time"], results["WorldStates"], Idx, fignum)
     plt.show()
+
 # Example usage
 # main_plotter(Results)
 if __name__ == "__main__":

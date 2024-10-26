@@ -37,8 +37,12 @@ class Magnetorquer:
         self.pcb_side_max = 0.1
         self.A_cross = (self.pcb_side_max - self.N * self.coil_width) ** 2
         self.R = self.compute_coil_resistance()
+        
+        self.max_current = np.min([self.max_current, np.sqrt(self.max_power / self.R) ])
+        self.max_current = np.min([self.max_current, self.max_voltage / self.R ])
+        self.max_voltage = self.R * self.max_current
+        self.max_power   = self.R * self.max_current ** 2
         self.max_dipole_moment = self.N_per_face * self.max_current * self.A_cross  # A*m^2
-
         self.G_mtb_b = np.array(config["mtb_orientation"][IdMtb]).T
         self.dipole_moment = np.zeros(3,)
         self.current = 0.0
@@ -50,9 +54,8 @@ class Magnetorquer:
         Update voltage or current before getting the torque.
         """
         # TODO: Get moment and field in whatever frame the sim wants torque
-        return np.crossproduct(
-            self.dipole_moment, MAG_FIELD
-        )
+        return crossproduct(self.dipole_moment) @ MAG_FIELD
+        
         
     def get_power(self):
         return  self.R * self.current ** 2
@@ -61,7 +64,7 @@ class Magnetorquer:
         self,
         voltage: float,
     ) -> None:
-        if voltage > self.max_voltage:
+        if np.abs(voltage) > self.max_voltage:
             raise ValueError("Voltage exceeds maximum voltage rating.")
         # Current driver is PWM
         self.voltage = voltage
@@ -77,11 +80,21 @@ class Magnetorquer:
         self,
         current: float,
     ) -> None:
-        if current > self.max_current:
+        if np.abs(current) > self.max_current:
             raise ValueError(
                 f"Current exceeds maximum power limit of {self.max_power} W."
             )
         self.dipole_moment = self.convert_current_to_dipole_moment(current)
+        
+    def set_dipole_moment(
+        self,
+        dipole_moment: float,
+    ) -> None:
+        if np.abs(dipole_moment) > self.max_dipole_moment:
+            raise ValueError(
+                f"Dipole Moment exceeds maximum dipole moment limit of {self.max_dipole_moment} Cm."
+            )
+        self.dipole_moment = dipole_moment * self.G_mtb_b
 
     def get_dipole_moment_over_current(self) -> float:
         return self.N_per_face * self.A_cross

@@ -4,20 +4,25 @@ from world.math.quaternions import *
 from FSW.controllers.detumbling_controller import *
 
 class Controller:
-    def __init__(self, config, Idx) -> None:
+    def __init__(self, config, Magnetorquers, Idx) -> None:
         self.config = config
         self.pointing_mode    = config["mission"]["pointing_mode"]
         self.pointing_target  = config["mission"]["pointing_target"]
         self.controller_algo  = config["controller"]["algorithm"]
+        self.tgt_ang_vel      = np.array(config["mission"]["tgt_ang_vel"], dtype=np.float64)
         self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
+        self.mtb              = Magnetorquers
         self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
+        
         self.lyapsunpointctr = LyapBasedSunPointingController(config["satellite"]["inertia"], 
                                                               config["satellite"]["mtb"],
-                                                              config["controller"]["bcrossgain"])
+                                                              config["controller"]["bcrossgain"],
+                                                              Magnetorquers)
         self.basesunpointctr = BaselineSunPointingController(config["satellite"]["inertia"], 
                                                               config["satellite"]["mtb"],
-                                                              config["controller"]["bcrossgain"])
+                                                              config["controller"]["bcrossgain"],
+                                                              Magnetorquers)
         self.G_mtb_b = np.array(config["satellite"]["mtb"]["mtb_orientation"])
         self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
         self.allocation_mat = np.zeros((Idx["NU"],3))
@@ -30,7 +35,7 @@ class Controller:
         return gains
     
     # define feedforward torque and state profile
-    def define_att_profile(self, date, pointing_mode, pointing_target, est_world_states):
+    def define_att_profile(self, date, pointing_mode, pointing_target, tgt_ang_vel, est_world_states):
         ref_ctrl_states = np.zeros((7,))
         
         if pointing_target == "Sun":
@@ -47,7 +52,7 @@ class Controller:
             y_body = np.cross(z_body, x_body)
             Rot_mat = np.vstack((x_body, y_body, z_body)).T
             q_ref = rotmat2quat(Rot_mat)
-        elif pointing_mode == "Nadir":
+        elif pointing_target == "Nadir":
             att_states = est_world_states[6:13]
             # Default values if not sun pointing
             ref_ctrl_states = np.zeros((19,))
@@ -62,7 +67,7 @@ class Controller:
             ref_ctrl_states = np.zeros((19,))
             # reference angular velocity in pointing axis 
             ref_ctrl_states[:4]  = q_ref
-            ref_ctrl_states[4:7] = np.array([0,0,np.deg2rad(0.1)])
+            ref_ctrl_states[4:7] = np.deg2rad(tgt_ang_vel)
             ref_torque = np.zeros((3,))
         elif pointing_mode == "3D-stabilized":
             q_ref = rotmat2quat(Rot_mat)
@@ -133,7 +138,8 @@ class Controller:
         
         self.est_world_states = est_world_states
         # define slew profile
-        ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, self.pointing_target, est_world_states)
+        ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, self.pointing_target, 
+                                                              self.tgt_ang_vel, est_world_states)
         # feedforward and feedback controller
         torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states, Idx)
         

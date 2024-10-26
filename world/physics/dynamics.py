@@ -11,7 +11,7 @@ from world.physics.models.magnetic_field import MagneticField
 from actuators.magnetorquer import Magnetorquer
 from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
-from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
+from world.math.quaternions import *
 
 """
     CLASS DYNAMICS
@@ -185,12 +185,14 @@ class Dynamics:
         wdot[self.Idx["X"]["ECI_VEL"]] = acceleration
 
         # ATTITUDE DYNAMICS
-        wdot[self.Idx["X"]["QUAT"]] = 0.5 * hamiltonproduct(np.insert(state[self.Idx["X"]["ANG_VEL"]], 0, 0), state[self.Idx["X"]["QUAT"]])
+        
+        wdot[self.Idx["X"]["QUAT"]] = 0.5 * Gquat(state[self.Idx["X"]["QUAT"]]) @ state[self.Idx["X"]["ANG_VEL"]]
+        # 0.5 * hamiltonproduct(np.insert(state[self.Idx["X"]["ANG_VEL"]], 0, 0), state[self.Idx["X"]["QUAT"]])
 
         # Reaction wheels
         tau_rw = np.zeros( self.Idx["N_rw"]) # torque per RW (RW axis)
         for i, rw in enumerate(self.ReactionWheels):
-            tau_rw += rw.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]][i])
+            tau_rw[i] = rw.get_applied_torque(input[self.Idx["U"]["RW_TORQUE"]][i])
         G_rw = np.zeros((3, len(self.ReactionWheels)))
         for i, rw in enumerate(self.ReactionWheels):
             G_rw[:, i] = rw.G_rw_b
@@ -204,9 +206,13 @@ class Dynamics:
         bfMAG_FIELD = Re2b @ self.state[self.Idx["X"]["MAG_FIELD"]] # convert ECI MAG FIELD 2 body frame
         for i, mtb in enumerate(self.Magnetorquers):
             # used 
-            Vi = mtb.convert_dipole_moment_to_voltage(input[self.Idx["U"]["MTB_TORQUE"]][i])
-            mtb_moment = mtb.convert_voltage_to_dipole_moment(Vi)
-            tau_mtb += crossproduct(mtb_moment) @ bfMAG_FIELD
+            # Vi = mtb.convert_dipole_moment_to_voltage(input[self.Idx["U"]["MTB_TORQUE"]][i])
+            # mtb_moment = mtb.convert_voltage_to_dipole_moment(Vi)
+            # tau_mtb += crossproduct(mtb_moment) @ bfMAG_FIELD
+            
+            mtb.set_dipole_moment(input[self.Idx["U"]["MTB_TORQUE"]][i])
+            tau_mtb += mtb.get_torque(bfMAG_FIELD)
+            
             # mtb.get_torque(input[self.Idx["U"]["MTB_TORQUE"]][i], bfMAG_FIELD)
         # self.Magnetorquer.get_torque(self, state, Idx)
         
