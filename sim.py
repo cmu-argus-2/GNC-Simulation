@@ -139,7 +139,8 @@ if __name__ == "__main__":
     # print(GREEN + f'job_name:{RESET} "{job_name}"')
     # job_directory_abs = os.path.join(results_directory_abs, job_name)
     # os.system(f"mkdir -p {job_directory_abs}")
-
+    os.environ["TRIAL_DIRECTORY"] = "/home/runner/work/GNC-Simulation/GNC-Simulation/montecarlo/results/"
+    os.environ["PARAMETER_FILEPATH"] = "/home/runner/work/GNC-Simulation/GNC-Simulation/config.yaml"
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
     run(TRIAL_DIRECTORY, PARAMETER_FILEPATH)

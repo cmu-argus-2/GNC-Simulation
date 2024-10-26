@@ -35,7 +35,7 @@ class Simulator:
         self.Idx = self.world.Idx
         
         # Initialize the Controller Class
-        self.controller = Controller(self.config, self.Idx)
+        self.controller = Controller(self.config, self.world.Magnetorquers, self.Idx)
         
         self.estimator = Estimator()
         
@@ -58,7 +58,7 @@ class Simulator:
     """
 
     def load_config(self):
-        # Read the YAML file and parse it into a dictioanry
+        # Read the YAML file and parse it into a dictionary
         self.config_file = "config.yaml"
         with open(self.config_file, "r") as f:
             self.config = yaml.safe_load(f)
@@ -104,7 +104,8 @@ class Simulator:
             self.date += (1 / self.update_rate) / (
                 24 * 60 * 60
             )  # 1 second into Julian date conversion
-            print(f"{self.date:.2f}", np.round(self.world_state, 2))
+            formatted_state = [f"{elem:.2e}" for elem in self.world_state[6:13]]
+            print(f"{self.date:.2f} {formatted_state}")
             
             Results["WorldStates"][i, :] = self.world_state
             Results["ControlInputs"][i, :] = actuator_cmd[:, 0]
