@@ -15,7 +15,7 @@
  * @param m : satellite mass [kg]
  * @return drag acceleration in ECI frame [m/s^2]
  */
-Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m);
+Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, double t_J2000, double Cd, double A, double m);
 
 /**
  * @brief Compute atmospheric density at current time
@@ -24,6 +24,6 @@ Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, do
  * @param t_J2000 : seconds since J2000 used to compute sun position
  * @return atmospheric density (kg/m^3) at current position
  */
-double density(Vector3 r, double t_J2000);
+double density(const Vector3 r, double t_J2000);
 
 #endif   // C___drag_H

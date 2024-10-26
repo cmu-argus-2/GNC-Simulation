@@ -5,19 +5,19 @@
 #include <math.h>
 
 
-Vector3 gravitational_acceleration(Vector3 r) 
+Vector3 gravitational_acceleration(const Vector3 r) 
 {
     return spherical_acceleration(r) + J2_perturbation(r);
 }
 
-Vector3 spherical_acceleration(Vector3 r)
+Vector3 spherical_acceleration(const Vector3 r)
 {
     Vector3 acceleration = - (mu/pow(r.norm(), 3.0))*r;
 
     return acceleration;
 }
 
-Vector3 J2_perturbation(Vector3 r)
+Vector3 J2_perturbation(const Vector3 r)
 {
     Vector3 acceleration;
 

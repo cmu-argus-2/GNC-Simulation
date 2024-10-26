@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 
-Vector3 MagneticField(Vector3 r, double t_J2000)
+Vector3 MagneticField(const Vector3 r, double t_J2000)
 {
     static Vector3 B_eci = Vector3::Zero();
     static double prev_compute_time = -100;
@@ -34,7 +34,7 @@ Vector3 MagneticField(Vector3 r, double t_J2000)
 
 }
 
-Vector3 MagneticFieldSEZ(Vector3 r_geod, double year)
+Vector3 MagneticFieldSEZ(const Vector3 r_geod, double year)
 {
     double colat = 90.0 - r_geod(1)*180.0/M_PI; //co-latitude
     double elong = r_geod(0)*180.0/M_PI;

@@ -6,7 +6,7 @@
 #include "SRP.h"
 
 
-Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, double Cd, double A, double m)
+Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, double t_J2000, double Cd, double A, double m)
 {
     // Get density
     double rho = density(r, t_J2000);
@@ -21,7 +21,7 @@ Vector3 drag_acceleration(Vector3 r, Vector3 v, Quaternion q, double t_J2000, do
     return acceleration;
 }
 
-double density(Vector3 r, double t_J2000) {
+double density(const Vector3 r, double t_J2000) {
     // Load all kernels
     loadAllKernels();
 
