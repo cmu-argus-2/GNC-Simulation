@@ -36,8 +36,8 @@ Vector3 MagneticField(const Vector3 r, double t_J2000)
 
 Vector3 MagneticFieldSEZ(const Vector3 r_geod, double year)
 {
-    double colat = 90.0 - r_geod(1)*180.0/M_PI; //co-latitude
-    double elong = r_geod(0)*180.0/M_PI;
+    double colat = 90.0 - RAD_2_DEG(r_geod(1)); //co-latitude
+    double elong = RAD_2_DEG(r_geod(0));
     if (elong < 0) {elong = elong + 360.0;}
 
     // get magnetic field
