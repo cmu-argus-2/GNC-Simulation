@@ -4,7 +4,7 @@ satellite:
       # physical properties
       mass : 1.0 # kg
       area : 0.01 # face area m^2
-      inertia : [[0.00149, 0.0, 0.00014], [0.0, 0.00147, 0.0],[0.00014, 0.0, 0.00154]]
+      inertia : [[0.002232, 0.0, 0.000716], [0.0, 0.002081, 0.0],[0.000716, 0.0, 0.001796]]
       Cd : 2.2 # Drag coefficient
       
       # Reaction Wheels
