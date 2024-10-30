@@ -10,6 +10,7 @@ Sensor::Sensor(double dt, SensorNoiseParams params,
                std::default_random_engine& rng)
     : bias_{dt, params.biasParams, rng},
       scale_factor_error_{params.scale_factor_error},
+      noise_params_(params),
       white_noise_{
           std::normal_distribution<double>{0, params.sigma_v / sqrt(dt)}},
       rng_{rng} {
