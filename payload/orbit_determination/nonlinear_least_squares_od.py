@@ -30,11 +30,11 @@ class OrbitDetermination:
 
         :param times: A numpy array of shape (n,) and dtype of int containing the indices of time steps at which
                       landmarks were observed. Must be sorted in non-strictly ascending order.
-        :param landmarks: A numpy array of shape (n, 3) containing the ECI coordinates of the landmarks.
-        :param pixel_coordinates: A numpy array of shape (n, 2) containing the pixel coordinates of the landmarks.
-        :param cubesat_attitudes: A numpy array of shape (n, 4) containing the quaternions representing the attitude of the satellite.
+        :param landmarks: A numpy array of shape (m, 3) containing the ECI coordinates of the landmarks.
+        :param pixel_coordinates: A numpy array of shape (m, 2) containing the pixel coordinates of the landmarks.
+        :param cubesat_attitudes: A numpy array of shape (m, 4) containing the quaternions representing the attitude of the satellite.
         :param N: The number of time steps. If None, it will be set to the maximum value in times plus one.
-        :return: A numpy array of shape (max(times) + 1, 6) containing the ECI position and velocity of the satellite at each time step.
+        :return: A numpy array of shape (N, 6) containing the ECI position and velocity of the satellite at each time step.
         """
         assert len(times.shape) == 1, "times must be a 1D array"
         assert all(times[i] <= times[i + 1] for i in range(len(times) - 1)), \
