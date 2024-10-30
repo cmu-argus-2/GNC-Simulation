@@ -3,7 +3,7 @@
 extern "C"
 {
     extern void igrf13syn_(int*, double*, int*, double*, double*, double*,double*, double*, double*, double*); // Fortran version of IGRF13 model
-};
+}
 
 /**
  * @brief Compute magnetic field at satellite location in J2000 ECI frame

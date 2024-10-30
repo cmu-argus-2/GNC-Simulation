@@ -69,7 +69,7 @@ class LyapBasedSunPointingController():
     def __init__(
         self,
         inertia_tensor: np.ndarray,
-        mtb_config: dict,
+        G_mtb: np.ndarray,
         b_dot_gain: float,
         Magnetorquers: list,
     ) -> None:
@@ -77,7 +77,6 @@ class LyapBasedSunPointingController():
         max_moms = np.zeros(len(Magnetorquers))
         for i, mtb in enumerate(Magnetorquers):
             max_moms[i] = mtb.max_dipole_moment
-        G_mtb = mtb_config["mtb_orientation"]
         
         self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
         self.lbm = -self.ubm
@@ -149,7 +148,7 @@ class BaselineSunPointingController():
     def __init__(
         self,
         inertia_tensor: np.ndarray,
-        mtb_config: dict,
+        G_mtb: np.ndarray,
         b_dot_gain: float,
         Magnetorquers: list,
     ) -> None:
@@ -158,7 +157,6 @@ class BaselineSunPointingController():
         max_moms = np.zeros(len(Magnetorquers))
         for i, mtb in enumerate(Magnetorquers):
             max_moms[i] = mtb.max_dipole_moment
-        G_mtb = mtb_config["mtb_orientation"]
         
         self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
         self.lbm = -self.ubm

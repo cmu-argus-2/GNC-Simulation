@@ -45,7 +45,6 @@ class Simulation_Parameters {
     double max_current_rating;
     double max_power;
     Magnetorquer MTB; // Magnetorquer class object
-
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]

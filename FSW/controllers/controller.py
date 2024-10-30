@@ -6,25 +6,26 @@ from FSW.controllers.detumbling_controller import *
 class Controller:
     def __init__(self, config, Magnetorquers, Idx) -> None:
         self.config = config
-        self.pointing_mode    = config["mission"]["pointing_mode"]
-        self.pointing_target  = config["mission"]["pointing_target"]
-        self.controller_algo  = config["controller"]["algorithm"]
-        self.tgt_ang_vel      = np.array(config["mission"]["tgt_ang_vel"], dtype=np.float64)
-        self.feedback_gains   = np.array(config["controller"]["state_feedback_gains"], dtype=np.float64)
+        self.pointing_mode    = config["pointing_mode"]
+        self.pointing_target  = config["pointing_target"]
+        self.controller_algo  = config["algorithm"]
+        self.tgt_ang_vel      = np.array(config["tgt_ang_vel"], dtype=np.float64)
+        self.feedback_gains   = np.array(config["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
         self.mtb              = Magnetorquers
-        self.Bcrossctr  = BcrossController(config["controller"]["bcrossgain"])
+        self.G_mtb_b = np.array(config["mtb_orientation"])
+        self.G_rw_b  = np.array(config["rw_orientation"])
+        self.Bcrossctr  = BcrossController(config["bcrossgain"])
         
-        self.lyapsunpointctr = LyapBasedSunPointingController(config["satellite"]["inertia"], 
-                                                              config["satellite"]["mtb"],
-                                                              config["controller"]["bcrossgain"],
+        self.lyapsunpointctr = LyapBasedSunPointingController(config["inertia"], 
+                                                              self.G_mtb_b,
+                                                              config["bcrossgain"],
                                                               Magnetorquers)
-        self.basesunpointctr = BaselineSunPointingController(config["satellite"]["inertia"], 
-                                                              config["satellite"]["mtb"],
-                                                              config["controller"]["bcrossgain"],
+        self.basesunpointctr = BaselineSunPointingController(config["inertia"], 
+                                                              self.G_mtb_b,
+                                                              config["bcrossgain"],
                                                               Magnetorquers)
-        self.G_mtb_b = np.array(config["satellite"]["mtb"]["mtb_orientation"])
-        self.G_rw_b  = np.array(config["satellite"]["rw_orientation"])
+
         self.allocation_mat = np.zeros((Idx["NU"],3))
        
     def _load_gains(self):

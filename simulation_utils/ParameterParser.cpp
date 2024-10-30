@@ -96,20 +96,21 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename)
 
     num_MTBs = params["N_mtb"].as<int>();
     G_mtb_b = Eigen::Map<Eigen::MatrixXd>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
-
+    
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["N_mtb"].as<int>(),
-                                    params["max_voltage"].as<double>(),
-                                    params["coils_per_layer"].as<double>(),
-                                    params["layers"].as<double>(),
-                                    params["trace_width"].as<double>(),
-                                    params["gap_width"].as<double>(),
-                                    params["trace_thickness"].as<double>(),
-                                    params["max_power"].as<double>(),
-                                    params["max_current_rating"].as<double>(),
+                                    Eigen::Map<VectorXd>(params["max_voltage"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["coils_per_layer"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["layers"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["trace_width"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["gap_width"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["trace_thickness"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["pcb_side_max"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["max_power"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["max_current_rating"].as<std::vector<double>>().data()),
                                     G_mtb_b
                                     );
-    
+
     return magnetorquer;
 }
 
