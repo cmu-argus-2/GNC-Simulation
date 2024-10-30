@@ -1,4 +1,21 @@
 # Starts up trials and manages them to ensure no more than a specified number run concurrently.
+'''
+
+    A single trial involves sampling the initial parameters once, fixing the RNG seed, and invoking sim.py.
+
+    A job involves running multiple trials (100, 1000, etc.), each with a different RNG seed and, thus, a different set of initial parameters. Each trial is an invocation of sim.py.
+
+    run_job.py takes care of running a simulation job from start to finish. This involves:
+
+        Building the C++ core libraries
+        Creating the job's directory where results from each trial are logged
+        Recording the state of the repo (git hash + uncommitted changes) so we know the exact state of the simulation that led to certain results. For repeatability.
+        Launching the trials manager (run_trials.py)
+        Plotting the results once all trials have finished
+
+    Step 4 involves run_trials.py. This file's sole job is to ensure multiple trials ( sim.py instances) run in parallel and then start up new trials when previous ones have finished. Basically, we want to keep the computer busy with running our trials.
+
+'''
 
 import os
 import sys
