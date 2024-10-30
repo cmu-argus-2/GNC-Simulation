@@ -42,11 +42,12 @@ useDrag : False
 useSRP : False
 
 # Initialization
-semimajor_axis : 6371000 # [m]
+semimajor_axis : 6971000 # [m]
 eccentricity : 0.007 
-inclination : 96 # [deg]
-RAAN : 147 # [deg]
-AOP : 63 # [deg]
+inclination : 90 # [deg]
+RAAN : 167 # [deg]
+AOP : 35 # [deg]
 true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
 initial_angular_rate : [0.3,0,0] # [rad/s]
+

@@ -5,7 +5,7 @@
 
 /* CONSTANTS */
 double mu = 3.98600435507e14;
-double J2 = 1.082e-3;
+double J2 = 1.08262668e-3;
 double R_earth = 6.378137e6;
 
 /**
