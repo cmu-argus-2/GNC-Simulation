@@ -96,6 +96,7 @@ def run(log_directory, config_path):
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
+            print(f"True State: {true_state}")
             last_print_time = current_time
 
         logr.log_v( # TODO : Log Control Input and State Estimate at each time
@@ -109,8 +110,8 @@ def run(log_directory, config_path):
                 *["x", "y", "z", "w"],
                 *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
                 *["xSun ECI [m]", "ySun ECI [m]", "zSun ECI [m]"],
-                *["Mag ECI [T]", "Mag ECI [T]", "Mag ECI [T]"],
-            ] + ["x [rad/s]"]*num_RWs),
+                *["xMag ECI [T]", "yMag ECI [T]", "zMag ECI [T]"],
+            ] + ["rw [rad/s]"]*num_RWs),
         )
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)
