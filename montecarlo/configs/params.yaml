@@ -1,0 +1,53 @@
+---
+# physical properties
+mass : 1.0 # kg
+area : 0.01 # face area m^2
+inertia : [0.002, 0, 0, 
+           0, 0.002, 0,
+           0, 0, 0.002]
+Cd : 2.2 # Drag coefficient
+CR : 1.8 # Reflectivity coefficient
+
+# Reaction Wheels
+N_rw : 1                   # number of reaction wheels
+rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
+I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
+m_rw: 0.002                # kg mass of each reaction wheel
+max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
+max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
+
+# Magnetorquers
+N_mtb : 6                                     # number of magnetorquers
+mtb_orientation : [1,0,0, 
+                   0,1,0, 
+                   0,0,1, 
+                   -1,0,0, 
+                   0,-1,0, 
+                   0,0,-1] # alignment axis of each magnetorquer in the body frame
+max_voltage : 5.0                          # V maximum voltage that can be applied by each magnetorquer
+coils_per_layer : 32.0  # number of coils per layer
+layers : 2.0                 # number of layers
+trace_width : 0.0007317  # m
+gap_width : 0.00008999  # m
+trace_thickness : 0.0000355603556  # 1oz copper - 35um = 1.4 mils
+max_current_rating : 1.0  # A
+max_power : 1.0  # W
+
+# Sim settings
+MAX_TIME: 108000 # [s]
+dt: 0.01             # [s]
+earliest_sim_start_time_UTC: 2027-01-01 12:00:00
+latest_sim_start_time_UTC: 2027-02-28 23:59:59
+useDrag : False
+useSRP : False
+
+# Initialization
+semimajor_axis : 6971000 # [m]
+eccentricity : 0.007 
+inclination : 90 # [deg]
+RAAN : 167 # [deg]
+AOP : 35 # [deg]
+true_anomaly : 0 # [deg]
+initial_attitude : [1,0,0,0] 
+initial_angular_rate : [0.3,0,0] # [rad/s]
+
