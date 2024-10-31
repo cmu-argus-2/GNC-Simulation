@@ -158,11 +158,11 @@ Vector6 KOE2ECI(Vector6 KOE, double t_J2000)
     
     conics[0] = KOE(0)*(1 - KOE(1))/1000.0;
     conics[1] = KOE(1);
-    conics[2] = RAD_2_DEG(KOE(2));
-    conics[3] = RAD_2_DEG(KOE(3));
-    conics[4] = RAD_2_DEG(KOE(4));
+    conics[2] = DEG_2_RAD(KOE(2));
+    conics[3] = DEG_2_RAD(KOE(3));
+    conics[4] = DEG_2_RAD(KOE(4));
 
-    double f = RAD_2_DEG(KOE(5));
+    double f = DEG_2_RAD(KOE(5));
     conics[5] = atan2(-sqrt(1-pow(KOE(1),2))*sin(f), -KOE(1)-cos(f)) + M_PI - 
                 KOE(1)*(sqrt(1-pow(KOE(1),2))*sin(f))/(1 + KOE(1)*cos(f)); // True anomaly to mean anomaly calculation
 

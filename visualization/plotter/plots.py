@@ -10,7 +10,8 @@ import numpy as np
 from parse_bin_file import parse_bin_file_wrapper
 from mpl_toolkits.basemap import Basemap
 import os
-
+import pymap3d as pm
+import datetime
 
 class MontecarloPlots:
     def __init__(
@@ -63,8 +64,10 @@ class MontecarloPlots:
             )
 
             # TODO convert from ECI to ECEF
-            lon = np.rad2deg(np.arctan2(y_km, x_km))
-            lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
+            tt = [datetime.datetime.utcfromtimestamp(t) for t in data_dicts[i]["time [s]"]]
+            lat, lon, _ = pm.eci2geodetic(x_km*1e3, y_km*1e3, z_km*1e3, tt)
+            # lon = np.rad2deg(np.arctan2(y_km, x_km))
+            # lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
 
             # https://matplotlib.org/basemap/stable/users/examples.html
             itm.figure(ground_track)
