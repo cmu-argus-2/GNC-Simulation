@@ -43,7 +43,7 @@ class Magnetorquer:
         self.max_voltage = self.R * self.max_current
         self.max_power   = self.R * self.max_current ** 2
         self.max_dipole_moment = self.N_per_face * self.max_current * self.A_cross  # A*m^2
-        self.G_mtb_b = np.array(config["mtb_orientation"][IdMtb]).T
+        self.G_mtb_b = np.array(config["mtb_orientation"][(3*IdMtb):(3*(IdMtb+1))]).T
         self.dipole_moment = np.zeros(3,)
         self.current = 0.0
         self.voltage = 0.0

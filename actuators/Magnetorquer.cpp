@@ -6,21 +6,23 @@
 
 
 Magnetorquer::Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer, VectorXd layers, VectorXd traceThickness,
-                           VectorXd pcb_side_max, VectorXd traceWidth, VectorXd gapWidth, VectorXd maxPower, VectorXd maxCurrentRating,
-                           MatrixXd mtb_orientation) : max_voltage(std::move(maxVolt)), pcb_layers(std::move(layers)), 
-                           trace_thickness(std::move(traceThickness)), pcb_side_max(std::move(pcb_side_max)),
+                           VectorXd pcbSideMax, VectorXd traceWidth, VectorXd gapWidth, VectorXd maxPower, VectorXd maxCurrentRating,
+                           MatrixXd mtb_orientation) : num_MTBs(N_MTBs), max_voltage(std::move(maxVolt)), N(std::move(coilsPerLayer)), pcb_layers(std::move(layers)), 
+                           trace_thickness(std::move(traceThickness)), pcb_side_max(std::move(pcbSideMax)),
                            trace_width(std::move(traceWidth)), gap_width(std::move(gapWidth)), max_power(std::move(maxPower)), 
                            max_current_rating(std::move(maxCurrentRating)) 
 {
-    num_MTBs = N_MTBs;
     
-    N = coilsPerLayer;
-    
-    N_per_face = N*pcb_layers;
-
     coil_width = trace_width + gap_width;
     
+    N_per_face = VectorXd::Zero(num_MTBs);
+    A_cross = VectorXd::Zero(num_MTBs);
+    coil_length = VectorXd::Zero(num_MTBs);
+    resistance = VectorXd::Zero(num_MTBs);
+    max_dipole_moment = VectorXd::Zero(num_MTBs);
+    
     for (int i=0; i<num_MTBs; i++) {
+        N_per_face(i) = N(i)*pcb_layers(i);
         max_current_rating(i) = std::min(max_power(i) / max_voltage(i), max_current_rating(i));
         A_cross(i) = pow(pcb_side_max(i) - N(i)*coil_width(i), 2.0);
             
@@ -33,8 +35,8 @@ Magnetorquer::Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer,
         max_power(i)   = resistance(i) * pow(max_current_rating(i), 2);
         max_dipole_moment(i) = N_per_face(i) * max_current_rating(i) * A_cross(i);
     }
-    
-    G_mtb_b = mtb_orientation;
+   
+    G_mtb_b = std::move(mtb_orientation);
 }
 
 Vector3 Magnetorquer::getTorque(VectorXd voltages, Quaternion q, Vector3 magnetic_field)
@@ -42,8 +44,8 @@ Vector3 Magnetorquer::getTorque(VectorXd voltages, Quaternion q, Vector3 magneti
     
     Vector3 magnetic_field_b = q.toRotationMatrix().transpose()*magnetic_field; // quaternion rotates vector in body frame to ECI. We need the inverse rotation
 
-    Eigen::VectorXd currents = voltages.array() / resistance.array();
-    Eigen::VectorXd power = voltages.array() * currents.array();
+    Eigen::VectorXd currents = voltages.cwiseProduct(resistance.cwiseInverse());
+    Eigen::VectorXd power = voltages.cwiseProduct(currents);
 
     Eigen::VectorXd max_current = currents.cwiseAbs();
     Eigen::VectorXd max_applied_voltage = voltages.cwiseAbs();

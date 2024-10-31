@@ -42,11 +42,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
 
     Cd = params["Cd"].as<double>();
     CR = params["CR"].as<double>();
-
+    
     num_RWs = params["N_rw"].as<int>();
     G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
-
 
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
@@ -99,15 +98,15 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename)
     
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["N_mtb"].as<int>(),
-                                    Eigen::Map<VectorXd>(params["max_voltage"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["coils_per_layer"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["layers"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["trace_width"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["gap_width"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["trace_thickness"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["pcb_side_max"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["max_power"].as<std::vector<double>>().data()),
-                                    Eigen::Map<VectorXd>(params["max_current_rating"].as<std::vector<double>>().data()),
+                                    Eigen::Map<VectorXd>(params["max_voltage"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["coils_per_layer"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["layers"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["trace_thickness"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["pcb_side_max"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["trace_width"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["gap_width"].as<std::vector<double>>().data(),  num_MTBs),
+                                    Eigen::Map<VectorXd>(params["max_power"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["max_current_rating"].as<std::vector<double>>().data(), num_MTBs),
                                     G_mtb_b
                                     );
 

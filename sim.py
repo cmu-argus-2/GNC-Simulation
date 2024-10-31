@@ -83,6 +83,8 @@ def run(log_directory, config_path):
         if current_time >= last_controller_update + controller_dt:
             state_estimate = true_state  # TODO fix me
             # controller_command = controller(state_estimate)
+            # b = MagneticField(state_estimate[], current_time)
+            
             controller_command = controller.run(current_time, state_estimate, Idx)
 
             assert(len(controller_command) == (num_RWs + num_MTBs))

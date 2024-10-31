@@ -81,6 +81,12 @@ class LyapBasedSunPointingController():
         self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
         self.lbm = -self.ubm
         self.k = np.array(b_dot_gain)
+        
+        eigenvalues, eigenvectors = np.linalg.eig(self.J)
+        I_min_direction = eigenvectors[:, np.argmax(eigenvalues)]
+        if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
+            I_min_direction = -I_min_direction
+        self.I_min_direction = I_min_direction
 
     def get_dipole_moment_command(
         self,
@@ -99,12 +105,11 @@ class LyapBasedSunPointingController():
         
         h = self.J @ angular_velocity 
         h_norm = np.linalg.norm(h)
-        h_tgt = self.J @ target_angular_velocity
+        # TODO: move this to preprocessing
+        h_tgt = self.J @ self.I_min_direction * target_angular_velocity[0]
         h_tgt_norm = np.linalg.norm(h_tgt)
-        eigenvalues, eigenvectors = np.linalg.eig(self.J)
-        I_min_direction = eigenvectors[:, np.argmax(eigenvalues)]
         u = np.zeros(3)
-        spin_stabilized = (np.linalg.norm(I_min_direction - (h/h_tgt_norm)) <= np.deg2rad(15))
+        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/h_tgt_norm)) <= np.deg2rad(15))
         sun_pointing = (np.linalg.norm(sun_vector-h/h_norm)<= np.deg2rad(10))
         """
         detumbled  = (np.linalg.norm(angular_velocity) <= np.deg2rad(3))
@@ -119,7 +124,7 @@ class LyapBasedSunPointingController():
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
         unit_magnetic_field = magnetic_field # / (magnetic_field_norm ** 2)
         if not spin_stabilized:
-            u = crossproduct(unit_magnetic_field) @ (I_min_direction - (h/h_tgt_norm))
+            u = crossproduct(unit_magnetic_field) @ (self.I_min_direction - (h/h_tgt_norm))
             # u = np.clip(a=u, a_min=self.lbm, a_max=self.ubm)
             # u = self.k  @ np.cross(unit_magnetic_field, target_angular_velocity - angular_velocity).reshape(3,1)
             print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")

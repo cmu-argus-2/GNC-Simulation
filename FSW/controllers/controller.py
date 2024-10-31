@@ -13,15 +13,15 @@ class Controller:
         self.feedback_gains   = np.array(config["state_feedback_gains"], dtype=np.float64)
         self.est_world_states = None
         self.mtb              = Magnetorquers
-        self.G_mtb_b = np.array(config["mtb_orientation"])
-        self.G_rw_b  = np.array(config["rw_orientation"])
+        self.G_mtb_b = np.array(config["mtb_orientation"]).reshape(config["N_mtb"], 3)
+        self.G_rw_b  = np.array(config["rw_orientation"]).reshape(config["N_rw"], 3)
         self.Bcrossctr  = BcrossController(config["bcrossgain"])
-        
-        self.lyapsunpointctr = LyapBasedSunPointingController(config["inertia"], 
+        self.inertia = np.array(config["inertia"]).reshape(3,3)
+        self.lyapsunpointctr = LyapBasedSunPointingController(self.inertia, 
                                                               self.G_mtb_b,
                                                               config["bcrossgain"],
                                                               Magnetorquers)
-        self.basesunpointctr = BaselineSunPointingController(config["inertia"], 
+        self.basesunpointctr = BaselineSunPointingController(self.inertia, 
                                                               self.G_mtb_b,
                                                               config["bcrossgain"],
                                                               Magnetorquers)
@@ -68,7 +68,7 @@ class Controller:
             ref_ctrl_states = np.zeros((19,))
             # reference angular velocity in pointing axis 
             ref_ctrl_states[:4]  = q_ref
-            ref_ctrl_states[4:7] = np.deg2rad(tgt_ang_vel)
+            ref_ctrl_states[4:7] = tgt_ang_vel
             ref_torque = np.zeros((3,))
         elif pointing_mode == "3D-stabilized":
             q_ref = rotmat2quat(Rot_mat)
