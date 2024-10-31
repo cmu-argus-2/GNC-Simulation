@@ -45,7 +45,7 @@ mission:
       # Mode management
       pointing_mode: "spin-stabilized" # "detumble" or "spin-stabilized" or "3D-stabilized"
       pointing_target: "Sun" # "Nadir" or "Sun"
-      tgt_ang_vel: [0.0, 0.0, 10.0] # [deg/s]
+      tgt_ang_vel: 10.0 # [deg/s]
 
 complexity:
       use_drag : True
@@ -55,9 +55,9 @@ complexity:
 controller:
       # assuming controller states are angular velocity and quaternion imaginary components
       algorithm: "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
-      bcrossgain: [[0.0028, 0.0, 0.0],
-                  [0.0, 0.0028, 0.0],
-                  [0.0, 0.0, 0.0028]]
+      bcrossgain: [[0.000028, 0.0, 0.0],
+                  [0.0, 0.000028, 0.0],
+                  [0.0, 0.0, 0.000028]]
 
       state_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
                               [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],

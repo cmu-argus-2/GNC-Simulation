@@ -3,7 +3,7 @@
 #include "math/EigenWrapper.h"
 #include <cmath>
 #include <utility>
-
+#include <iostream>
 
 Magnetorquer::Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer, VectorXd layers, VectorXd traceThickness,
                            VectorXd pcbSideMax, VectorXd traceWidth, VectorXd gapWidth, VectorXd maxPower, VectorXd maxCurrentRating,

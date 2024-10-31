@@ -71,9 +71,9 @@ class LyapBasedSunPointingController():
         inertia_tensor: np.ndarray,
         G_mtb: np.ndarray,
         b_dot_gain: float,
+        target_angular_velocity: float,
         Magnetorquers: list,
     ) -> None:
-        self.J = inertia_tensor 
         max_moms = np.zeros(len(Magnetorquers))
         for i, mtb in enumerate(Magnetorquers):
             max_moms[i] = mtb.max_dipole_moment
@@ -82,11 +82,14 @@ class LyapBasedSunPointingController():
         self.lbm = -self.ubm
         self.k = np.array(b_dot_gain)
         
+        self.J = inertia_tensor 
         eigenvalues, eigenvectors = np.linalg.eig(self.J)
         I_min_direction = eigenvectors[:, np.argmax(eigenvalues)]
         if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
             I_min_direction = -I_min_direction
         self.I_min_direction = I_min_direction
+        self.h_tgt = self.J @ self.I_min_direction * target_angular_velocity
+        self.h_tgt_norm = np.linalg.norm(self.h_tgt)
 
     def get_dipole_moment_command(
         self,
@@ -105,11 +108,8 @@ class LyapBasedSunPointingController():
         
         h = self.J @ angular_velocity 
         h_norm = np.linalg.norm(h)
-        # TODO: move this to preprocessing
-        h_tgt = self.J @ self.I_min_direction * target_angular_velocity[0]
-        h_tgt_norm = np.linalg.norm(h_tgt)
         u = np.zeros(3)
-        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/h_tgt_norm)) <= np.deg2rad(15))
+        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
         sun_pointing = (np.linalg.norm(sun_vector-h/h_norm)<= np.deg2rad(10))
         """
         detumbled  = (np.linalg.norm(angular_velocity) <= np.deg2rad(3))
@@ -124,14 +124,14 @@ class LyapBasedSunPointingController():
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
         unit_magnetic_field = magnetic_field # / (magnetic_field_norm ** 2)
         if not spin_stabilized:
-            u = crossproduct(unit_magnetic_field) @ (self.I_min_direction - (h/h_tgt_norm))
+            u = crossproduct(unit_magnetic_field) @ (self.I_min_direction - (h/self.h_tgt_norm))
             # u = np.clip(a=u, a_min=self.lbm, a_max=self.ubm)
             # u = self.k  @ np.cross(unit_magnetic_field, target_angular_velocity - angular_velocity).reshape(3,1)
             print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")
-            print("h_tgt=", h_tgt)
+            print("h_tgt=", self.h_tgt)
             
         elif not sun_pointing:
-            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/h_tgt_norm))
+            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/self.h_tgt_norm))
             print("Sun pointing: Sun vector =", sun_vector)
             print("Angular momentum direction =", h / h_norm)
         
@@ -143,8 +143,8 @@ class LyapBasedSunPointingController():
         angle_sun_h = np.arccos(np.clip(np.dot(sun_vector, h / h_norm), -1.0, 1.0))
         print("Sun Vector: ", sun_vector)
         print("Angle between sun vector and angular momentum direction (degrees):", np.degrees(angle_sun_h))
-        print("Angle between sun vector and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(sun_vector, I_min_direction))))
-        print("Angle between angular momentum and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(h/h_norm, I_min_direction))))
+        print("Angle between sun vector and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(sun_vector, self.I_min_direction))))
+        print("Angle between angular momentum and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(h/h_norm, self.I_min_direction))))
         print("torque command =", np.cross(u.T, magnetic_field))
         return u.reshape(3, 1)
 
@@ -210,28 +210,42 @@ class BaselineSunPointingController():
 class BcrossController():
     def __init__(
         self,
+        G_mtb: np.ndarray,
         b_dot_gain: float,
-        dipole_moment_lower_bound=-np.finfo(np.float64).max,
-        dipole_moment_upper_bound=np.finfo(np.float64).max,
+        Magnetorquers: list,
+        inertia_tensor: np.ndarray,
+        ref_angular_velocity: float,
     ) -> None:
+        
         self.k = np.array(b_dot_gain)
-        self.lbm = dipole_moment_lower_bound
-        self.ubm = dipole_moment_upper_bound
+        max_moms = np.zeros(len(Magnetorquers))
+        for i, mtb in enumerate(Magnetorquers):
+            max_moms[i] = mtb.max_dipole_moment
+        self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
+        self.lbm = -self.ubm
+        self.J = inertia_tensor 
+        
+        eigenvalues, eigenvectors = np.linalg.eig(self.J)
+        I_min_direction = eigenvectors[:, np.argmax(eigenvalues)]
+        if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
+            I_min_direction = -I_min_direction
+        self.I_min_direction = I_min_direction
+                
+        self.ref_angular_velocity = self.I_min_direction * np.deg2rad(ref_angular_velocity)
  
     def get_dipole_moment_command(
         self,
         magnetic_field: np.ndarray,
         angular_velocity: np.ndarray,
-        ref_angular_velocity: np.ndarray,
     ) -> np.ndarray:
         """
         B-cross law: https://arc.aiaa.org/doi/epdf/10.2514/1.53074
         """
-        refomega_norm = np.linalg.norm(ref_angular_velocity)
-        if np.linalg.norm(angular_velocity - ref_angular_velocity) / refomega_norm >= np.deg2rad(5):
+        refomega_norm = np.linalg.norm(self.ref_angular_velocity)
+        if np.linalg.norm(angular_velocity - self.ref_angular_velocity) / refomega_norm >= np.deg2rad(5):
             magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
             unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
-            m_cmd = -self.k @ np.cross(unit_magnetic_field, angular_velocity - ref_angular_velocity).reshape(3,1)
+            m_cmd = -self.k @ np.cross(unit_magnetic_field, angular_velocity - self.ref_angular_velocity).reshape(3,1)
         else:
             m_cmd = np.zeros((3,1))
         return np.clip(a=m_cmd, a_min=self.lbm, a_max=self.ubm)

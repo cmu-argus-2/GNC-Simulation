@@ -15,6 +15,8 @@
 #include "utils_and_transforms.h"
 #include "ReactionWheel.h"
 #include "Magnetorquer.h"
+#include "../world/physics/models/MagneticField.h"
+
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -42,7 +44,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
 
     Cd = params["Cd"].as<double>();
     CR = params["CR"].as<double>();
-    
+
     num_RWs = params["N_rw"].as<int>();
     G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
@@ -64,6 +66,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     initial_angular_rate = Eigen::Map<Vector3>(params["initial_angular_rate"].as<std::vector<double>>().data());
     
     initial_state = initializeSatellite(earliest_sim_start_unix);
+
+    controller_dt = params["controller_dt"].as<double>();
+    estimator_dt  = params["estimator_dt"].as<double>();
 }
 
 /*
@@ -76,14 +81,19 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {
-    VectorXd State(13+num_RWs);
+    VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
     State(Eigen::seqN(10,3)) = initial_angular_rate;
-    State(Eigen::seqN(13, num_RWs)).setZero();
+    // Sun Position [m]
+    State(Eigen::seqN(13, 3)) = Eigen::VectorXd::Zero(3);
+    // Magnetic Field [T]
+    State(Eigen::seqN(16, 3)) = Eigen::VectorXd::Zero(3);
+    //MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
+    State(Eigen::seqN(19, num_RWs)).setZero();
 
     return State;
 

@@ -65,6 +65,9 @@ class Simulation_Parameters {
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
 
+    double controller_dt; // [s]
+    double estimator_dt;  // [s]
+
     private:
     Magnetorquer load_MTB(std::string filename);
 };

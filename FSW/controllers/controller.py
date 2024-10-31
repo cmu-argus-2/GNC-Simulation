@@ -15,11 +15,16 @@ class Controller:
         self.mtb              = Magnetorquers
         self.G_mtb_b = np.array(config["mtb_orientation"]).reshape(config["N_mtb"], 3)
         self.G_rw_b  = np.array(config["rw_orientation"]).reshape(config["N_rw"], 3)
-        self.Bcrossctr  = BcrossController(config["bcrossgain"])
         self.inertia = np.array(config["inertia"]).reshape(3,3)
+        self.Bcrossctr  = BcrossController(self.G_mtb_b,
+                                            config["bcrossgain"],
+                                            Magnetorquers,
+                                            self.inertia,
+                                            config["tgt_ang_vel"])
         self.lyapsunpointctr = LyapBasedSunPointingController(self.inertia, 
                                                               self.G_mtb_b,
                                                               config["bcrossgain"],
+                                                              config["tgt_ang_vel"],
                                                               Magnetorquers)
         self.basesunpointctr = BaselineSunPointingController(self.inertia, 
                                                               self.G_mtb_b,
@@ -85,7 +90,7 @@ class Controller:
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             bfMAG_FIELD = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
             return self.Bcrossctr.get_dipole_moment_command(bfMAG_FIELD, 
-                            est_ctrl_states[Idx["X"]["ANG_VEL"]], ref_ctrl_states[4:7])
+                                                            est_ctrl_states[Idx["X"]["ANG_VEL"]])
         elif self.controller_algo == "Lyapunov":
             Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
             magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
@@ -124,8 +129,9 @@ class Controller:
         bfMAG_FIELD = Re2b @ mag_field
         B_mat[:,Idx["U"]["MTB_TORQUE"]] = -crossproduct(bfMAG_FIELD)  @ self.G_mtb_b.T
         
-        self.allocation_mat = np.vstack((np.zeros((1, 3)), np.linalg.pinv(self.G_mtb_b.T)))
-        
+        self.allocation_mat = np.zeros((Idx["NU"],3))
+        self.allocation_mat[Idx["U"]["MTB_TORQUE"],:] = np.linalg.pinv(self.G_mtb_b.T)
+                
         # np.linalg.pinv(B_mat)
         
         # Normalize columns of the allocation matrix
@@ -146,8 +152,12 @@ class Controller:
         
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, torque_cmd, Idx)
- 
-                
-        return actuator_cmd
+
+        # convert to voltage      
+        volt_cmd = np.zeros((Idx["NU"],))
+        for i in range(len(self.mtb)):
+            volt_cmd[Idx["U"]["MTB_TORQUE"]][i] = self.mtb[i].convert_dipole_moment_to_voltage(actuator_cmd[Idx["U"]["MTB_TORQUE"]][i])
+        
+        return volt_cmd
 
         

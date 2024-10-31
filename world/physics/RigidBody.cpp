@@ -63,7 +63,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 {
     
     // Assert matrix sizes
-    assert(x.size() == (13 + num_RWs)); // State vector = 13x1 vector + RW speeds
+    assert(x.size() == (19 + num_RWs)); // State vector = 13x1 vector + RW speeds
     assert(u.size() == (num_MTBs + num_RWs)); // num_MTB + num_RWs torques
     assert(G_rw_b.rows() == 3); // Orientation matrix has 3 element vectors
     assert(G_rw_b.cols() == num_RWs); // 1 column for each RW
@@ -77,7 +77,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
     Vector3 omega{x(10), x(11), x(12)};
     VectorXd omega_rw(num_RWs);
-    omega_rw = x(Eigen::seqN(13, num_RWs));
+    omega_rw = x(Eigen::seqN(19, num_RWs));
     
     /* Attitude Dynamics */
     Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
@@ -101,7 +101,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     // Pack into state derivative vector
     xdot(Eigen::seqN(6,4)) = qdot;
     xdot(Eigen::seqN(10,3)) = omega_dot;
-    xdot(Eigen::seqN(13,num_RWs)) = omega_dot_rw;
+    xdot(Eigen::seqN(19,num_RWs)) = omega_dot_rw;
 
     return xdot;
 }
@@ -119,6 +119,10 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
 
     // renormalize the attitude quaternion
     x_new(Eigen::seqN(6, 4)) = x_new(Eigen::seqN(6, 4))/x_new(Eigen::seqN(6, 4)).norm();
+    // sun position
+    x_new(Eigen::seqN(13, 3)) = sun_position_eci(t_J2000 + dt);
+    // magnetic field 
+    x_new(Eigen::seqN(16, 3)) = MagneticField( x_new(Eigen::seqN(0, 3)), t_J2000 + dt);
 
     return x_new;
 }
