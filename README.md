@@ -1,6 +1,6 @@
 # 3dDynamicsSim
 
-This repo simulates the 3d Dynamics of a satellite in orbit. The core dynamics are comptued and the state is propogated in C++. This is exposed to python via pybind. 
+This repo simulates the 3D Dynamics of a satellite in orbit. The core dynamics are computed, and the state is propagated in C++. This is exposed to Python via pybind11. 
 
 Credits to Derek Fan for his approach to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
@@ -17,7 +17,7 @@ Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during b
 
 ### Each time
 1. Run `source .venv/bin/activate` to activate the venv
-2. Once done with devlopment, run `deactivate` to exit the venv
+2. Once done with development, run `deactivate` to exit the venv
 
 ## Running the sim
 1. `cd simulation_manager/`
@@ -42,7 +42,7 @@ Run `./build_sim_debug.sh`
 
 #### Interactive - specific trials
 1. `cd visualization/plotter`
-2. `python3 plot.py <JOB_NAME> -i -t [list of trail numbers to debug]`
+2. `python3 plot.py <JOB_NAME> -i -t [list of trial numbers to debug]`
 
 #### Replotting an existing job after changing the plotting scripts
 1. `cd visualization/plotter`
@@ -65,7 +65,7 @@ Edit `montecarlo/configs/params.yaml`
 ### C++
 Install the following VSCode extensions:
 1. clangd for powerful C++ intellisense (identifier: `llvm-vs-code-extensions.vscode-clangd`)
-2. doxygen dostring generator (identifier: `cschlosser.doxdocgen`)
+2. doxygen docstring generator (identifier: `cschlosser.doxdocgen`)
 
 ## Code Architecture
 Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simulation-Architecture-10648018d82a80d4a90ce8fb38b47777">here</a>
