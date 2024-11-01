@@ -10,6 +10,7 @@ from FSW.controllers.controller import Controller
 import os
 import yaml
 from actuators.magnetorquer import Magnetorquer
+# from build.world.pyphysics.models import MagneticField, SRP
 
 START_TIME = time()
 
@@ -30,6 +31,8 @@ def run(log_directory, config_path):
         pyparams = yaml.safe_load(f)
 
     initial_state = np.array(params.initial_state) # Get initial state
+    newstate = np.array(rk4(initial_state, np.zeros((params.num_MTBs + params.num_RWs, 1)), params, -params.dt, params.dt))
+    initial_state[13:19]  = newstate[13:19]
     num_RWs = params.num_RWs
     num_MTBs = params.num_MTBs
 

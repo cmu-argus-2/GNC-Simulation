@@ -140,15 +140,19 @@ class MontecarloPlots:
         annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "ECI_sun_direction.png", self.close_after_saving)
         # ==========================================================================
-        # Plot the sun vector, ang mom vector dir and target ang mom dir in body frame
+        # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
         with open("../../montecarlo/configs/params.yaml", "r") as f:
             pyparams = yaml.safe_load(f)
         
         J = np.array(pyparams["inertia"]).reshape((3,3))
+        eigenvalues, eigenvectors = np.linalg.eig(J)
+        idx = np.argsort(eigenvalues)
+        major_axis = eigenvectors[:, idx[2]]
         for i, trial_number in enumerate(self.trials):
             bsun_vector = []
             ang_mom_vector = []
+            ang_mom_norm_vector = []
             for j in range(len(data_dicts[i]["time [s]"])):
                 # Assuming the attitude quaternion is in the form [w, x, y, z]
                 quat = np.array([data_dicts[i]["w"][j], data_dicts[i]["x"][j], data_dicts[i]["y"][j], data_dicts[i]["z"][j]])
@@ -157,19 +161,27 @@ class MontecarloPlots:
                 Re2b = quatrotation(quat).T
                 sun_vector_body = Re2b @ sun_vector_eci
                 sun_vector_body = sun_vector_body / np.linalg.norm(sun_vector_body)
-                bsun_vector.append(sun_vector_body)
+                angle_sv = np.rad2deg(np.arccos(np.dot(sun_vector_body, major_axis)))
+                bsun_vector.append(angle_sv)
                 ang_vel = np.array([data_dicts[i]["x [rad/s]"][j], data_dicts[i]["y [rad/s]"][j], data_dicts[i]["z [rad/s]"][j]])
                 ang_mom = J @ ang_vel
-                ang_mom = ang_mom / np.linalg.norm(ang_mom)
-                ang_mom_vector.append(ang_mom)
-            bsun_vector = np.array(bsun_vector).T
+                ang_mom_norm = np.linalg.norm(ang_mom)
+                ang_mom_norm_vector.append(ang_mom_norm)
+                ang_mom = ang_mom / ang_mom_norm
+                angle_am = np.rad2deg(np.arccos(np.dot(ang_mom, major_axis)))
+                ang_mom_vector.append(angle_am)
+                ang_mom_norm
+            bsun_vector    = np.array(bsun_vector).T
             ang_mom_vector = np.array(ang_mom_vector).T
             itm.figure()
             multiPlot(
-            data_dicts[i]["time [s]"],
-            [bsun_vector,ang_mom_vector],
-            seriesLabel=f"_{trial_number}",
+                data_dicts[i]["time [s]"],
+                [bsun_vector, ang_mom_vector, ang_mom_norm_vector],
+                seriesLabel=f"_{trial_number}",
             )
-        annotateMultiPlot(title="Sun Pointing/Spin Stabilization", ylabels=["SunVec", "AngMom"])
+        annotateMultiPlot(title="Sun Pointing/Spin Stabilization", 
+                          ylabels=["SunVector/MajorAx Angle [deg]", 
+                                   "AngMom/MajorAx Angle [deg]",
+                                   "AngMom norm [Nms]"])
         save_figure(itm.gcf(), self.plot_dir, "sun_vector_body.png", self.close_after_saving)
  
