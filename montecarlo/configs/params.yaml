@@ -2,9 +2,12 @@
 # physical properties
 mass : 1.0 # kg
 area : 0.01 # face area m^2
-inertia : [0.002232, 0.0, 0.000716, 
-                0.0, 0.002081, 0.0,
-           0.000716, 0.0, 0.001796]
+inertia : [0.002232, 0.0, 0.0, 
+               0.0, 0.001, 0.0,
+          0.0, 0.0, 0.001]
+# [0.002232, 0.0, 0.000716, 
+#                0.0, 0.002081, 0.0,
+#           0.000716, 0.0, 0.001796]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
@@ -21,9 +24,9 @@ N_mtb : 6                                     # number of magnetorquers
 mtb_orientation : [1,0,0, 
                    0,1,0, 
                    0,0,1, 
-                   -1,0,0, 
-                   0,-1,0, 
-                   0,0,-1] # alignment axis of each magnetorquer in the body frame
+                   1,0,0, 
+                   0,1,0, 
+                   0,0,1] # alignment axis of each magnetorquer in the body frame
 max_voltage : [5,5,5,5,5,5]  # V maximum voltage that can be applied by each magnetorquer
 coils_per_layer : [32.0,32.0,32.0,32.0,32.0,32.0]  # number of coils per layer
 layers : [2.0,2.0,2.0,2.0,2.0,2.0]                 # number of layers
@@ -32,11 +35,11 @@ gap_width : [0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008
 trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556]  # 1oz copper - 35um = 1.4 mils
 pcb_side_max: [0.1,0.1,0.1,0.1,0.1,0.1] # m
 max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
-max_power : [5.0,5.0,5.0,5.0,5.0,5.0]  # W
+max_power : [1,1,1,1,1,1]  # W
 
 # Sim settings
-MAX_TIME: 108000 # [s]
-dt: 0.01             # [s]
+MAX_TIME: 7200 # [s]
+dt: 0.1         # [s]
 earliest_sim_start_time_UTC: 2027-01-01 12:00:00
 latest_sim_start_time_UTC: 2027-02-28 23:59:59
 useDrag : False
@@ -52,7 +55,7 @@ true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
 initial_angular_rate : [0.3,0,0] # [rad/s]
 
-algorithm: "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "Lyapunov" # "Bcross" # "BaseSP" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: [[0.0028, 0.0, 0.0],
           [0.0, 0.0028, 0.0],
           [0.0, 0.0, 0.0028]]
@@ -61,6 +64,8 @@ state_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
                     [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
                     [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
 
-pointing_mode: "spin-stabilized" # "detumble" or "spin-stabilized" or "3D-stabilized"
+pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Sun" # "Nadir" or "Sun"
-tgt_ang_vel: [0.0, 0.0, 10.0] # [deg/s]
+tgt_ang_vel: 5 # [deg/s]
+controller_dt: 0.1 # [s]
+estimator_dt: 1    # [s]

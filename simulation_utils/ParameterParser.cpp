@@ -15,8 +15,8 @@
 #include "utils_and_transforms.h"
 #include "ReactionWheel.h"
 #include "Magnetorquer.h"
-#include "../world/physics/models/MagneticField.h"
-
+#include "MagneticField.h"
+#include "SRP.h" //../world/physics/models/
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -89,8 +89,10 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     State(Eigen::seqN(6,4)) = initial_attitude;
     State(Eigen::seqN(10,3)) = initial_angular_rate;
     // Sun Position [m]
-    State(Eigen::seqN(13, 3)) = Eigen::VectorXd::Zero(3);
+    State(Eigen::seqN(13, 3)) = Eigen::VectorXd::Zero(3); //sun_position_eci(epoch);
     // Magnetic Field [T]
+    Vector3 Bfield = MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
+    std::cout << "Magnetic Field: " << Bfield << std::endl;
     State(Eigen::seqN(16, 3)) = Eigen::VectorXd::Zero(3);
     //MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
     State(Eigen::seqN(19, num_RWs)).setZero();

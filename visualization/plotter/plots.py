@@ -12,7 +12,11 @@ from mpl_toolkits.basemap import Basemap
 import os
 import pymap3d as pm
 import datetime
-
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from world.math.quaternions import quatrotation
+# temp (remove later)
+import yaml
 class MontecarloPlots:
     def __init__(
         self,
@@ -108,8 +112,64 @@ class MontecarloPlots:
         for i, trial_number in enumerate(self.trials):
             multiPlot(
                 data_dicts[i]["time [s]"],
-                np.rad2deg([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]]),
+                [data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]],
                 seriesLabel=f"_{trial_number}",
             )
-        annotateMultiPlot(title="True body angular rate [deg/s]", ylabels=["x", "y", "z"])
+        annotateMultiPlot(title="True body angular rate [rad/s]", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving)
+        # ==========================================================================
+        # Plot the magnetic field in ECI
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["time [s]"],
+                [data_dicts[i]["xMag ECI [T]"], data_dicts[i]["yMag ECI [T]"], data_dicts[i]["zMag ECI [T]"]],
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="ECI Magnetic Field [T]", ylabels=["x", "y", "z"])
+        save_figure(itm.gcf(), self.plot_dir, "mag_field_true.png", self.close_after_saving)
+        # ==========================================================================
+        # Plot the sun direction in ECI
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["time [s]"],
+                [data_dicts[i]["xSun ECI [m]"], data_dicts[i]["ySun ECI [m]"], data_dicts[i]["zSun ECI [m]"]],
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
+        save_figure(itm.gcf(), self.plot_dir, "ECI_sun_direction.png", self.close_after_saving)
+        # ==========================================================================
+        # Plot the sun vector, ang mom vector dir and target ang mom dir in body frame
+        # load inertia from config file (temp solution)
+        with open("../../montecarlo/configs/params.yaml", "r") as f:
+            pyparams = yaml.safe_load(f)
+        
+        J = np.array(pyparams["inertia"]).reshape((3,3))
+        for i, trial_number in enumerate(self.trials):
+            bsun_vector = []
+            ang_mom_vector = []
+            for j in range(len(data_dicts[i]["time [s]"])):
+                # Assuming the attitude quaternion is in the form [w, x, y, z]
+                quat = np.array([data_dicts[i]["w"][j], data_dicts[i]["x"][j], data_dicts[i]["y"][j], data_dicts[i]["z"][j]])
+                sun_vector_eci = np.array([data_dicts[i]["xSun ECI [m]"][j], data_dicts[i]["ySun ECI [m]"][j], data_dicts[i]["zSun ECI [m]"][j]])
+                # Rotate the sun vector from ECI to body frame using the quaternion
+                Re2b = quatrotation(quat).T
+                sun_vector_body = Re2b @ sun_vector_eci
+                sun_vector_body = sun_vector_body / np.linalg.norm(sun_vector_body)
+                bsun_vector.append(sun_vector_body)
+                ang_vel = np.array([data_dicts[i]["x [rad/s]"][j], data_dicts[i]["y [rad/s]"][j], data_dicts[i]["z [rad/s]"][j]])
+                ang_mom = J @ ang_vel
+                ang_mom = ang_mom / np.linalg.norm(ang_mom)
+                ang_mom_vector.append(ang_mom)
+            bsun_vector = np.array(bsun_vector).T
+            ang_mom_vector = np.array(ang_mom_vector).T
+            itm.figure()
+            multiPlot(
+            data_dicts[i]["time [s]"],
+            [bsun_vector,ang_mom_vector],
+            seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Sun Pointing/Spin Stabilization", ylabels=["SunVec", "AngMom"])
+        save_figure(itm.gcf(), self.plot_dir, "sun_vector_body.png", self.close_after_saving)
+ 
