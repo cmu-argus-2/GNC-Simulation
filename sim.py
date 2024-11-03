@@ -19,8 +19,12 @@ def controller(state_estimate):
     return np.array([0, 0, 0, 0, 0, 0, 0])
 
 
-def estimator(w):
-    pass
+def estimator(y):
+    return y
+
+
+def sensors(true_state): # TODO : sensors will return a shorter measurement vector and estimator will estimate the full state
+    return true_state # + np.array([5000, 5000, 5000, 5, 5, 5, 0.05, 0.05, 0.05, 0.05, 2, 2, 2, 2])*np.random.random()
 
 
 def run(log_directory, config_path):
@@ -58,7 +62,7 @@ def run(log_directory, config_path):
     estimator_dt = pyparams['estimator_dt']
 
     current_time = 0
-    controller_command = np.zeros((num_MTBs + num_RWs, 1))
+    controller_command = np.zeros((num_MTBs + num_RWs))
     
     Idx = {}
     # Intialize the dynamics class as the "world"
@@ -95,7 +99,6 @@ def run(log_directory, config_path):
 
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
-            state_estimate = true_state  # TODO fix me
             # controller_command = controller(state_estimate)            
             controller_command = controller.run(current_time, state_estimate, Idx)
 
@@ -105,7 +108,7 @@ def run(log_directory, config_path):
         # Update Estimator Prediction at Estimator Update Frequency
         if current_time >= last_estimator_update + estimator_dt:
             # w = get_gyro_measurement()
-            # estimator(w)
+            state_estimate = estimator(measured_state)
             last_estimator_update = current_time
             # print(f"Estimator update: {current_time}")
 
@@ -121,6 +124,7 @@ def run(log_directory, config_path):
         )
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)
+        measured_state = sensors(true_state)
         current_time += params.dt
 
     elapsed_seconds_wall_clock = time() - START_TIME

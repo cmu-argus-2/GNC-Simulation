@@ -68,7 +68,7 @@ class MontecarloPlots:
             )
 
             # TODO convert from ECI to ECEF
-            tt = [datetime.datetime.utcfromtimestamp(t) for t in data_dicts[i]["time [s]"]]
+            tt = [datetime.datetime.utcfromtimestamp(t) for t in data_dicts[i]["Time [s]"]]
             lat, lon, _ = pm.eci2geodetic(x_km*1e3, y_km*1e3, z_km*1e3, tt)
             # lon = np.rad2deg(np.arctan2(y_km, x_km))
             # lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
@@ -111,8 +111,8 @@ class MontecarloPlots:
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
-                [data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]],
+                data_dicts[i]["Time [s]"],
+                [data_dicts[i]["omega_x [rad/s]"], data_dicts[i]["omega_y [rad/s]"], data_dicts[i]["omega_z [rad/s]"]],
                 seriesLabel=f"_{trial_number}",
             )
         annotateMultiPlot(title="True body angular rate [rad/s]", ylabels=["x", "y", "z"])
@@ -122,7 +122,7 @@ class MontecarloPlots:
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
+                data_dicts[i]["Time [s]"],
                 [data_dicts[i]["xMag ECI [T]"], data_dicts[i]["yMag ECI [T]"], data_dicts[i]["zMag ECI [T]"]],
                 seriesLabel=f"_{trial_number}",
             )
@@ -133,8 +133,8 @@ class MontecarloPlots:
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
-                data_dicts[i]["time [s]"],
-                [data_dicts[i]["xSun ECI [m]"], data_dicts[i]["ySun ECI [m]"], data_dicts[i]["zSun ECI [m]"]],
+                data_dicts[i]["Time [s]"],
+                [data_dicts[i]["rSun_x ECI [m]"], data_dicts[i]["rSun_y ECI [m]"], data_dicts[i]["rSun_z ECI [m]"]],
                 seriesLabel=f"_{trial_number}",
             )
         annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
@@ -153,17 +153,17 @@ class MontecarloPlots:
             bsun_vector = []
             ang_mom_vector = []
             ang_mom_norm_vector = []
-            for j in range(len(data_dicts[i]["time [s]"])):
+            for j in range(len(data_dicts[i]["Time [s]"])):
                 # Assuming the attitude quaternion is in the form [w, x, y, z]
-                quat = np.array([data_dicts[i]["w"][j], data_dicts[i]["x"][j], data_dicts[i]["y"][j], data_dicts[i]["z"][j]])
-                sun_vector_eci = np.array([data_dicts[i]["xSun ECI [m]"][j], data_dicts[i]["ySun ECI [m]"][j], data_dicts[i]["zSun ECI [m]"][j]])
+                quat = np.array([data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]])
+                sun_vector_eci = np.array([data_dicts[i]["rSun_x ECI [m]"][j], data_dicts[i]["rSun_y ECI [m]"][j], data_dicts[i]["rSun_z ECI [m]"][j]])
                 # Rotate the sun vector from ECI to body frame using the quaternion
                 Re2b = quatrotation(quat).T
                 sun_vector_body = Re2b @ sun_vector_eci
                 sun_vector_body = sun_vector_body / np.linalg.norm(sun_vector_body)
                 angle_sv = np.rad2deg(np.arccos(np.dot(sun_vector_body, major_axis)))
                 bsun_vector.append(angle_sv)
-                ang_vel = np.array([data_dicts[i]["x [rad/s]"][j], data_dicts[i]["y [rad/s]"][j], data_dicts[i]["z [rad/s]"][j]])
+                ang_vel = np.array([data_dicts[i]["omega_x [rad/s]"][j], data_dicts[i]["omega_y [rad/s]"][j], data_dicts[i]["omega_z [rad/s]"][j]])
                 ang_mom = J @ ang_vel
                 ang_mom_norm = np.linalg.norm(ang_mom)
                 ang_mom_norm_vector.append(ang_mom_norm)
@@ -175,7 +175,7 @@ class MontecarloPlots:
             ang_mom_vector = np.array(ang_mom_vector).T
             itm.figure()
             multiPlot(
-                data_dicts[i]["time [s]"],
+                data_dicts[i]["Time [s]"],
                 [bsun_vector, ang_mom_vector, ang_mom_norm_vector],
                 seriesLabel=f"_{trial_number}",
             )

@@ -159,6 +159,6 @@ class Controller:
         for i in range(len(self.mtb)):
             volt_cmd[Idx["U"]["MTB_TORQUE"]][i] = self.mtb[i].convert_dipole_moment_to_voltage(actuator_cmd[Idx["U"]["MTB_TORQUE"]][i])
         
-        return volt_cmd
+        return volt_cmd.flatten()
 
         
