@@ -2,12 +2,12 @@
 # physical properties
 mass : 1.0 # kg
 area : 0.01 # face area m^2
-inertia : [0.002232, 0.0, 0.0, 
-               0.0, 0.001, 0.0,
-          0.0, 0.0, 0.001]
-# [0.002232, 0.0, 0.000716, 
-#                0.0, 0.002081, 0.0,
-#           0.000716, 0.0, 0.001796]
+inertia : [0.002232, 0.0, 0.000716, 
+               0.0, 0.002081, 0.0,
+          0.000716, 0.0, 0.001796]
+# [0.002232, 0.0, 0.0, 
+#      0.0, 0.001, 0.0,
+#      0.0, 0.0, 0.001]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
@@ -38,24 +38,24 @@ max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
 max_power : [1,1,1,1,1,1]  # W
 
 # Sim settings
-MAX_TIME: 7200 # [s]
+MAX_TIME: 25000 # [s]
 dt: 0.1         # [s]
-earliest_sim_start_time_UTC: 2027-01-01 12:00:00
-latest_sim_start_time_UTC: 2027-02-28 23:59:59
+earliest_sim_start_time_UTC: 2025-10-01 12:00:00
+latest_sim_start_time_UTC: 2025-10-28 23:59:59
 useDrag : False
 useSRP : False
-
+# [6981e3, 0.00064, 95, 1.0804, 27.7899, 190];
 # Initialization
 semimajor_axis : 6921000 # [m]
 eccentricity : 0.007 
 inclination : 96 # [deg]
-RAAN : 147 # [deg]
+RAAN : 0 # 147 # [deg]
 AOP : 63 # [deg]
 true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
 initial_angular_rate : [0.3,0,0] # [rad/s]
 
-algorithm: "Lyapunov" # "Bcross" # "BaseSP" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "BaseSP" # "Lyapunov" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: [[0.0028, 0.0, 0.0],
           [0.0, 0.0028, 0.0],
           [0.0, 0.0, 0.0028]]

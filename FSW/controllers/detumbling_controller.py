@@ -131,7 +131,7 @@ class LyapBasedSunPointingController():
             # print("h_tgt=", self.h_tgt)
             
         elif not sun_pointing:
-            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/self.h_tgt_norm))
+            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/h_norm)) # (h/self.h_tgt_norm))
             # print("Sun pointing: Sun vector =", sun_vector)
             # print("Angular momentum direction =", h / h_norm)
         
@@ -155,10 +155,10 @@ class BaselineSunPointingController():
         inertia_tensor: np.ndarray,
         G_mtb: np.ndarray,
         b_dot_gain: float,
+        target_angular_velocity: np.ndarray,
         Magnetorquers: list,
     ) -> None:
         # [TODO] max moment should be defined per axis based on all magnetorquers, not just first
-        self.J = inertia_tensor        
         max_moms = np.zeros(len(Magnetorquers))
         for i, mtb in enumerate(Magnetorquers):
             max_moms[i] = mtb.max_dipole_moment
@@ -166,6 +166,15 @@ class BaselineSunPointingController():
         self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
         self.lbm = -self.ubm
         self.k = np.array(b_dot_gain)
+        
+        self.J = inertia_tensor 
+        eigenvalues, eigenvectors = np.linalg.eig(self.J)
+        I_min_direction = eigenvectors[:, np.argmax(eigenvalues)]
+        if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
+            I_min_direction = -I_min_direction
+        self.I_min_direction = I_min_direction 
+        self.h_tgt = self.J @ self.I_min_direction * np.deg2rad(target_angular_velocity)
+        self.h_tgt_norm = np.linalg.norm(self.h_tgt)
 
     def get_dipole_moment_command(
         self,
@@ -184,27 +193,24 @@ class BaselineSunPointingController():
         
         h = self.J @ angular_velocity 
         h_norm = np.linalg.norm(h)
-        h_tgt = self.J @ target_angular_velocity
-        h_tgt_norm = np.linalg.norm(h_tgt)
-        I_min_index = np.argmin(np.diag(self.J))
-        I_min_direction = np.zeros(3)
-        I_min_direction[I_min_index] = 1.0
+        
         u = np.zeros(3)
-        spin_stabilized = (np.linalg.norm(I_min_direction - (h/h_tgt_norm)) <= np.deg2rad(15))
-        sun_pointing = (np.linalg.norm(sun_vector-h/h_norm)<= np.deg2rad(10))
+        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
+        sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
         unit_magnetic_field = magnetic_field / (magnetic_field_norm)
         α = 0.5
-        u = crossproduct(unit_magnetic_field) @ ((1-α)*((h_tgt-h) / h_tgt_norm) 
-                                                 + α*((sun_vector*h_tgt_norm-h) / h_norm))
+        u = crossproduct(unit_magnetic_field) @ ((1-α)*((self.h_tgt-h) / self.h_tgt_norm) 
+                                                 + α*((sun_vector*self.h_tgt_norm-h) / h_norm))
         u = np.clip(a=u, a_min=self.lbm, a_max=self.ubm)
+        """
         print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")
         print("torque command: ", crossproduct(u) @ magnetic_field)
         angle_sun_h = np.arccos(np.clip(np.dot(sun_vector, h / h_norm), -1.0, 1.0))
         print("Angle between sun vector and angular momentum direction (degrees):", np.degrees(angle_sun_h))
         print("Angle between sun vector and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(sun_vector, I_min_direction))))
         print("Angle between angular momentum and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(h/h_norm, I_min_direction))))
-
+        """
         return u.reshape(3, 1)
 
 class BcrossController():
