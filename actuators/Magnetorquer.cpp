@@ -23,12 +23,10 @@ Magnetorquer::Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer,
     
     for (int i=0; i<num_MTBs; i++) {
         N_per_face(i) = N(i)*pcb_layers(i);
-        max_current_rating(i) = std::min(max_power(i) / max_voltage(i), max_current_rating(i));
         A_cross(i) = pow(pcb_side_max(i) - N(i)*coil_width(i), 2.0);
-            
         coil_length(i) = 4*(pcb_side_max(i) - N(i)*coil_width(i))*N(i)*pcb_layers(i);
         resistance(i) = COPPER_RESISTIVITY*coil_length(i)/(trace_width(i)*trace_thickness(i));
-            
+
         max_current_rating(i) = std::min(max_current_rating(i), sqrt(max_power(i) / resistance(i)) );
         max_current_rating(i) = std::min(max_current_rating(i), max_voltage(i) / resistance(i));
         max_voltage(i) = resistance(i) * max_current_rating(i);

@@ -30,15 +30,14 @@ class Magnetorquer:
         self.coil_width =  self.trace_width + self.gap_width
         self.max_power = config["max_power"][IdMtb]
         self.max_current_rating = config["max_current_rating"][IdMtb] 
-        self.max_current = np.min([self.max_power / self.max_voltage, self.max_current_rating])
         # I_max = min Imax, Vmax / R 
         # D_max = N * I_max * A * G  
 
         self.pcb_side_max = 0.1
         self.A_cross = (self.pcb_side_max - self.N * self.coil_width) ** 2
         self.R = self.compute_coil_resistance()
-        
-        self.max_current = np.min([self.max_current, np.sqrt(self.max_power / self.R) ])
+
+        self.max_current = np.min([self.max_current_rating, np.sqrt(self.max_power / self.R) ])
         self.max_current = np.min([self.max_current, self.max_voltage / self.R ])
         self.max_voltage = self.R * self.max_current
         self.max_power   = self.R * self.max_current ** 2

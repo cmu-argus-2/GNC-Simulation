@@ -75,13 +75,14 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     // Extract elements of state vector
     Vector3 r = x(Eigen::seqN(0, 3));
     Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
+    q.normalize();
     Vector3 omega{x(10), x(11), x(12)};
     VectorXd omega_rw(num_RWs);
     omega_rw = x(Eigen::seqN(19, num_RWs));
     
     /* Attitude Dynamics */
     Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
-    Quaternion qdot_quat = 0.5*omega_quat*q;
+    Quaternion qdot_quat = 0.5*q*omega_quat;
     Vector4 qdot{qdot_quat.w(), qdot_quat.x(), qdot_quat.y(), qdot_quat.z()};
 
     // Reaction Wheels

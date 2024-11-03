@@ -110,7 +110,7 @@ def run(log_directory, config_path):
             ([
                 *["x ECI [m]", "y ECI [m]", "z ECI [m]"],
                 *["x ECI [m/s]", "y ECI [m/s]", "z ECI [m/s]"],
-                *["x", "y", "z", "w"],
+                *["w", "x", "y", "z"],
                 *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
                 *["xSun ECI [m]", "ySun ECI [m]", "zSun ECI [m]"],
                 *["xMag ECI [T]", "yMag ECI [T]", "zMag ECI [T]"],

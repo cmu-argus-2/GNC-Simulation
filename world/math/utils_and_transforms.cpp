@@ -1,5 +1,12 @@
 #include "utils_and_transforms.h"
-#include <filesystem>
+//#include <filesystem>
+#if __cplusplus >= 201703L
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#else
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#endif
 
 #include "SpiceUsr.h"
 #include <cmath>
@@ -65,7 +72,7 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
 
 // Basic Utility functions
 void loadAllKernels() {
-    std::filesystem::path path(__FILE__);
+    fs::path path(__FILE__);
     std::string root = path.parent_path().parent_path().parent_path().string(); // utils_and_transforms.cpp --> math --> world --> dynamics sim
     std::string data_folder = root + "/data/";
 

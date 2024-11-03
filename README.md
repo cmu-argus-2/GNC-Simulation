@@ -5,7 +5,8 @@ This repo simulates the 3d Dynamics of a satellite in orbit. The core dynamics a
 Credits to Derek Fan for his approach to C++ Eigen <--> Python bindings. I used his method with pybind11. 
 
 ## SPICE data download
-Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during build
+Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during build. 
+This step requires curl installed with a version higher than 7.73.0.
 
 ## Setting Up
 ### First time
