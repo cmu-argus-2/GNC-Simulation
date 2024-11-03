@@ -14,7 +14,7 @@
  * @param m : satellite mass [kg]
  * @return acceleration due to solar radiation pressure [m/s^2]
  */
-Vector3 SRP_acceleration(Quaternion q, double t_J2000, double CR, double A, double m);
+Vector3 SRP_acceleration(const Quaternion q, double t_J2000, double CR, double A, double m);
 
 /**
  * @brief Computes area perpendicular to the velocity vector as a % of face area
@@ -23,7 +23,7 @@ Vector3 SRP_acceleration(Quaternion q, double t_J2000, double CR, double A, doub
  * @param r : position vector along which to compute frontal area
  * @return projection_factor where area perpendicular to sun position vector = projection_factor*A_face
  */
-double FrontalAreaFactor(Quaternion q, Vector3 r);
+double FrontalAreaFactor(const Quaternion q, const Vector3 r);
 
 /**
  * @brief Compute sun position in J2000 ECI frame

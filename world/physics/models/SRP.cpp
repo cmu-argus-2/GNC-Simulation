@@ -5,7 +5,7 @@
 #include "utils_and_transforms.h"
 
 // TODO : Compute shadow function
-Vector3 SRP_acceleration(Quaternion q, double t_J2000, double CR, double A, double m)
+Vector3 SRP_acceleration(const Quaternion q, double t_J2000, double CR, double A, double m)
 {
     // Constants
     double solar_constant = 1367; // W/m^2
@@ -24,7 +24,7 @@ Vector3 SRP_acceleration(Quaternion q, double t_J2000, double CR, double A, doub
     return acceleration;
 }
 
-double FrontalAreaFactor(Quaternion q, Vector3 r)
+double FrontalAreaFactor(const Quaternion q, const Vector3 r)
 {
     Matrix_3x3 R_q = q.normalized().toRotationMatrix();
     double projection_factor = (r.transpose()*R_q).sum()/r.norm();

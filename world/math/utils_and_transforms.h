@@ -142,7 +142,7 @@ Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude);
 /**
  * @brief Converts Keplerian Elements into ECI state
  *
- * @param KOE - Keplerian Orbital Lement vector
+ * @param KOE - Keplerian Orbital element vector
  * @param t_J2000 - seconds past J2000
  * @return position and velocity vector in ECI coordinates
  */

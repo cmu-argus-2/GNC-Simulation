@@ -36,7 +36,19 @@ def run(log_directory, config_path):
     num_RWs = params.num_RWs
     num_MTBs = params.num_MTBs
 
+    # Logging Legend
+    state_labels = ["r_x ECI [m]", "r_y ECI [m]", "r_z ECI [m]", "v_x ECI [m/s]", "v_y ECI [m/s]", "v_z ECI [m/s]",
+                "q_w", "q_x", "q_y", "q_z", "omega_x [rad/s]", "omega_y [rad/s]", "omega_z [rad/s]",
+                "rSun_x ECI [m]","rSun_y ECI [m]","rSun_z ECI [m]","xMag ECI [T]","yMag ECI [T]","zMag ECI [T]"] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
+    #measurement_labels = state_labels # TODO : Fix based on partial state measurement
+    state_estimate_labels = ["r_hat_x ECI [m]", "r_hat_y ECI [m]", "r_hat_z ECI [m]", "v_hat_x ECI [m/s]", "v_hat_y ECI [m/s]", "v_hat_z ECI [m/s]",
+                "q_hat_w", "q_hat_x", "q_hat_y", "q_hat_z", "omega_hat_x [rad/s]", "omega_hat_y [rad/s]", "omega_hat_z [rad/s]",
+                "rSun_x ECI [m]","rSun_y ECI [m]","rSun_z ECI [m]","xMag ECI [T]","yMag ECI [T]","zMag ECI [T]"] + ["omega_hat_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
+    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + ["V_RW_" + str(i) + " [V]" for i in range(num_RWs)]
+
     true_state = initial_state
+    measured_state = true_state
+    state_estimate = true_state
 
     last_controller_update = 0
     last_estimator_update = 0
@@ -102,19 +114,10 @@ def run(log_directory, config_path):
             print(f"True State: {true_state}")
             last_print_time = current_time
 
-        logr.log_v( # TODO : Log Control Input and State Estimate at each time
+        logr.log_v( # TODO : add state estimate and measurement labels
             "state_true.bin",
-            current_time,
-            true_state,
-            "time [s]",
-            ([
-                *["x ECI [m]", "y ECI [m]", "z ECI [m]"],
-                *["x ECI [m/s]", "y ECI [m/s]", "z ECI [m/s]"],
-                *["w", "x", "y", "z"],
-                *["x [rad/s]", "y [rad/s]", "z [rad/s]"],
-                *["xSun ECI [m]", "ySun ECI [m]", "zSun ECI [m]"],
-                *["xMag ECI [T]", "yMag ECI [T]", "zMag ECI [T]"],
-            ] + ["rw [rad/s]"]*num_RWs),
+            [current_time] + true_state.tolist() + state_estimate.tolist() + controller_command.tolist(),
+            ["Time [s]"] + state_labels + state_estimate_labels + input_labels
         )
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)

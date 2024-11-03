@@ -17,6 +17,7 @@ class Sensor {
    private:
     Bias bias_;
     double scale_factor_error_{0};
+    SensorNoiseParams noise_params_;
     std::normal_distribution<double> white_noise_;
     std::default_random_engine& rng_;
 };

@@ -7,7 +7,7 @@
 #include "IMUparams.h"
 #include "math/EigenWrapper.h"
 #include "Sensor.h"
-struct IMUsignal {
+struct IMUSignal {
     Vector3 gyro;
     Vector3 accel;
 };
@@ -15,8 +15,8 @@ struct IMUsignal {
 class IMU {
    public:
     IMU(double dt, IMUNoiseParams params, std::default_random_engine& rng);
-    IMUsignal update(const IMUsignal& clean);
-    IMUsignal getBias();
+    IMUSignal update(const IMUSignal& clean);
+    IMUSignal getBias();
 
    private:
     TriAxisSensor gyro_;

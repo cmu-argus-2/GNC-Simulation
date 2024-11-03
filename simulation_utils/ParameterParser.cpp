@@ -14,7 +14,7 @@
 #include "yaml-cpp/yaml.h"
 #include "utils_and_transforms.h"
 #include "ReactionWheel.h"
-//#include "Magnetorquer.h"
+#include "Magnetorquer.h"
 //#include "MagneticField.h"
 #include "SRP.h" //../world/physics/models/
 

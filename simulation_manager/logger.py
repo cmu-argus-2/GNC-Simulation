@@ -39,8 +39,8 @@ class MultiFileLogger:
             self.prev_values_[file_name] = x
             self.last_log_time_[file_name] = t
 
-    def log_v(self, file_name, t, x, t_label, x_labels):
-        assert len(x) == len(x_labels)
+    def log_v(self, file_name, data, data_labels):
+        assert len(data) == len(data_labels)
         # log a 'v'ector of double values
         if file_name not in self.files_:  # haven't logged to the given file name
             file_path = os.path.join(self.log_dir, file_name)
@@ -48,12 +48,12 @@ class MultiFileLogger:
             self.files_[file_name] = f
 
             # Write the header
-            header = ",".join([t_label, *x_labels]) + "\n"
+            header = ",".join([*data_labels]) + "\n"
             f.write(header.encode())
 
         # Write the data
-        N = len(x) + 1
-        s = struct.pack("d" * N, t, *x)
+        N = len(data)
+        s = struct.pack("d" * N, *data)
         self.files_[file_name].write(s)
 
     def close_log(self, file_name):

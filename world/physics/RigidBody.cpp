@@ -129,58 +129,6 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
 }
 
 
-/* UTILITY FUNCTIONS */
-void set_pos_in_state(VectorXd &x, const Vector3 &pos)
-{
-    x(Eigen::seqN(0,3)) = pos;
-}
-
-void set_vel_in_state(VectorXd &x, const Vector3 &vel)
-{
-    x(Eigen::seqN(3,3)) = vel;
-}
-
-void set_quaternion_in_state(VectorXd &x, const Quaternion &quat)
-{
-    x(Eigen::seqN(6,4)) << quat.w(), quat.x(), quat.y(), quat.z();
-}
-
-void set_omega_in_state(VectorXd &x, const Vector3 &omega)
-{
-    x(Eigen::seqN(10,3)) = omega;
-}
-
-void set_omegaRW_in_state(VectorXd &x, const Vector3 &omegaRW)
-{
-    x(Eigen::seqN(13, x.size() - 13)) = omegaRW;
-}
-
-Vector3 get_pos_from_state(VectorXd &x)
-{
-    return x(Eigen::seqN(0,3));
-}
-
-Vector3 get_vel_from_state(VectorXd &x)
-{
-    return x(Eigen::seqN(3,3));
-}
-
-Quaternion get_quaternion_from_state(VectorXd &x)
-{
-    Quaternion q{x(6), x(7), x(8), x(9)};
-    return q;
-}
-
-Vector3 get_omega_from_state(VectorXd &x)
-{
-    return x(Eigen::seqN(10,3));
-}
-
-VectorXd get_omegaRW_from_state(VectorXd &x)
-{
-    return x(Eigen::seqN(13, x.size()-13));
-}
-
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pyphysics, m) {
     m.doc() = "pybind11 physics plugin";   // module docstring    
