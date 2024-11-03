@@ -14,7 +14,7 @@ import subprocess
 
 # ============================================= JOB CONFIGURATION CONSTANTS ===========================================
 NUM_TRIALS = 1
-TIMEOUT = 300  # [s] kill a trial that takes longer than this amount
+TIMEOUT = 900  # [s] kill a trial that takes longer than this amount
 MAX_CONCURRENT_TRIALS = 10
 
 parameter_file_name = "params.yaml"
