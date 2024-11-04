@@ -155,17 +155,23 @@ class OrbitDetermination:
             """
             states = X.reshape(N, 6)
             res = np.zeros(6 * (N - 1) + 3 * len(times))
+            idx = 0  # index into res
 
             # dynamics residuals
             for i in range(N - 1):
-                res[6 * i:6 * (i + 1)] = states[i + 1, :] - f(states[i, :], self.dt)
+                res[idx:idx + 6] = states[i + 1, :] - f(states[i, :], self.dt)
+                idx += 6
 
             # measurement residuals
             for i, (time, landmark, eci_to_camera_rotation) in enumerate(zip(times, landmarks, eci_to_camera_rotations)):
                 cubesat_position = states[time, :3]
                 predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)  # in camera frame
-                res[6 * (N - 1) + 3 * i:6 * (N - 1) + 3 * (i + 1)] = bearing_unit_vectors[i] - predicted_bearing / np.linalg.norm(predicted_bearing)
+                predicted_bearing_unit_vector = predicted_bearing / np.linalg.norm(predicted_bearing)
 
+                res[idx:idx + 3] = bearing_unit_vectors[i] - predicted_bearing_unit_vector
+                idx += 3
+
+            assert idx == len(res)
             return res
 
         def residual_jac(X: np.ndarray):
@@ -177,12 +183,14 @@ class OrbitDetermination:
             """
             states = X.reshape(N, 6)
             jac = np.zeros((6 * (N - 1) + 3 * len(times), 6 * N), dtype=X.dtype)
+            row_idx = 0  # row index into jac
             # Note that indices into the columns of jac are 6 * i : 6 * (i + 1) for the ith state
 
             # dynamics Jacobian
             for i in range(N - 1):
-                jac[6 * i:6 * (i + 1), 6 * (i + 1):6 * (i + 2)] = np.eye(6)
-                jac[6 * i:6 * (i + 1), 6 * i:6 * (i + 1)] = -f_jac(states[i, :], self.dt)
+                jac[row_idx:row_idx + 6, row_idx:row_idx + 6] = -f_jac(states[i, :], self.dt)
+                jac[row_idx:row_idx + 6, row_idx + 6:row_idx + 12] = np.eye(6)
+                row_idx += 6
 
             # measurement Jacobian
             for i, (time, landmark, eci_to_camera_rotation) in enumerate(
@@ -191,9 +199,13 @@ class OrbitDetermination:
                 predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)
                 predicted_bearing_norm = np.linalg.norm(predicted_bearing)
                 predicted_bearing_unit_vector = predicted_bearing / predicted_bearing_norm
-                jac[6 * (N - 1) + 3 * i:6 * (N - 1) + 3 * (i + 1), 6 * time:6 * time + 3] = \
-                    (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) @ eci_to_camera_rotation / predicted_bearing_norm
 
+                jac[row_idx:row_idx + 3, 6 * time:6 * time + 3] = \
+                    (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) @ \
+                    eci_to_camera_rotation / predicted_bearing_norm
+                row_idx += 3
+
+            assert row_idx == jac.shape[0]
             return jac
 
         altitude_normalized_landmarks = landmarks / np.linalg.norm(landmarks, axis=1, keepdims=True)
