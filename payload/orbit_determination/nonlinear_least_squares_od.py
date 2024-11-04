@@ -137,8 +137,7 @@ class OrbitDetermination:
             "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
         if N is None:
             N = times[-1] + 1  # number of time steps
-        else:
-            assert N > times[-1], "N must be greater than the maximum value in times"
+        assert N > times[-1], "N must be greater than the maximum value in times"
 
         bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
         bearing_unit_vectors = bearing_vectors / np.linalg.norm(bearing_vectors, axis=1, keepdims=True)
