@@ -115,7 +115,7 @@ class OrbitDetermination:
         """
         Solve the orbit determination problem using non-linear least squares.
 
-        :param times: A numpy array of shape (n,) and dtype of int containing the indices of time steps at which
+        :param times: A numpy array of shape (m,) and dtype of int containing the indices of time steps at which
                       landmarks were observed. Must be sorted in non-strictly ascending order.
         :param landmarks: A numpy array of shape (m, 3) containing the ECI coordinates of the landmarks.
         :param pixel_coordinates: A numpy array of shape (m, 2) containing the pixel coordinates of the landmarks.
