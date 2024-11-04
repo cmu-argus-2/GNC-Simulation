@@ -5,7 +5,7 @@ from typing import Any
 
 import brahe
 from brahe.epoch import Epoch
-from brahe.constants import R_EARTH
+from brahe.constants import R_EARTH, GM_EARTH
 
 from world.math.time import increment_epoch
 from world.math.transforms import update_brahe_data_files
@@ -95,7 +95,9 @@ def test_od():
     )
     N = int(np.ceil(config["mission"]["duration"] * config["solver"]["world_update_rate"]))
     states = np.zeros((N, 6))
-    states[0, :] = np.array([R_EARTH + 600e3, 0, 0, 0, 0, -7.56e3])  # polar orbit in x-z plane, angular momentum in +y direction
+    a = R_EARTH + 600e3
+    v = np.sqrt(GM_EARTH / a)
+    states[0, :] = np.array([a, 0, 0, 0, 0, -v])  # polar orbit in x-z plane, angular momentum in +y direction
     epoch = starting_epoch
 
     # set up arrays to store measurements
