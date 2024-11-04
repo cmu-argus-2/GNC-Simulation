@@ -131,7 +131,7 @@ class LyapBasedSunPointingController():
             # print("h_tgt=", self.h_tgt)
             
         elif not sun_pointing:
-            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/h_norm)) # (h/self.h_tgt_norm))
+            u = crossproduct(unit_magnetic_field) @ (sun_vector - (h/self.h_tgt_norm)) # (h/self.h_tgt_norm))
             # print("Sun pointing: Sun vector =", sun_vector)
             # print("Angular momentum direction =", h / h_norm)
         
@@ -155,6 +155,7 @@ class BaselineSunPointingController():
         inertia_tensor: np.ndarray,
         G_mtb: np.ndarray,
         b_dot_gain: float,
+        pd_gain: np.ndarray,
         target_angular_velocity: np.ndarray,
         Magnetorquers: list,
     ) -> None:
@@ -165,7 +166,8 @@ class BaselineSunPointingController():
         
         self.ubm = np.min(np.abs(G_mtb).T @ max_moms)
         self.lbm = -self.ubm
-        self.k = np.array(b_dot_gain)
+        self.kdetumb = np.array(b_dot_gain)
+        self.k = np.array(pd_gain)
         
         self.J = inertia_tensor 
         eigenvalues, eigenvectors = np.linalg.eig(self.J)
@@ -173,7 +175,9 @@ class BaselineSunPointingController():
         if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
             I_min_direction = -I_min_direction
         self.I_min_direction = I_min_direction 
-        self.h_tgt = self.J @ self.I_min_direction * np.deg2rad(target_angular_velocity)
+        self.target_angular_velocity = target_angular_velocity
+        self.ref_angular_velocity = self.I_min_direction * np.deg2rad(target_angular_velocity)
+        self.h_tgt = self.J @ self.ref_angular_velocity
         self.h_tgt_norm = np.linalg.norm(self.h_tgt)
 
     def get_dipole_moment_command(
@@ -198,10 +202,26 @@ class BaselineSunPointingController():
         spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
         sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
+        """
         unit_magnetic_field = magnetic_field / (magnetic_field_norm)
         α = 0.5
         u = crossproduct(unit_magnetic_field) @ ((1-α)*((self.h_tgt-h) / self.h_tgt_norm) 
                                                  + α*((sun_vector*self.h_tgt_norm-h) / h_norm))
+        """
+        unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
+
+        if not spin_stabilized:
+            u = self.kdetumb * np.cross(unit_magnetic_field, self.ref_angular_velocity - angular_velocity).reshape(3,1)
+        elif not sun_pointing:
+            Bhat = crossproduct(magnetic_field)
+            U, S, V = np.linalg.svd(Bhat)
+            idx = np.where(S > 1e-6 * np.max(S))[0]
+            S_inv = np.diag([1/s if s > 1e-10 else 0 for s in S])
+            Bhat_pseudo_inv = V.T @ S_inv @ U.T
+
+            err_vec = np.hstack((-self.I_min_direction-sun_vector, self.ref_angular_velocity - angular_velocity))
+            u = Bhat_pseudo_inv @ self.k @ err_vec
+
         u = np.clip(a=u, a_min=self.lbm, a_max=self.ubm)
         """
         print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")
@@ -251,7 +271,7 @@ class BcrossController():
         if np.linalg.norm(angular_velocity - self.ref_angular_velocity) / refomega_norm >= np.deg2rad(5):
             magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
             unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
-            m_cmd = -self.k @ np.cross(unit_magnetic_field, angular_velocity - self.ref_angular_velocity).reshape(3,1)
+            m_cmd = -self.k * np.cross(unit_magnetic_field, angular_velocity - self.ref_angular_velocity).reshape(3,1)
         else:
             m_cmd = np.zeros((3,1))
         return np.clip(a=m_cmd, a_min=self.lbm, a_max=self.ubm)

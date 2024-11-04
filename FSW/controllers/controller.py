@@ -29,6 +29,7 @@ class Controller:
         self.basesunpointctr = BaselineSunPointingController(self.inertia, 
                                                               self.G_mtb_b,
                                                               config["bcrossgain"],
+                                                              np.array(config["state_feedback_gains"]),
                                                               config["tgt_ang_vel"],
                                                               Magnetorquers)
 
