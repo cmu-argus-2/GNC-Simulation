@@ -32,7 +32,7 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: MockVisionModel) \
+def get_measurement_info(epoch: Epoch, cubesat_position: np.ndarray, mock_vision_model: MockVisionModel) \
         -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get all the information needed to represent several landmark bearing measurements.
@@ -40,7 +40,7 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
     number of correspondences, mock_vision_model.N.
 
     :param epoch: The measurement epoch as an instance of brahe's Epoch class.
-    :param state: The state of the satellite at the measurement epoch as a numpy array of shape (6,).
+    :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
     :param mock_vision_model: The mock vision model object.
     :return: A tuple containing a numpy array of shape (M, 4) containing the cubesat attitudes as quaternions in ECI,
              a numpy array of shape (M, 2) containing the pixel coordinates of the landmarks,
@@ -50,7 +50,7 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
 
     # define nadir cubesat attitude
     y_axis = [0, 1, 0]  # along orbital angular momentum
-    z_axis = state[:3] / np.linalg.norm(state[:3])  # along radial vector
+    z_axis = cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
     x_axis = np.cross(y_axis, z_axis)
     R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis]).T  # TODO: why do we need to transpose?
     cubesat_attitude = Rotation.from_matrix(R_body_to_eci).as_quat(scalar_first=True)  # in eci
@@ -119,7 +119,7 @@ def test_od():
         """
         nonlocal times, cubesat_attitudes, pixel_coordinates, landmarks
         measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
-            get_measurement_info(epoch, states[t_idx, :], mock_vision_model)
+            get_measurement_info(epoch, states[t_idx, :3], mock_vision_model)
         times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
         cubesat_attitudes = np.vstack((cubesat_attitudes, measurement_cubesat_attitudes))
         pixel_coordinates = np.vstack((pixel_coordinates, measurement_pixel_coordinates))
