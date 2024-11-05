@@ -1,12 +1,10 @@
 from collections.abc import Callable
 import numpy as np
-from scipy.spatial.transform import Rotation
 from scipy.optimize import least_squares
 from scipy.stats import circmean, circvar
 
-from world.math.quaternions import q_inv
 from world.physics.orbital_dynamics import f, f_jac
-from sensors.mock_vision_model import Camera
+from sensors.mock_vision_model2 import Camera
 
 from brahe.constants import R_EARTH, GM_EARTH
 
@@ -110,7 +108,7 @@ class OrbitDetermination:
         return model
 
     def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, pixel_coordinates: np.ndarray,
-                  cubesat_attitudes: np.ndarray, N: int = None,
+                  Rs_body_to_eci: np.ndarray, N: int = None,
                   semi_major_axis_guess: float = R_EARTH + 600e3) -> np.ndarray:
         """
         Solve the orbit determination problem using non-linear least squares.
@@ -119,7 +117,7 @@ class OrbitDetermination:
                       landmarks were observed. Must be sorted in non-strictly ascending order.
         :param landmarks: A numpy array of shape (m, 3) containing the ECI coordinates of the landmarks.
         :param pixel_coordinates: A numpy array of shape (m, 2) containing the pixel coordinates of the landmarks.
-        :param cubesat_attitudes: A numpy array of shape (m, 4) containing the quaternions representing the attitude of the satellite.
+        :param Rs_body_to_eci: A numpy array of shape (m, 3, 3) containing the rotation matrices from the body frame to the ECI frame.
         :param N: The number of time steps. If None, it will be set to the maximum value in times plus one.
         :param semi_major_axis_guess: An initial guess for the semi-major axis of the satellite's orbit.
         :return: A numpy array of shape (N, 6) containing the ECI position and velocity of the satellite at each time step.
@@ -131,20 +129,18 @@ class OrbitDetermination:
         assert landmarks.shape[1] == 3, "landmarks must have 3 columns"
         assert len(pixel_coordinates.shape) == 2, "pixel_coordinates must be a 2D array"
         assert pixel_coordinates.shape[1] == 2, "pixel_coordinates must have 2 columns"
-        assert len(cubesat_attitudes.shape) == 2, "cubesat_attitudes must be a 2D array"
-        assert cubesat_attitudes.shape[1] == 4, "cubesat_attitudes must have 4 columns"
-        assert len(times) == len(landmarks) == len(pixel_coordinates) == len(cubesat_attitudes), \
+        assert len(Rs_body_to_eci.shape) == 3, "cubesat_attitudes must be a 3D array"
+        assert Rs_body_to_eci.shape[1:] == (3, 3), "cubesat_attitudes must have shape (m, 3, 3)"
+        assert len(times) == len(landmarks) == len(pixel_coordinates) == len(Rs_body_to_eci), \
             "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
         if N is None:
             N = times[-1] + 1  # number of time steps
         assert N > times[-1], "N must be greater than the maximum value in times"
 
-        bearing_vectors = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates)
-        bearing_unit_vectors = bearing_vectors / np.linalg.norm(bearing_vectors, axis=1, keepdims=True)
+        bearing_unit_vectors = self.camera.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
 
-        eci_to_camera_rotations = np.zeros((len(times), 3, 3))
-        for i in range(len(times)):
-            eci_to_camera_rotations[i, ...] = self.camera.R_sat_cam @ Rotation.from_quat(q_inv(cubesat_attitudes[i, :]), scalar_first=True).as_matrix()
+        eci_to_body_rotations = self.camera.R_body_to_camera[np.newaxis, ...] @ \
+                                np.swapaxes(Rs_body_to_eci, 1, 2)
 
         def residuals(X: np.ndarray) -> np.ndarray:
             """
@@ -163,9 +159,9 @@ class OrbitDetermination:
                 idx += 6
 
             # measurement residuals
-            for i, (time, landmark, eci_to_camera_rotation) in enumerate(zip(times, landmarks, eci_to_camera_rotations)):
+            for i, (time, landmark, eci_to_body_rotation) in enumerate(zip(times, landmarks, eci_to_body_rotations)):
                 cubesat_position = states[time, :3]
-                predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)  # in camera frame
+                predicted_bearing = eci_to_body_rotation @ (landmark - cubesat_position)
                 predicted_bearing_unit_vector = predicted_bearing / np.linalg.norm(predicted_bearing)
 
                 res[idx:idx + 3] = bearing_unit_vectors[i] - predicted_bearing_unit_vector
@@ -193,16 +189,16 @@ class OrbitDetermination:
                 row_idx += 6
 
             # measurement Jacobian
-            for i, (time, landmark, eci_to_camera_rotation) in enumerate(
-                    zip(times, landmarks, eci_to_camera_rotations)):
+            for i, (time, landmark, eci_to_body_rotation) in enumerate(
+                    zip(times, landmarks, eci_to_body_rotations)):
                 cubesat_position = states[time, :3]
-                predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)
+                predicted_bearing = eci_to_body_rotation @ (landmark - cubesat_position)
                 predicted_bearing_norm = np.linalg.norm(predicted_bearing)
                 predicted_bearing_unit_vector = predicted_bearing / predicted_bearing_norm
 
                 jac[row_idx:row_idx + 3, 6 * time:6 * time + 3] = \
                     (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) @ \
-                    eci_to_camera_rotation / predicted_bearing_norm
+                    eci_to_body_rotation / predicted_bearing_norm
                 row_idx += 3
 
             assert row_idx == jac.shape[0]

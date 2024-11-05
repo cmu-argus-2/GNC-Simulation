@@ -12,7 +12,7 @@ from brahe.constants import R_EARTH, GM_EARTH
 from world.math.time import increment_epoch
 from world.math.transforms import update_brahe_data_files
 from world.physics.orbital_dynamics import f
-from sensors.mock_vision_model import Camera, MockVisionModel
+from sensors.mock_vision_model2 import Camera
 from nonlinear_least_squares_od import OrbitDetermination
 
 
@@ -32,37 +32,31 @@ def load_config() -> dict[str, Any]:
     return config
 
 
-def get_measurement_info(epoch: Epoch, cubesat_position: np.ndarray, mock_vision_model: MockVisionModel) \
+def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 1) \
         -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get all the information needed to represent several landmark bearing measurements.
-    The number of landmark bearing measurements, M, will be some number less than or equal to the configured maximum
-    number of correspondences, mock_vision_model.N.
+    The number of landmark bearing measurements, M, will be some number less than or equal to N.
 
-    :param epoch: The measurement epoch as an instance of brahe's Epoch class.
     :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
-    :param mock_vision_model: The mock vision model object.
-    :return: A tuple containing a numpy array of shape (M, 4) containing the cubesat attitudes as quaternions in ECI,
+    :param camera: The camera object.
+    :param N: The number of landmark bearing measurements to attempt to generate.
+    :return: A tuple containing a numpy array of shape (M, 3, 3) containing the rotation matrices from the body frame to the ECI frame,
              a numpy array of shape (M, 2) containing the pixel coordinates of the landmarks,
              and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
     """
-    R_eci_to_ecef = brahe.frames.rECItoECEF(epoch)
-
     # define nadir cubesat attitude
     y_axis = [0, -1, 0]  # along orbital angular momentum
     z_axis = -cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
     x_axis = np.cross(y_axis, z_axis)
-    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis]).T  # TODO: why do we need to transpose?
-    cubesat_attitude = Rotation.from_matrix(R_body_to_eci).as_quat(scalar_first=True)  # in eci
+    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
 
     # run vision model
-    pixel_coordinates, landmark_positions_ecef = mock_vision_model.get_measurement(
-        cubesat_position_in_ecef=R_eci_to_ecef @ state[:3],
-        cubesat_attitude_in_ecef=Rotation.from_matrix(R_eci_to_ecef @ R_body_to_eci).as_quat(scalar_first=True)
-    )
-    landmark_positions_eci = (R_eci_to_ecef.T @ landmark_positions_ecef.T).T
-    return np.tile(cubesat_attitude, (pixel_coordinates.shape[0], 1)), pixel_coordinates, landmark_positions_eci
+    pixel_coordinates = camera.sample_pixel_coordinates(N)
+    valid_intersections, landmark_positions_eci = camera.get_earth_intersections(pixel_coordinates, cubesat_position, R_body_to_eci)
+    pixel_coordinates = pixel_coordinates[valid_intersections, :]
 
+    return np.tile(R_body_to_eci, (pixel_coordinates.shape[0], 1, 1)), pixel_coordinates, landmark_positions_eci
 
 
 def is_over_daytime(epoch: Epoch, cubesat_position: np.ndarray) -> bool:
@@ -82,14 +76,14 @@ def test_od():
 
     # set up camera, vision model, and orbit determination objects
     camera_params = config["satellite"]["camera"]
+    focal_length = camera_params["focal_length"]
+    R_body_to_camera = Rotation.from_quat(np.asarray(camera_params["orientation_in_cubesat_frame"]), scalar_first=True).as_matrix()
     camera = Camera(
-        image_width=camera_params["image_width"],
-        image_height=camera_params["image_height"],
-        focal_length=camera_params["focal_length"],
-        position_in_cubesat_frame=np.asarray(camera_params["position_in_cubesat_frame"]),
-        orientation_in_cubesat_frame=np.asarray(camera_params["orientation_in_cubesat_frame"])
+        image_dimensions=np.array([camera_params["image_width"], camera_params["image_height"]]),
+        K=np.diag([focal_length, focal_length, 1]),
+        R_body_to_camera=R_body_to_camera,
+        t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
     )
-    mock_vision_model = MockVisionModel(camera, max_correspondences=10, earth_radius=R_EARTH)
     od = OrbitDetermination(camera, dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state
@@ -105,7 +99,7 @@ def test_od():
 
     # set up arrays to store measurements
     times = np.array([], dtype=int)
-    cubesat_attitudes = np.zeros(shape=(0, 4))
+    Rs_body_to_eci = np.zeros(shape=(0, 3, 3))
     pixel_coordinates = np.zeros(shape=(0, 2))
     landmarks = np.zeros(shape=(0, 3))
 
@@ -113,17 +107,17 @@ def test_od():
         """
         Take a set of measurements at the given time index.
         Reads from the states, epoch, and mock_vision_model variables in the outer scope.
-        Appends to the times, cubesat_attitudes, pixel_coordinates, and landmarks arrays in the outer scope.
+        Appends to the times, Rs_body_to_eci, pixel_coordinates, and landmarks arrays in the outer scope.
 
         :param t_idx: The time index at which to take the measurements.
         """
-        nonlocal times, cubesat_attitudes, pixel_coordinates, landmarks
+        nonlocal times, Rs_body_to_eci, pixel_coordinates, landmarks
         measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
-            get_measurement_info(epoch, states[t_idx, :3], mock_vision_model)
+            get_measurement_info(states[t_idx, :3], camera)
         times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
-        cubesat_attitudes = np.vstack((cubesat_attitudes, measurement_cubesat_attitudes))
-        pixel_coordinates = np.vstack((pixel_coordinates, measurement_pixel_coordinates))
-        landmarks = np.vstack((landmarks, measurement_landmarks))
+        Rs_body_to_eci = np.concatenate((Rs_body_to_eci, measurement_cubesat_attitudes), axis=0)
+        pixel_coordinates = np.concatenate((pixel_coordinates, measurement_pixel_coordinates), axis=0)
+        landmarks = np.concatenate((landmarks, measurement_landmarks), axis=0)
 
     for t in range(0, N - 1):
         states[t + 1, :] = f(states[t, :], od.dt)
