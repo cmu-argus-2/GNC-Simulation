@@ -49,7 +49,7 @@ def run(log_directory, config_path):
     state_estimate_labels = ["r_hat_x ECI [m]", "r_hat_y ECI [m]", "r_hat_z ECI [m]", "v_hat_x ECI [m/s]", "v_hat_y ECI [m/s]", "v_hat_z ECI [m/s]",
                 "q_hat_w", "q_hat_x", "q_hat_y", "q_hat_z", "omega_hat_x [rad/s]", "omega_hat_y [rad/s]", "omega_hat_z [rad/s]",
                 "rSun_x ECI [m]","rSun_y ECI [m]","rSun_z ECI [m]","xMag ECI [T]","yMag ECI [T]","zMag ECI [T]"] + ["omega_hat_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
-    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + ["V_RW_" + str(i) + " [V]" for i in range(num_RWs)]
+    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + ["T_RW_" + str(i) + " [Nm]" for i in range(num_RWs)]
 
     true_state = initial_state
     measured_state = true_state

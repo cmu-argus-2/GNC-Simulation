@@ -17,6 +17,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from world.math.quaternions import quatrotation
 # temp (remove later)
 import yaml
+from actuators.magnetorquer import Magnetorquer
+
+
 class MontecarloPlots:
     def __init__(
         self,
@@ -184,4 +187,78 @@ class MontecarloPlots:
                                    "AngMom/MajorAx Angle [deg]",
                                    "AngMom norm [Nms]"])
         save_figure(itm.gcf(), self.plot_dir, "sun_vector_body.png", self.close_after_saving)
+        # ==========================================================================
+        # Reaction Wheel Speed and Torque
+        num_RWs = pyparams["N_rw"]
+         
+        # G_rw_b = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            rw_speed = [data_dicts[i]["omega_RW_" + str(j) + " [rad/s]"] for j in range(num_RWs)]
+            rw_speed_labels = [f"RW_{j}" for j in range(num_RWs)]
+            torque_rw = [data_dicts[i]["T_RW_" + str(j) + " [Nm]"] for j in range(num_RWs)]
+            rw_torque_labels = [f"Torque_RW_{j}" for j in range(num_RWs)]
+            rw_speed_torque = rw_speed + torque_rw
+            rw_speed_torque_labels = rw_speed_labels + rw_torque_labels
+            multiPlot(
+            data_dicts[i]["Time [s]"],
+            rw_speed_torque,
+            seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Reaction Wheel Speed and Torque", ylabels=rw_speed_torque_labels)
+        save_figure(itm.gcf(), self.plot_dir, "rw_w_T_true.png", self.close_after_saving)
+        # ==========================================================================
+        # Magnetorquer dipole moment
+        num_MTBs = pyparams["N_mtb"]
+        Magnetorquers = [Magnetorquer(pyparams, IdMtb) for IdMtb in range(num_MTBs)] 
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
+            mtb_dipole_moment = np.zeros((num_MTBs, len(data_dicts[i]["Time [s]"])))
+            for j in range(len(data_dicts[i]["Time [s]"])):
+                for k in range(num_MTBs):
+                    Magnetorquers[k].set_voltage(volt_magnetorquer[k][j])
+                    mtb_dipole_moment[k][j] = np.linalg.norm(Magnetorquers[k].get_dipole_moment())
+
+            mtb_dipole_moment_labels = [f"MTB_{j} [Cm]" for j in range(num_MTBs)]
+            multiPlot(
+            data_dicts[i]["Time [s]"],
+            mtb_dipole_moment,
+            seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Magnetorquer Dipole Moment [C*m]", ylabels=mtb_dipole_moment_labels)
+        save_figure(itm.gcf(), self.plot_dir, "mtb_dipole_moment_true.png", self.close_after_saving)
+        # ==========================================================================
+        # Nadir Pointing
+        # Orbit Pointing 
+
+        # ==========================================================================
+        # Total Body frame torque of magnetorquers 
+
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
+            mag_field = np.array([data_dicts[i]["xMag ECI [T]"], 
+                                  data_dicts[i]["yMag ECI [T]"], 
+                                  data_dicts[i]["zMag ECI [T]"]])
+            quat = np.array([data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]])
+            torque_magnetorquer = np.zeros((3, len(data_dicts[i]["Time [s]"])))
+            for j in range(len(data_dicts[i]["Time [s]"])):
+                RE2b = quatrotation(quat[:,j]).T
+                mag_field_loc = RE2b @ mag_field[:,j]
+                for k in range(num_MTBs):
+                    Magnetorquers[k].set_voltage(volt_magnetorquer[k][j])
+                torque_magnetorquer[:, j] = np.sum([Magnetorquers[k].get_torque(mag_field_loc) for k in range(num_MTBs)], axis=0)
+
+            total_torque = torque_magnetorquer.tolist()
+            multiPlot(
+            data_dicts[i]["Time [s]"],
+            total_torque,
+            seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Total Magnetorquer Body Frame Torque [Nm]", ylabels=["T_x [Nm]", "T_y [Nm]", "T_z [Nm]"])
+        save_figure(itm.gcf(), self.plot_dir, "total_mtb_body_frame_torque.png", self.close_after_saving)
+        
+
+        
  

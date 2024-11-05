@@ -48,6 +48,10 @@ class Magnetorquer:
         self.voltage = 0.0
         self.power   = 0.0
 
+    def get_dipole_moment(self):
+        return self.dipole_moment
+
+
     def get_torque(self, MAG_FIELD):
         """
         Update voltage or current before getting the torque.
