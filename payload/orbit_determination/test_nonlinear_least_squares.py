@@ -2,6 +2,7 @@ from time import perf_counter
 import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
+from matplotlib import pyplot as plt
 from typing import Any
 
 import brahe
@@ -141,6 +142,16 @@ def test_od():
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
     rms_position_error = np.sqrt(np.mean(position_errors ** 2))
     print(f"RMS position error: {rms_position_error}")
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
+    ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+    ax.set_zlabel("Z (m)")
+    ax.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
