@@ -231,7 +231,38 @@ class MontecarloPlots:
         # ==========================================================================
         # Nadir Pointing
         # Orbit Pointing 
+        G_rw_b        = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
+        nadir_cam_dir = np.array(pyparams["nadir_cam_dir"])
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            nadir_cam_dir_angle = []
+            rw_orb_dir_angle = []
+            for j in range(len(data_dicts[i]["Time [s]"])):
+                quat = np.array([data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]])
+                RE2b = quatrotation(quat).T
+                eci_pos = np.array([data_dicts[i]["r_x ECI [m]"][j], data_dicts[i]["r_y ECI [m]"][j], data_dicts[i]["r_z ECI [m]"][j]])
+                nadir_vector = -RE2b @ eci_pos
+                nadir_vector = nadir_vector / np.linalg.norm(nadir_vector)
+                cam_angle = np.rad2deg(np.arccos(np.dot(nadir_cam_dir, nadir_vector)))
+                nadir_cam_dir_angle.append(cam_angle)
 
+                eci_vel = np.array([data_dicts[i]["v_x ECI [m/s]"][j], data_dicts[i]["v_y ECI [m/s]"][j], data_dicts[i]["v_z ECI [m/s]"][j]])
+                orb_ang_dir = np.cross(eci_pos, eci_vel)
+                orb_ang_dir = orb_ang_dir / np.linalg.norm(orb_ang_dir)
+                orb_ang_dir = Re2b @ orb_ang_dir
+                sun_pos = np.array([data_dicts[i]["rSun_x ECI [m]"][j], data_dicts[i]["rSun_y ECI [m]"][j], data_dicts[i]["rSun_z ECI [m]"][j]])
+                if np.dot(sun_pos, orb_ang_dir) < 0:
+                    orb_ang_dir = -orb_ang_dir
+                orb_angle = np.rad2deg(np.arccos(np.dot(orb_ang_dir, G_rw_b)))
+                rw_orb_dir_angle.append(orb_angle)
+
+            multiPlot(
+            data_dicts[i]["Time [s]"],
+            [nadir_cam_dir_angle, rw_orb_dir_angle],
+            seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Nadir and Orbit Ang Mom alignment", ylabels=["Nadir Cam Dir Angle [deg]", "Orbit Dir Angle [deg]"])
+        save_figure(itm.gcf(), self.plot_dir, "nad_orb_point_true.png", self.close_after_saving)
         # ==========================================================================
         # Total Body frame torque of magnetorquers 
 

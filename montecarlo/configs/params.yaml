@@ -36,7 +36,8 @@ trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0
 pcb_side_max: [0.1,0.1,0.1,0.1,0.1,0.1] # m
 max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
 max_power : [1,1,1,1,1,1]  # W
-
+# payload camera
+nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sim settings
 MAX_TIME: 20000 # [s]
 dt: 1         # [s]

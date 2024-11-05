@@ -39,6 +39,7 @@ class Controller:
                                                     np.array(config["rw_vel_gain"]),
                                                     np.array(config["tgt_ss_ang_vel"]),
                                                     np.array(config["nom_rw_ang_vel"]),
+                                                    np.array(config["nadir_cam_dir"]),
                                                     Magnetorquers,
                                                     ReactionWheels)
         """

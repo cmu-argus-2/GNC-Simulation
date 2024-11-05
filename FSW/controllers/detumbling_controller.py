@@ -252,6 +252,7 @@ class BaselineNadirPointingController():
         rw_vel_gain: float,
         target_angular_velocity: np.ndarray,
         target_rw_ang_vel: np.ndarray,
+        nadir_cam_dir: np.ndarray,
         Magnetorquers: list,
         ReactionWheels: list,
     ) -> None:
@@ -281,7 +282,7 @@ class BaselineNadirPointingController():
         self.h_tgt = self.J @ self.ref_angular_velocity
         self.h_tgt_norm = np.linalg.norm(self.h_tgt)
 
-        self.nadir_cam_dir = np.array([-1,0,0])
+        self.nadir_cam_dir = nadir_cam_dir
         self.target_rw_ang_vel = target_rw_ang_vel
         self.k_mtb_rw = rw_vel_gain
         self.k_rw_att = np.array(rw_pd_gain)
