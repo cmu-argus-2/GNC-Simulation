@@ -5,6 +5,7 @@
 #include "math/vector_math.h"
 #include "ParameterParser.h"
 #include "Magnetorquer.h"
+#include "utils_and_transforms.h"
 
 #include "gravity.h"
 #include "drag.h"
@@ -128,5 +129,6 @@ PYBIND11_MODULE(pyphysics, m) {
     m.doc() = "pybind11 physics plugin";   // module docstring    
 
     m.def("rk4", &rk4, "rk4 integrator");
+    m.def("ECI2GEOD", &ECI2GEOD, "ECI to Geodetic Coordinates");
 }
 #endif
