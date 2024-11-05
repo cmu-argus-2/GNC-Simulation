@@ -18,7 +18,7 @@ I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
 m_rw: 0.002                # kg mass of each reaction wheel
 max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
 max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
-
+nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
 # Magnetorquers
 N_mtb : 6                                     # number of magnetorquers
 mtb_orientation : [1,0,0, 
@@ -52,18 +52,19 @@ inclination : 96 # [deg]
 RAAN : 0 # 147 # [deg]
 AOP : 63 # [deg]
 true_anomaly : 0 # [deg]
-initial_attitude : [0,0,1,0] 
-initial_angular_rate : [0.3,0,0] # [rad/s]
+initial_attitude : [1,0,0,0] 
+initial_angular_rate : [0.3,0.0,0.0] # [rad/s]
 
-algorithm: "BaseSP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 0.0028
 
-state_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
+mtb_att_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
                     [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
                     [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
-
+rw_att_feedback_gains: [0.7071, 0.0028]
+rw_vel_gain: 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
-pointing_target: "Sun" # "Nadir" or "Sun"
-tgt_ang_vel: 10 # [deg/s]
+pointing_target: "Nadir" # "Nadir" or "Sun"
+tgt_ss_ang_vel: 10 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]

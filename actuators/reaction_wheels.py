@@ -9,11 +9,11 @@ class ReactionWheel:
         :param max_torque: Maximum torque the reaction wheel can provide (Nm)
         :param max_speed: Maximum speed the reaction wheel can spin (rad/s)
         """
-        self.G_rw_b = np.array(config["satellite"]["rw_orientation"][IdRw]).T
-        self.N_rw = np.array(config["satellite"]["rw_orientation"]).shape[0]
-        self.I_rw = np.array(config["satellite"]["I_rw"])
-        self.max_torque = config["satellite"]["max_torque"]
-        self.max_speed = config["satellite"]["max_speed"]
+        self.G_rw_b = np.array(config["rw_orientation"][(3*IdRw):(3*(IdRw+1))]).T
+        self.N_rw = np.array(config["rw_orientation"]).shape[0]
+        self.I_rw = np.array(config["I_rw"])
+        self.max_torque = config["max_torque"]
+        self.max_speed = config["max_speed"]
 
     def get_applied_torque(self, actuator_cmd):
         """

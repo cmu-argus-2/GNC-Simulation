@@ -10,6 +10,7 @@ from FSW.controllers.controller import Controller
 import os
 import yaml
 from actuators.magnetorquer import Magnetorquer
+from actuators.reaction_wheels import ReactionWheel
 # from build.world.pyphysics.models import MagneticField, SRP
 
 START_TIME = time()
@@ -93,7 +94,8 @@ def run(log_directory, config_path):
     Idx["NX"] = Idx["NX"] + N_rw
     Idx["X"]["RW_SPEED"]   = slice(19, 19 + N_rw)
     Magnetorquers = [Magnetorquer(pyparams, IdMtb) for IdMtb in range(N_mtb)] 
-    controller = Controller(pyparams, Magnetorquers, Idx)
+    ReactionWheels = [ReactionWheel(pyparams, IdRw) for IdRw in range(N_rw)]
+    controller = Controller(pyparams, Magnetorquers, ReactionWheels, Idx)
     
     while current_time <= params.MAX_TIME:
 
