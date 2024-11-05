@@ -131,6 +131,9 @@ def test_od():
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
 
+    if len(times) == 0:
+        raise ValueError("No measurements taken")
+
     start_time = perf_counter()
     estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, Rs_body_to_eci, N)
     print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
