@@ -64,15 +64,16 @@ def get_measurement_info(epoch: Epoch, state: np.ndarray, mock_vision_model: Moc
     return np.tile(cubesat_attitude, (pixel_coordinates.shape[0], 1)), pixel_coordinates, landmark_positions_eci
 
 
-def is_over_daytime(epoch: Epoch, state: np.ndarray) -> bool:
+
+def is_over_daytime(epoch: Epoch, cubesat_position: np.ndarray) -> bool:
     """
     Determine if the satellite is above a portion of the Earth that is in daylight.
 
     :param epoch: The epoch as an instance of brahe's Epoch class.
-    :param state: The state of the satellite at the specified epoch as a numpy array of shape (6,).
+    :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
     :return: True if the satellite is above the daylight portion of the Earth, False otherwise.
     """
-    return np.dot(brahe.ephemerides.sun_position(epoch), state[:3]) > 0
+    return np.dot(brahe.ephemerides.sun_position(epoch), cubesat_position) > 0
 
 
 def test_od():
@@ -127,7 +128,7 @@ def test_od():
     for t in range(0, N - 1):
         states[t + 1, :] = f(states[t, :], od.dt)
 
-        if t % 5 == 0 and is_over_daytime(epoch, states[t, :]):  # take a set of measurements every 5 minutes
+        if t % 5 == 0 and is_over_daytime(epoch, states[t, :3]):  # take a set of measurements every 5 minutes
             take_measurement(t)
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
