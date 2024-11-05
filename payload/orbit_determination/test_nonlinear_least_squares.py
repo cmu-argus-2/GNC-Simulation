@@ -1,3 +1,4 @@
+from time import perf_counter
 import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -130,7 +131,10 @@ def test_od():
 
         epoch = increment_epoch(epoch, 1 / config["solver"]["world_update_rate"])
 
-    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, cubesat_attitudes, N)
+    start_time = perf_counter()
+    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, Rs_body_to_eci, N)
+    print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
+
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
     rms_position_error = np.sqrt(np.mean(position_errors ** 2))
     print(f"RMS position error: {rms_position_error}")
