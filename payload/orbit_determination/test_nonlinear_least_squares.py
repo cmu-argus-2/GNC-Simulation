@@ -49,8 +49,8 @@ def get_measurement_info(epoch: Epoch, cubesat_position: np.ndarray, mock_vision
     R_eci_to_ecef = brahe.frames.rECItoECEF(epoch)
 
     # define nadir cubesat attitude
-    y_axis = [0, 1, 0]  # along orbital angular momentum
-    z_axis = cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
+    y_axis = [0, -1, 0]  # along orbital angular momentum
+    z_axis = -cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
     x_axis = np.cross(y_axis, z_axis)
     R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis]).T  # TODO: why do we need to transpose?
     cubesat_attitude = Rotation.from_matrix(R_body_to_eci).as_quat(scalar_first=True)  # in eci
