@@ -2,7 +2,7 @@
 
 from build.world.pyphysics import rk4
 from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParams
-from build.sensors.pysensors import gps, sunSensor
+from build.sensors.pysensors import gps, sunSensor, magnetometer, gyroscope
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -51,8 +51,11 @@ class Simulator():
     
     def sensors(self, current_time, state):
         gps_measurements = gps(state[0:3], state[3:6], current_time, self.params)
-
         sun_sensor_measurements = sunSensor(state[6:10], current_time, self.params)
+        magnetic_field_measurements = magnetometer(state[0:3], state[6:10], current_time, self.params)
+        gyroscope_readings = gyroscope(state[10:13])
+
+        return np.concatenate((gps_measurements, gyroscope_readings, sun_sensor_measurements, magnetic_field_measurements))
 
     def step(self, sim_time, dt):
 

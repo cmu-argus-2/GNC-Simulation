@@ -3,6 +3,8 @@
 #include "utils_and_transforms.h"
 #include "ParameterParser.h"
 #include "SRP.h"
+#include "MagneticField.h"
+#include <unsupported/Eigen/MatrixFunctions>
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -41,6 +43,42 @@ VectorXd SunSensor(const Vector4 q, double t_J2000, Simulation_Parameters sc)
 
 }
 
+Vector3 Magnetometer(const Vector3 r, const Vector4 q, double t_J2000, Simulation_Parameters sc)
+{
+    Quaternion quat {q(0), q(1), q(2), q(3)};
+
+    Vector3 B_eci = MagneticField(r, t_J2000);
+    Vector3 B_body = random_SO3_rotation(sc.magnetometer_noise_std)*quat.toRotationMatrix().transpose()*B_eci;
+
+    return B_body;
+}
+
+Vector3 Gyroscope(const Vector3 omega)
+{
+    return omega;
+}
+
+/* UTILITY FUNCTIONS */
+Matrix_3x3 skew_symmetric(Vector3 v)
+{
+    Matrix_3x3 W;
+    W << 0, -v(2), v(1),
+         v(2), 0, -v(0),
+         -v(1), v(0), 0;
+    
+    return W;
+}
+
+Matrix_3x3 random_SO3_rotation(double noise_std)
+{
+    Vector3 noise = noise_std*Vector3::Random();
+
+    Matrix_3x3 W = skew_symmetric(noise);
+    Matrix_3x3 W_so3 = W.exp();
+
+    return W_so3;
+}
+
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysensors, m) {
@@ -48,5 +86,7 @@ PYBIND11_MODULE(pysensors, m) {
 
     m.def("gps", &GPS, "GPS Sensor");
     m.def("sunSensor", &SunSensor, "Sun Sensor");
+    m.def("magnetometer", &Magnetometer, "Magnetometer Readings");
+    m.def("gyroscope", &Gyroscope, "Gyroscope Reading");
 }
 #endif

@@ -54,6 +54,9 @@ class Simulation_Parameters {
     // Sun Sensors
     MatrixXd G_ld_b;
 
+    // Magnetometer
+    double magnetometer_noise_std;
+
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]

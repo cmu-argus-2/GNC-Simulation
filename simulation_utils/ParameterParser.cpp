@@ -53,6 +53,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     double num_light_diodes = params["num_light_diodes"].as<int>();
     G_ld_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_light_diodes);
 
+    magnetometer_noise_std = params["magnetometer_noise_std"].as<double>();
+
 
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
