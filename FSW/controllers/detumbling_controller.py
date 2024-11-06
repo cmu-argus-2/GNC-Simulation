@@ -277,6 +277,7 @@ class BaselineNadirPointingController():
         if I_min_direction[np.argmax(np.abs(I_min_direction))] < 0:
             I_min_direction = -I_min_direction
         self.I_min_direction = I_min_direction 
+        # self.I_min_direction = self.G_rw_b.flatten() 
         self.target_angular_velocity = target_angular_velocity
         self.ref_angular_velocity = self.I_min_direction * np.deg2rad(target_angular_velocity)
         self.h_tgt = self.J @ self.ref_angular_velocity
@@ -287,7 +288,7 @@ class BaselineNadirPointingController():
         self.k_mtb_rw = rw_vel_gain
         self.k_rw_att = np.array(rw_pd_gain)
 
-    def remove_projection_from_vector(vector, projection):
+    def remove_projection_from_vector(self, vector, projection):
         projection = projection / np.linalg.norm(projection)
         return vector - np.dot(vector, projection) * projection
 
@@ -316,7 +317,7 @@ class BaselineNadirPointingController():
         sun_vector       = Re2b @ est_ctrl_states[Idx["X"]["SUN_POS"]]
         sun_vector       = sun_vector / np.linalg.norm(sun_vector)
 
-        rw_ang_vel = est_ctrl_states[Idx["X"]["ANG_VEL"]]
+        rw_ang_vel = est_ctrl_states[Idx["X"]["RW_SPEED"]]
 
         eci_pos = est_ctrl_states[Idx["X"]["ECI_POS"]]
         eci_vel = est_ctrl_states[Idx["X"]["ECI_VEL"]]
@@ -342,9 +343,11 @@ class BaselineNadirPointingController():
          
         # angular momentum in a cone around the direction to be pointed
         spin_stabilized = (h_norm <= (1.0 + np.deg2rad(15)) * self.h_tgt_norm) and \
-                          (np.arccos(np.clip(np.dot(self.G_rw_b.flatten(), h / h_norm), -1.0, 1.0)) <= np.deg2rad(15))
-   
-        orbit_pointing = (np.linalg.norm(orbit_vector-(h/h_norm))<= np.deg2rad(10))
+                          (np.arccos(np.clip(np.dot(self.I_min_direction, h / h_norm), -1.0, 1.0)) <= np.deg2rad(15))
+        # if angular velocity low enough, then its in nadir pointing and dont need to spin stabilize
+        spin_stabilized = spin_stabilized or (np.linalg.norm(angular_velocity) <= np.deg2rad(1))
+        # orbit_pointing = (np.linalg.norm(orbit_vector-(h/h_norm))<= np.deg2rad(10))
+        orbit_pointing = (np.linalg.norm(orbit_vector-self.G_rw_b.flatten())<= np.deg2rad(10))
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
         
         unit_magnetic_field = magnetic_field / (magnetic_field_norm ** 2)
@@ -355,8 +358,8 @@ class BaselineNadirPointingController():
             Bhat = crossproduct(magnetic_field)
             Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
 
-            err_vec = np.hstack((-self.G_rw_b-orbit_vector, self.ref_angular_velocity - angular_velocity))
-            u_mtb = Bhat_pseudo_inv @ self.k @ err_vec
+            err_vec = np.hstack((-self.G_rw_b.flatten()-orbit_vector, self.ref_angular_velocity - angular_velocity))
+            u_mtb = Bhat_pseudo_inv @ self.k_mtb_att @ err_vec
         else:
             # nadir pointing controller
             Bhat = crossproduct(magnetic_field)
@@ -367,24 +370,26 @@ class BaselineNadirPointingController():
             Bhat_pseudo_inv = V.T @ S_inv @ U.T"""
             Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
             # 1. mtb nutation control
-            err_vec = np.hstack((-self.G_rw_b-orbit_vector, angular_velocity))
+            err_vec = np.hstack((-self.G_rw_b.flatten()-orbit_vector, angular_velocity))
             u_mtb = Bhat_pseudo_inv @ self.k_mtb_att @ err_vec
-            u_mtb = np.clip(a=u_mtb, a_min=self.lbm, a_max=self.ubm)
+            u_mtb = np.clip(a=u_mtb, a_min=self.lbmtb, a_max=self.ubmtb)
             # 2. rw spin stabilization
             err_rw = self.target_rw_ang_vel - rw_ang_vel
-            t_mtb_rw = Bhat_pseudo_inv @ self.G_rw_b @ self.k_mtb_rw @ err_rw
-            ff_rw_tq = np.clip(a=u_mtb + t_mtb_rw, a_min=self.lbm, a_max=self.ubm) - u_mtb
+            t_mtb_rw = Bhat_pseudo_inv @ self.G_rw_b * self.k_mtb_rw * err_rw
+            ff_rw_tq = np.clip(a=u_mtb + t_mtb_rw.flatten(), a_min=self.lbmtb, a_max=self.ubmtb) - u_mtb
             u_mtb += ff_rw_tq
             # feedforward magnetorquer feedforward toset rw ang velocity
             ff_rw_tq = np.linalg.norm(Bhat @ t_mtb_rw)
             # ff_rw_tq = t_mtb_rw - (np.dot(t_mtb_rw, magnetic_field) / magnetic_field_norm**2) * magnetic_field
             # 3. rw attitude control
-            tgt_rw_dir = self.remove_projection_from_vector(nadir_vector, self.G_rw_b)
-            cur_rw_dir = self.remove_projection_from_vector(self.nadir_cam_dir, self.G_rw_b)
+            tgt_rw_dir = self.remove_projection_from_vector(nadir_vector, self.G_rw_b.flatten())
+            cur_rw_dir = self.remove_projection_from_vector(self.nadir_cam_dir, self.G_rw_b.flatten())
+            tgt_rw_dir =  tgt_rw_dir / np.linalg.norm(tgt_rw_dir)
+            cur_rw_dir =  cur_rw_dir / np.linalg.norm(cur_rw_dir)
             angle_norm = np.abs(np.arccos(np.clip(np.dot(tgt_rw_dir, cur_rw_dir), -1.0, 1.0)))
-            angle_sign = np.sign(np.dot(np.cross(self.G_rw_b,cur_rw_dir), tgt_rw_dir))
+            angle_sign = np.sign(np.dot(np.cross(self.G_rw_b.flatten(),cur_rw_dir), tgt_rw_dir))
             angle_nadir = angle_sign * angle_norm
-            err_att = np.hstack((angle_nadir, -angular_velocity))
+            err_att = np.hstack((angle_nadir, -self.G_rw_b.flatten() @ angular_velocity))
             u_rw = self.k_rw_att @ err_att - ff_rw_tq
        
         u_mtb = np.clip(a=u_mtb, a_min=self.lbmtb, a_max=self.ubmtb)
