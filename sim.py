@@ -5,15 +5,8 @@ from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParam
 from build.sensors.pysensors import gps, sunSensor, magnetometer, gyroscope
 
 import numpy as np
-from scipy.spatial.transform import Rotation as R
-from time import time
 from simulation_manager import logger
 import os
-
-START_TIME = time()
-
-controller_dt = 0.1
-estimator_dt = 1
 
 class Simulator():
     def __init__(self, log_directory, config_path) -> None:
