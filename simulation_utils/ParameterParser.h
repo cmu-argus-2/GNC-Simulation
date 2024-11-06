@@ -46,6 +46,14 @@ class Simulation_Parameters {
     double max_power;
     Magnetorquer MTB; // Magnetorquer class object
 
+    /* Sensors */
+    // GPS
+    double gps_pos_std;
+    double gps_vel_std;
+
+    // Sun Sensors
+    MatrixXd G_ld_b;
+
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]

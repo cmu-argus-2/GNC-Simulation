@@ -44,8 +44,14 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     CR = params["CR"].as<double>();
 
     num_RWs = params["N_rw"].as<int>();
-    G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
+    G_rw_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
+
+    gps_pos_std = params["gps_pos_std"].as<double>();
+    gps_vel_std = params["gps_vel_std"].as<double>();
+
+    double num_light_diodes = params["num_light_diodes"].as<int>();
+    G_ld_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_light_diodes);
 
 
     MAX_TIME = params["MAX_TIME"].as<double>();
@@ -95,7 +101,7 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename)
     YAML::Node params = YAML::LoadFile(filename);
 
     num_MTBs = params["N_mtb"].as<int>();
-    G_mtb_b = Eigen::Map<Eigen::MatrixXd>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
+    G_mtb_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
 
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["N_mtb"].as<int>(),
