@@ -139,6 +139,16 @@ Vector3 ECEF2GEOD(Vector3 v_ecef) {
     return geod;
 }
 
+Vector3 ECI2GEOD(Vector3 v_eci, double t_J2000){
+    Vector3 v_ecef = ECI2ECEF(t_J2000)*v_eci;
+    Vector3 r_geod = ECEF2GEOD(v_ecef);
+
+    r_geod(0) = RAD_2_DEG(r_geod(0));
+    r_geod(1) = RAD_2_DEG(r_geod(1));
+    
+    return r_geod;
+}
+
 Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude)
 {
     Vector3 r_ecef;
