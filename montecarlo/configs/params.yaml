@@ -60,8 +60,8 @@ magnetometer_noise_std : 0.05
 # -----------------------------------------------------------------------------------------------------------
 MAX_TIME: 108000 # [s]
 dt: 0.01             # [s]
-earliest_sim_start_time_UTC: 2027-01-01 12:00:00
-latest_sim_start_time_UTC: 2027-02-28 23:59:59
+earliest_sim_start_time_UTC: 2024-01-01 12:00:00
+latest_sim_start_time_UTC: 2024-02-28 23:59:59
 useDrag : False
 useSRP : False
 
@@ -70,7 +70,7 @@ useSRP : False
 # -----------------------------------------------------------------------------------------------------------
 semimajor_axis : 6971000 # [m]
 eccentricity : 0.007 
-inclination : 90 # [deg]
+inclination : 75 # [deg]
 RAAN : 167 # [deg]
 AOP : 35 # [deg]
 true_anomaly : 0 # [deg]

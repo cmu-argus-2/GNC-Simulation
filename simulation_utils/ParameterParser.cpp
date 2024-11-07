@@ -50,7 +50,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     gps_pos_std = params["gps_pos_std"].as<double>();
     gps_vel_std = params["gps_vel_std"].as<double>();
 
-    double num_light_diodes = params["num_light_diodes"].as<int>();
+    num_light_diodes = params["num_light_diodes"].as<int>();
     G_ld_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_light_diodes);
 
     magnetometer_noise_std = params["magnetometer_noise_std"].as<double>();
@@ -138,6 +138,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
+        //
+        .def_readonly("num_light_diodes", &Simulation_Parameters::num_light_diodes)
         //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)

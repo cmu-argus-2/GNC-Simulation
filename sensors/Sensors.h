@@ -41,13 +41,6 @@ Vector3 Gyroscope(const Vector3 omega);
 
 
 /* UTILITY FUNCTIONS */
-/**
- * @brief Defines the skew-symmetric form of a matrix
- * 
- * @param v : vector to convert into skew-symmetric form
- * @return 3x3 matrix represnting a skew-symmetric form of a vector
- */
-Matrix_3x3 skew_symmetric(Vector3 v);
 
 /**
  * @brief Defines a random rotation about a random axis

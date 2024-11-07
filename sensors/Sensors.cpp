@@ -59,21 +59,12 @@ Vector3 Gyroscope(const Vector3 omega)
 }
 
 /* UTILITY FUNCTIONS */
-Matrix_3x3 skew_symmetric(Vector3 v)
-{
-    Matrix_3x3 W;
-    W << 0, -v(2), v(1),
-         v(2), 0, -v(0),
-         -v(1), v(0), 0;
-    
-    return W;
-}
 
 Matrix_3x3 random_SO3_rotation(double noise_std)
 {
     Vector3 noise = noise_std*Vector3::Random();
 
-    Matrix_3x3 W = skew_symmetric(noise);
+    Matrix_3x3 W = toSkew(noise);
     Matrix_3x3 W_so3 = W.exp();
 
     return W_so3;

@@ -40,6 +40,7 @@ class MultiFileLogger:
             self.last_log_time_[file_name] = t
 
     def log_v(self, file_name, data, data_labels):
+        print(len(data), len(data_labels))
         assert len(data) == len(data_labels)
         # log a 'v'ector of double values
         if file_name not in self.files_:  # haven't logged to the given file name

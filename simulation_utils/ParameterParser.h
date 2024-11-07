@@ -52,6 +52,7 @@ class Simulation_Parameters {
     double gps_vel_std;
 
     // Sun Sensors
+    int num_light_diodes;
     MatrixXd G_ld_b;
 
     // Magnetometer
