@@ -54,9 +54,9 @@ RAAN : 0 # 147 # [deg]
 AOP : 63 # [deg]
 true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
-initial_angular_rate : [0.3,0.0,0.0] # [rad/s]
+initial_angular_rate : [0.2,0.3,0.2] # [rad/s]
 
-algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "BaseNP" # "BaseSP" # "Lyapunov" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 0.0028
 
 mtb_att_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
