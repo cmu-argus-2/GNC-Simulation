@@ -152,6 +152,8 @@ class MontecarloPlots:
         eigenvalues, eigenvectors = np.linalg.eig(J)
         idx = np.argsort(eigenvalues)
         major_axis = eigenvectors[:, idx[2]]
+        if major_axis[np.argmax(np.abs(major_axis))] < 0:
+            major_axis = -major_axis
         for i, trial_number in enumerate(self.trials):
             bsun_vector = []
             ang_mom_vector = []

@@ -394,6 +394,8 @@ class BaselineNadirPointingController():
        
         u_mtb = np.clip(a=u_mtb, a_min=self.lbmtb, a_max=self.ubmtb)
         u_rw = np.clip(a=u_rw, a_min=self.lbrw, a_max=self.ubrw)
+        # clip according to rw angular velocity
+        
         """
         print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")
         print("torque command: ", crossproduct(u) @ magnetic_field)

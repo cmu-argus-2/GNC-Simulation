@@ -135,7 +135,8 @@ class Controller:
         # np.linalg.pinv(B_mat)
         actuator_cmd = np.zeros((Idx["NU"],1))
         actuator_cmd[Idx["U"]["MTB_TORQUE"]] = np.linalg.pinv(self.G_mtb_b.T) @ mtb_torque_cmd
-        actuator_cmd[Idx["U"]["RW_TORQUE"]] = rw_torque_cmd # only one, bypass allocation matrix
+        if rw_torque_cmd:
+            actuator_cmd[Idx["U"]["RW_TORQUE"]] = rw_torque_cmd # only one, bypass allocation matrix
         # np.linalg.pinv(self.G_rw_b.T) @ rw_torque_cmd
         # Normalize columns of the allocation matrix
         # col_norms = np.linalg.norm(allocation_mat, axis=0)
