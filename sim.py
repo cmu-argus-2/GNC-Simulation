@@ -14,18 +14,14 @@ from algs.Estimators import Attitude_EKF
 
 START_TIME = time()
 
-controller_dt = 0.1
-estimator_dt = 1
+# TODO read these in from parameter file; don't hardcode
+controller_dt = 0.1  # [s]
+GYRO_DT = 0.05  # [s]
+estimator_dt = GYRO_DT
 
 
 def controller(state_estimate):
     return np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-
-def sensors(
-    true_state,
-):  # TODO : sensors will return a shorter measurement vector and estimator will estimate the full state
-    return true_state + np.array([5000, 5000, 5000, 5, 5, 5, 0.05, 0.05, 0.05, 0.05, 2, 2, 2, 2]) * np.random.random()
 
 
 def run(log_directory, config_path):
@@ -53,7 +49,6 @@ def run(log_directory, config_path):
     sigma_w_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
     sigma_v_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
     scale_factor_error_range = [0.99, 1.01]  # [-]
-    GYRO_DT = 0.01  # [s]
 
     gyro_params = []
     for i in range(3):
