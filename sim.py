@@ -15,9 +15,9 @@ from algs.Estimators import Attitude_EKF
 START_TIME = time()
 
 # TODO read these in from parameter file; don't hardcode
-controller_dt = 0.1  # [s]
+CONTROLLER_DT = 0.1  # [s]
 GYRO_DT = 0.05  # [s]
-estimator_dt = GYRO_DT
+SUN_SENSOR_DT = 10  # [s]
 
 
 def controller(state_estimate):
@@ -56,6 +56,8 @@ def run(log_directory, config_path):
         gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
     gyro = TriAxisSensor(GYRO_DT, gyro_params)
 
+    sunSensor = SunSensor(sigma_sunsensor)
+
     attitude_ekf = Attitude_EKF(
         initial_ECI_R_b_estimate,
         initial_gyro_bias_estimate,
@@ -91,7 +93,8 @@ def run(log_directory, config_path):
     gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
 
     last_controller_update = 0
-    last_estimator_update = 0
+    last_gyro_measurement_time = 0
+    last_sun_sensor_measurement_time = 0
     last_print_time = -1e99
 
     current_time = 0
@@ -99,13 +102,23 @@ def run(log_directory, config_path):
     while current_time <= params.MAX_TIME:
 
         # Update Controller Command based on Controller Update Frequency
-        if current_time >= last_controller_update + controller_dt:
+        if current_time >= last_controller_update + CONTROLLER_DT:
             controller_command = controller(state_estimate)
             assert len(controller_command) == (num_RWs + num_MTBs)
             last_controller_update = current_time
 
-        # Update Estimator Prediction at Estimator Update Frequency
-        if current_time >= last_estimator_update + estimator_dt:
+        # Sun Sensor update
+        SUN_IN_VIEW = True  # TODO actually check if sun is in view
+        if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
+            true_sun_ray_ECI = TODO
+            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_ECI)
+
+            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI)
+
+            last_sun_sensor_measurement_time = current_time
+
+        # Propogate on Gyro
+        if current_time >= last_gyro_measurement_time + GYRO_DT:
             true_omega_body_wrt_ECI_in_body = true_state[10:13]
             gyro_measurement = gyro.update(true_omega_body_wrt_ECI_in_body)
 
@@ -127,7 +140,7 @@ def run(log_directory, config_path):
                 ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
             )
 
-            last_estimator_update = current_time
+            last_gyro_measurement_time_time = current_time
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
