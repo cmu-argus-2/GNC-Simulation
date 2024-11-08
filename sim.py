@@ -111,7 +111,9 @@ def run(log_directory, config_path):
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
             true_sun_ray_ECI = TODO
-            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_ECI)
+            body_R_ECI = R.from_quat([*true_state[7:10], true_state[6]]).inverse()  # TODO inverse?
+            true_sun_ray_body = body_R_ECI * true_sun_ray_ECI
+            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
 
             attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI)
 
