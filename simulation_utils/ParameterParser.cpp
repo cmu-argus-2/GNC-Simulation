@@ -64,7 +64,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     initial_attitude = Eigen::Map<Vector4>(params["initial_attitude"].as<std::vector<double>>().data());
     initial_angular_rate = Eigen::Map<Vector3>(params["initial_angular_rate"].as<std::vector<double>>().data());
     
-    initial_state = initializeSatellite(earliest_sim_start_unix);
+    initial_true_state = initializeSatellite(earliest_sim_start_unix);
 }
 
 /*
@@ -138,7 +138,7 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         //
-        .def_readonly("initial_state", &Simulation_Parameters::initial_state);
+        .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }
 
 #endif

@@ -7,6 +7,10 @@ from scipy.spatial.transform import Rotation as R
 from time import time
 from simulation_manager import logger
 import os
+from sensors.Sensor import SensorNoiseParams, TriAxisSensor
+from sensors.SunSensor import SunSensor
+from sensors.Bias import BiasParams
+from algs.Estimators import Attitude_EKF
 
 START_TIME = time()
 
@@ -16,10 +20,6 @@ estimator_dt = 1
 
 def controller(state_estimate):
     return np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-
-def estimator(y):
-    return y
 
 
 def sensors(
@@ -33,50 +33,67 @@ def run(log_directory, config_path):
 
     params = SimParams(config_path)
 
-    initial_state = np.array(params.initial_state)  # Get initial state
+    true_state = np.array(params.initial_true_state)  # Get initial state
+    print(true_state)
     num_RWs = params.num_RWs
     num_MTBs = params.num_MTBs
 
-    # Logging Legend
-    state_labels = [
-        "r_x ECI [m]",
-        "r_y ECI [m]",
-        "r_z ECI [m]",
-        "v_x ECI [m/s]",
-        "v_y ECI [m/s]",
-        "v_z ECI [m/s]",
-        "q_w",
-        "q_x",
-        "q_y",
-        "q_z",
-        "omega_x [rad/s]",
-        "omega_y [rad/s]",
-        "omega_z [rad/s]",
-    ] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
-    # measurement_labels = state_labels # TODO : Fix based on partial state measurement
-    state_estimate_labels = [
-        "r_hat_x ECI [m]",
-        "r_hat_y ECI [m]",
-        "r_hat_z ECI [m]",
-        "v_hat_x ECI [m/s]",
-        "v_hat_y ECI [m/s]",
-        "v_hat_z ECI [m/s]",
-        "q_hat_w",
-        "q_hat_x",
-        "q_hat_y",
-        "q_hat_z",
-        "omega_hat_x [rad/s]",
-        "omega_hat_y [rad/s]",
-        "omega_hat_z [rad/s]",
-    ] + ["omega_hat_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
-    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + [
-        "V_RW_" + str(i) + " [V]" for i in range(num_RWs)
-    ]
-
-    true_state = initial_state
-    measured_state = true_state
     state_estimate = true_state
-    print(true_state)
+    initial_ECI_R_b_estimate = R.from_quat([*state_estimate[7:10], state_estimate[6]])  # TODO inverse?
+    initial_gyro_bias_estimate = np.deg2rad(np.zeros(3))  # [rad/s]
+
+    sigma_initial_attitude = np.deg2rad(5)  # [rad]
+    sigma_initial_gyro_bias = np.deg2rad(5)  # [rad/s]
+    sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
+    sigma_gyro_bias_deriv = np.deg2rad(0.15)  # [(rad/s)/sqrt(s))]
+    sigma_sunsensor = np.deg2rad(5)  # [rad]
+
+    # TODO read these in from parameter file; don't hardcode
+    initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
+    sigma_w_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
+    sigma_v_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
+    scale_factor_error_range = [0.99, 1.01]  # [-]
+    GYRO_DT = 0.01  # [s]
+
+    gyro_params = []
+    for i in range(3):
+        biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
+        gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
+    gyro = TriAxisSensor(GYRO_DT, gyro_params)
+
+    attitude_ekf = Attitude_EKF(
+        initial_ECI_R_b_estimate,
+        initial_gyro_bias_estimate,
+        sigma_initial_attitude,
+        sigma_initial_gyro_bias,
+        sigma_gyro_white,
+        sigma_gyro_bias_deriv,
+        sigma_sunsensor,
+        GYRO_DT,
+    )
+
+    # Logging Legend
+    state_labels = (
+        [f"r_{axis} ECI [m]" for axis in "xyz"]
+        + [f"v_{axis} ECI [m/s]" for axis in "xyz"]
+        + [f"q_{axis}" for axis in "wxyz"]
+        + [f"omega_{axis} [rad/s]" for axis in "xyz"]
+        + [f"omega_RW_{i} [rad/s]" for i in range(num_RWs)]
+    )
+
+    # measurement_labels = state_labels # TODO : Fix based on partial state measurement
+    state_estimate_labels = (
+        [f"r_hat_{axis} ECI [m]" for axis in "xyz"]
+        + [f"v_hat_{axis} ECI [m/s]" for axis in "xyz"]
+        + [f"q_hat_{axis}" for axis in "wxyz"]
+        + [f"omega_hat_{axis} [rad/s]" for axis in "xyz"]
+        + [f"omega_hat_RW_{i} [rad/s]" for i in range(num_RWs)]
+    )
+
+    input_labels = [f"V_MTB_{i} [V]" for i in range(num_MTBs)] + [f"V_RW_{i} [V]" for i in range(num_RWs)]
+
+    attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
+    gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
 
     last_controller_update = 0
     last_estimator_update = 0
@@ -94,7 +111,27 @@ def run(log_directory, config_path):
 
         # Update Estimator Prediction at Estimator Update Frequency
         if current_time >= last_estimator_update + estimator_dt:
-            state_estimate = estimator(measured_state)
+            true_omega_body_wrt_ECI_in_body = true_state[10:13]
+            gyro_measurement = gyro.update(true_omega_body_wrt_ECI_in_body)
+
+            attitude_ekf.gyro_update(gyro_measurement)
+
+            # get attitude estimate of the body wrt ECI
+            state_estimate[6:10] = attitude_ekf.get_ECI_R_b().as_quat()
+            attitude_estimate_error = (
+                R.from_quat(true_state[6:10]).inv() * R.from_quat(state_estimate[6:10])
+            ).as_rotvec()
+
+            true_gyro_bias = gyro.get_bias()
+            estimated_gyro_bias = attitude_ekf.get_gyro_bias()
+            gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+
+            logr.log_v(
+                "attitude_ekf_state.bin",
+                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
+            )
+
             last_estimator_update = current_time
 
         if current_time >= last_print_time + 1000:
@@ -108,7 +145,6 @@ def run(log_directory, config_path):
         )
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)
-        measured_state = sensors(true_state)
 
         current_time += params.dt
 

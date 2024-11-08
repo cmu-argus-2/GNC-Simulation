@@ -64,7 +64,7 @@ class Simulation_Parameters {
     double true_anomaly; // [deg]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
-    VectorXd initial_state;
+    VectorXd initial_true_state;
 
     private:
     Magnetorquer load_MTB(std::string filename);
