@@ -1,7 +1,11 @@
 import configparser
 import numpy as np
 from world.math.quaternions import *
-from FSW.controllers.detumbling_controller import *
+from FSW.controllers.ControllerAlgorithm import *
+from FSW.controllers.BcrossController import BcrossController
+from FSW.controllers.LyapBasedSunPointingController import LyapBasedSunPointingController
+from FSW.controllers.BaselineSunPointingController import BaselineSunPointingController
+from FSW.controllers.BaselineNadirPointingController import BaselineNadirPointingController
 
 class Controller:
     def __init__(self, config, Magnetorquers, ReactionWheels, Idx) -> None:
@@ -15,43 +19,31 @@ class Controller:
         self.G_mtb_b = np.array(config["mtb_orientation"]).reshape(config["N_mtb"], 3)
         self.G_rw_b  = np.array(config["rw_orientation"]).reshape(config["N_rw"], 3)
         self.inertia = np.array(config["inertia"]).reshape(3,3)
-        self.Bcrossctr  = BcrossController(self.G_mtb_b,
-                                            config["bcrossgain"],
-                                            Magnetorquers,
-                                            self.inertia,
-                                            config["tgt_ss_ang_vel"])
-        self.lyapsunpointctr = LyapBasedSunPointingController(self.inertia, 
-                                                              self.G_mtb_b,
-                                                              config["bcrossgain"],
-                                                              config["tgt_ss_ang_vel"],
-                                                              Magnetorquers)
-        self.basesunpointctr = BaselineSunPointingController(self.inertia, 
-                                                              self.G_mtb_b,
-                                                              config["bcrossgain"],
-                                                              np.array(config["mtb_att_feedback_gains"]),
-                                                              config["tgt_ss_ang_vel"],
-                                                              Magnetorquers)
-        self.nadirpointctr = BaselineNadirPointingController(self.inertia,
-                                                    self.G_mtb_b,
-                                                    config["bcrossgain"],
-                                                    np.array(config["mtb_att_feedback_gains"]),
-                                                    np.array(config["rw_att_feedback_gains"]),
-                                                    np.array(config["rw_vel_gain"]),
-                                                    np.array(config["tgt_ss_ang_vel"]),
-                                                    np.array(config["nom_rw_ang_vel"]),
-                                                    np.array(config["nadir_cam_dir"]),
+    
+        self.controller_algorithm = None
+        if self.controller_algo == "Bcross":
+            self.controller_algorithm = BcrossController(
                                                     Magnetorquers,
-                                                    ReactionWheels)
-        """
-        inertia_tensor: np.ndarray,
-        G_mtb: np.ndarray,
-        b_cross_gain: float,
-        mtb_pd_gain: np.ndarray,
-        rw_pd_gain: np.ndarray,
-        rw_vel_gain: float,
-        target_angular_velocity: np.ndarray,
-        target_rw_ang_vel: np.ndarray,
-        Magnetorquers: list,"""
+                                                    ReactionWheels,
+                                                    config)
+        elif self.controller_algo == "Lyapunov":
+            self.controller_algorithm = LyapBasedSunPointingController(
+                                                    Magnetorquers,
+                                                    ReactionWheels,
+                                                    config)
+        elif self.controller_algo == "BaseSP":
+            self.controller_algorithm = BaselineSunPointingController(
+                                                    Magnetorquers,
+                                                    ReactionWheels,
+                                                    config)
+        elif self.controller_algo == "BaseNP":
+            self.controller_algorithm = BaselineNadirPointingController(
+                                                    Magnetorquers,
+                                                    ReactionWheels,
+                                                    config)
+        else:
+            raise ValueError(f"Unrecognized controller algorithm: {self.controller_algo}")
+  
         self.allocation_mat = np.zeros((Idx["NU"],3))
        
     def _load_gains(self):
@@ -61,67 +53,6 @@ class Controller:
                 gains[key] = float(self.config['Gains'][key])
         return gains
     
-    # define feedforward torque and state profile
-    def define_att_profile(self, date, pointing_mode, pointing_target, tgt_ang_vel, est_world_states):
-        ref_ctrl_states = np.zeros((7,))
-        
-        if pointing_target == "Sun":
-            # Define reference torque as zero
-            ref_torque = np.zeros((3,))
-            
-            # Define reference control states with constant estimated sun direction
-            # quaternion defining sun pointing direction
-            # +z pointing to self.state[13:16]
-            # +x cross product of +z and [0,0,1]
-            # +y completes the right handed coordinate system
-            z_body = -est_world_states[13:16] / np.linalg.norm(est_world_states[13:16])
-            x_body = np.cross(z_body, np.array([0,0,1]))
-            y_body = np.cross(z_body, x_body)
-            Rot_mat = np.vstack((x_body, y_body, z_body)).T
-            q_ref = rotmat2quat(Rot_mat)
-        elif pointing_target == "Nadir":
-            att_states = est_world_states[6:13]
-            # Default values if not sun pointing
-            ref_ctrl_states = np.zeros((19,))
-            ref_torque = np.zeros((3,))
-            
-        if  pointing_mode == "detumble":
-            # Default values if not sun pointing
-            ref_ctrl_states = np.zeros((19,))
-            ref_torque = np.zeros((3,))
-        elif pointing_mode == "spin-stabilized":
-            # Default values if not sun pointing
-            ref_ctrl_states = np.zeros((19,))
-            # reference angular velocity in pointing axis 
-            # ref_ctrl_states[:4]  = q_ref
-            # ref_ctrl_states[4:7] = tgt_ang_vel
-            ref_torque = np.zeros((3,))
-        elif pointing_mode == "3D-stabilized":
-            q_ref = rotmat2quat(Rot_mat)
-            ref_ctrl_states[:4] = q_ref
-            ref_torque = np.zeros((3,))
-        else:
-            raise ValueError(f"Unrecognized pointing mode: {pointing_mode}")
-            
-        return ref_torque, ref_ctrl_states
-    
-    def get_torque(self, date, ref_torque, ref_ctrl_states, est_ctrl_states, Idx):
-        # from the reference and estimated quaternions, get the error quaternion for control
-        if self.controller_algo == "Bcross":
-            mtb_torque = self.Bcrossctr.get_dipole_moment_command(est_ctrl_states, Idx)
-            return mtb_torque, []
-        elif self.controller_algo == "Lyapunov":
-            mtb_torque = self.lyapsunpointctr.get_dipole_moment_command(est_ctrl_states, Idx) 
-            return mtb_torque, []
-        elif self.controller_algo == "BaseSP":
-            mtb_torque = self.basesunpointctr.get_dipole_moment_command(est_ctrl_states, Idx) 
-            return mtb_torque, []
-        elif self.controller_algo == "BaseNP":
-            mtb_torque, rw_torque = self.nadirpointctr.get_dipole_moment_command_and_rw_torque(est_ctrl_states, Idx) 
-            return mtb_torque, rw_torque
-        else: 
-            raise ValueError(f"Unrecognized controller algorithm: {self.controller_algo}")
-        
     
     def allocate_torque(self, state, mtb_torque_cmd, rw_torque_cmd, Idx):
         # Placeholder for actuator management
@@ -147,11 +78,9 @@ class Controller:
     def run(self, date, est_world_states, Idx):
         
         self.est_world_states = est_world_states
-        # define slew profile
-        ref_torque, ref_ctrl_states = self.define_att_profile(date, self.pointing_mode, self.pointing_target, 
-                                                              self.tgt_ang_vel, est_world_states)
+       
         # feedforward and feedback controller
-        mtb_torque_cmd, rw_torque_cmd = self.get_torque(date, ref_torque, ref_ctrl_states, self.est_world_states, Idx)
+        mtb_torque_cmd, rw_torque_cmd = self.controller_algorithm.get_dipole_moment_and_rw_torque_command(est_world_states, Idx)
         
         # actuator management function
         actuator_cmd = self.allocate_torque(self.est_world_states, mtb_torque_cmd, rw_torque_cmd, Idx)
