@@ -32,7 +32,10 @@ class BaselineNadirPointingController(ControllerAlgorithm):
         self.k_mtb_rw = np.array(params["rw_vel_gain"])
         self.k_rw_att = np.array(params["rw_att_feedback_gains"])
 
-    def remove_projection_from_vector(self, vector, projection):
+    # TODO: maybe move this to a utility file
+    def remove_projection_from_vector(self, 
+                                      vector: np.ndarray, 
+                                      projection: np.ndarray) -> np.ndarray:
         projection = projection / np.linalg.norm(projection)
         return vector - np.dot(vector, projection) * projection
 

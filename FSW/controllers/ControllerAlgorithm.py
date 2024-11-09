@@ -21,12 +21,3 @@ class ControllerAlgorithm:
 
     def get_dipole_moment_and_rw_torque_command(self, state: np.ndarray, Idx: dict):
         raise NotImplementedError("This method should be overridden by subclasses")
-
-class SpecificController(ControllerAlgorithm):
-    def __init__(self, parameters, additional_param):
-        super().__init__(parameters)
-        self.additional_param = additional_param
-
-    def compute_control(self, state):
-        # Implement the specific control algorithm here
-        pass
