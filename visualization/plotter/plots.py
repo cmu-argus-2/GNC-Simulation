@@ -10,14 +10,15 @@ import numpy as np
 from parse_bin_file import parse_bin_file_wrapper
 from mpl_toolkits.basemap import Basemap
 import os
-import pymap3d as pm
 import datetime
+
+# TODO : Setup Python setuptools
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append('../../')
+from build.world.pyphysics import ECI2GEOD
 from world.math.quaternions import quatrotation
-# temp (remove later)
-import yaml
 from actuators.magnetorquer import Magnetorquer
+import yaml
 
 
 class MontecarloPlots:
@@ -64,18 +65,19 @@ class MontecarloPlots:
             x_km = data_dicts[i]["r_x ECI [m]"] / 1000
             y_km = data_dicts[i]["r_y ECI [m]"] / 1000
             z_km = data_dicts[i]["r_z ECI [m]"] / 1000
+            time_vec = data_dicts[i]["Time [s]"]
             multiPlot(
-                data_dicts[i]["Time [s]"],
+                time_vec,
                 [x_km, y_km, z_km],
                 seriesLabel=f"_{trial_number}",
             )
 
             # TODO convert from ECI to ECEF
-            tt = [datetime.datetime.utcfromtimestamp(t) for t in data_dicts[i]["Time [s]"]]
-            lat, lon, _ = pm.eci2geodetic(x_km*1e3, y_km*1e3, z_km*1e3, tt)
-            # lon = np.rad2deg(np.arctan2(y_km, x_km))
-            # lat = np.rad2deg(np.arctan(z_km / np.hypot(x_km, y_km)))
-
+            lon = np.zeros_like(x_km)
+            lat = np.zeros_like(x_km)
+            for k in range(len(x_km)):
+                lon[k], lat[k], _ = ECI2GEOD([x_km[k]*1000, y_km[k]*1000, z_km[k]*1000], time_vec[k])
+                
             # https://matplotlib.org/basemap/stable/users/examples.html
             itm.figure(ground_track)
             m.scatter(lon, lat, s=0.1, marker=".", label=f"_{trial_number}", latlon=True)

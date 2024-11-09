@@ -140,6 +140,15 @@ Vector3 ECEF2GEOD(Vector3 v_ecef);
 Vector3 SEZ2ECEF(Vector3 r_sez, double latitude, double longitude);
 
 /**
+ * @brief Transforms a vector in ECI frame to Geodetic(LLA) coordinates
+ *
+ * @param v_eci - vector in ECI frame
+ * @param t_J2000 - Time of conversion as seconds past J2000
+ * @return vector in Geodetic coordinates
+ */
+Vector3 ECI2GEOD(Vector3 v_eci, double t_J2000);
+
+/**
  * @brief Converts Keplerian Elements into ECI state
  *
  * @param KOE - Keplerian Orbital element vector
