@@ -12,7 +12,6 @@ class BaselineSunPointingController(ControllerAlgorithm):
         ReactionWheels: list,
         params: dict,
     ) -> None:
-        # [TODO] max moment should be defined per axis based on all magnetorquers, not just first
         super().__init__(Magnetorquers, ReactionWheels, params)
 
         self.kdetumb = np.array(params["bcrossgain"])
@@ -34,8 +33,12 @@ class BaselineSunPointingController(ControllerAlgorithm):
         Idx: dict,
     ) -> np.ndarray:
         """
-        Lyapunov-based sun-pointing law:
-            https://digitalcommons.usu.edu/smallsat/2024/all2024/56/
+        Calculate the dipole moment and reaction wheel torque command.
+        Parameters:
+            est_ctrl_states : Estimated control states containing various state vectors.
+            Idx : Dictionary containing indices for accessing specific state vectors.
+        Returns:
+            The calculated dipole moment and reaction wheel torque command.
         """
         # omega sat body frame ang vel
         # omega_b gyro bias

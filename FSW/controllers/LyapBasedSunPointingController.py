@@ -23,13 +23,37 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
         self.h_tgt_norm = np.linalg.norm(self.h_tgt)
 
     def get_dipole_moment_and_rw_torque_command(
+        
         self,
         est_ctrl_states: np.ndarray,
         Idx: dict,
     ) -> np.ndarray:
         """
-        Lyapunov-based sun-pointing law:
-            https://digitalcommons.usu.edu/smallsat/2024/all2024/56/
+        Calculate the dipole moment and reaction wheel torque command for the satellite's control system.
+        This method implements a Lyapunov-based sun-pointing control law to determine the necessary control inputs
+        for the satellite to achieve and maintain a desired orientation relative to the sun.
+        Args:
+            est_ctrl_states (np.ndarray): Estimated control states of the satellite, including quaternion, magnetic field,
+                          angular velocity, and sun position.
+            Idx (dict): Dictionary containing indices for accessing specific elements within the `est_ctrl_states` array.
+        Returns:
+            np.ndarray: A 3x1 array representing the dipole moment command.
+            list: An empty list (reserved for future use or additional outputs).
+        Control Logic:
+            - The method first calculates the rotation matrix from the estimated quaternion.
+            - It then computes the magnetic field, angular velocity, and normalized sun vector in the body frame.
+            - The angular momentum `h` and its norm `h_norm` are calculated.
+            - The control input `u` is initialized to zero.
+            - The method checks if the satellite is spin-stabilized and sun-pointing based on predefined thresholds.
+            - If the satellite is not spin-stabilized, the control input `u` is calculated to align the angular momentum
+              with the direction of minimum inertia.
+            - If the satellite is spin-stabilized but not sun-pointing, the control input `u` is calculated to align the
+              angular momentum with the sun vector.
+            - The control input `u` is normalized and scaled by `self.ubmtb` if it is non-zero.
+        Note:
+            - The method assumes that the input `est_ctrl_states` and `Idx` are correctly formatted and contain all
+              necessary information.
+            - The control law is based on the reference: https://digitalcommons.usu.edu/smallsat/2024/all2024/56/
         """
         # omega sat body frame ang vel
         # omega_b gyro bias

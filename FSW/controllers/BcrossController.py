@@ -27,7 +27,34 @@ class BcrossController(ControllerAlgorithm):
         Idx: dict,
     ) -> np.ndarray:
         """
-        B-cross law: https://arc.aiaa.org/doi/epdf/10.2514/1.53074
+        Calculate the dipole moment and reaction wheel torque command based on the B-cross law.
+
+        The B-cross law is used to control the attitude of a satellite by generating a magnetic dipole moment 
+        that interacts with the Earth's magnetic field. This method calculates the required dipole moment 
+        to achieve the desired angular velocity.
+
+        Args:
+            est_ctrl_states (np.ndarray): Estimated control states, including quaternion, magnetic field, 
+                                          and angular velocity.
+            Idx (dict): Dictionary containing indices for accessing specific control states from the 
+                        est_ctrl_states array.
+
+        Returns:
+            np.ndarray: A tuple containing:
+                - The commanded magnetic dipole moment (3x1 ndarray) clipped to the specified bounds.
+                - An empty list due to the absence of reaction wheel control in this method.
+
+        References:
+
+        Notes:
+            - The method first transforms the estimated magnetic field from the Earth frame to the body frame.
+            - It then calculates the difference between the current and reference angular velocities.
+            - If the norm of this difference exceeds 5 degrees (in radians), the method computes the 
+              commanded magnetic dipole moment using the B-cross law.
+            - If the difference is within 5 degrees, the commanded magnetic dipole moment is set to zero.
+            - The commanded magnetic dipole moment is clipped to the lower and upper bounds specified by 
+              self.lbmtb and self.ubmtb, respectively.
+            - Source: https://arc.aiaa.org/doi/epdf/10.2514/1.53074
         """
         Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
         magnetic_field = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]

@@ -102,7 +102,7 @@ def run(log_directory, config_path):
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
             # controller_command = controller(state_estimate)            
-            controller_command = controller.run(current_time, state_estimate, Idx)
+            controller_command = controller.run(state_estimate, Idx)
 
             assert(len(controller_command) == (num_RWs + num_MTBs))
             last_controller_update = current_time

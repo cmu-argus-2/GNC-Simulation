@@ -57,9 +57,18 @@ class Controller:
         self.allocation_mat = np.zeros((Idx["NU"],3))
     
     def allocate_torque(self, 
-                        mtb_torque_cmd, 
-                        rw_torque_cmd, 
-                        Idx):                
+                        mtb_torque_cmd: np.ndarray, 
+                        rw_torque_cmd: np.ndarray, 
+                        Idx: dict) -> np.ndarray:    
+        """
+        Allocates torque commands to the appropriate actuators.
+        Args:
+            mtb_torque_cmd (numpy.ndarray): Commanded torque for the magnetorquer bars (MTB).
+            rw_torque_cmd (numpy.ndarray or None): Commanded torque for the reaction wheels (RW). If None, no torque is applied to the reaction wheels.
+            Idx (dict): Dictionary containing indices for the actuators and their commands.
+        Returns:
+            numpy.ndarray: Actuator command array with allocated torques.
+        """
         actuator_cmd = np.zeros((Idx["NU"],1))
         actuator_cmd[Idx["U"]["MTB_TORQUE"]] = \
                     self.allocation_mat[Idx["U"]["MTB_TORQUE"],:] @ mtb_torque_cmd
@@ -68,7 +77,15 @@ class Controller:
         
         return actuator_cmd
     
-    def run(self, date, est_world_states, Idx):
+    def run(self, est_world_states: np.ndarray, Idx: dict) -> np.ndarray:
+        """
+        Executes the control algorithm to generate actuator commands based on the estimated world states.
+        Args:
+            est_world_states (dict): A dictionary containing the estimated states of the real world.
+            Idx (dict): A dictionary containing index mappings for variothe state and control signals.
+        Returns:
+            np.ndarray: A flattened array of actuator commands.
+        """
         
         self.est_world_states = est_world_states
        
