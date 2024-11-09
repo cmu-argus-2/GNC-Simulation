@@ -94,7 +94,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 
     // Gyrostat Equation
     Vector3 h_sc = I_sat*omega + G_rw_b*h_rw;
-    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) + G_rw_b*tau_rw + tau_mtb);
+    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) - G_rw_b*tau_rw + tau_mtb);
     
     // Reaction wheel speeds
     auto omega_dot_rw = tau_rw/I_rw;
