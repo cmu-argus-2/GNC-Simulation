@@ -10,7 +10,6 @@ import numpy as np
 from parse_bin_file import parse_bin_file_wrapper
 from mpl_toolkits.basemap import Basemap
 import os
-import datetime
 
 # TODO : Setup Python setuptools
 import sys
