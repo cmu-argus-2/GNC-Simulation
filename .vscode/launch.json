@@ -21,7 +21,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/main",
-            "args": [],
+            "args": ["-std=c++20"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/build",
             "environment": [

@@ -45,7 +45,6 @@ class Simulation_Parameters {
     double max_current_rating;
     double max_power;
     Magnetorquer MTB; // Magnetorquer class object
-
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
@@ -65,6 +64,9 @@ class Simulation_Parameters {
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
+
+    double controller_dt; // [s]
+    double estimator_dt;  // [s]
 
     private:
     Magnetorquer load_MTB(std::string filename);

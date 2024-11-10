@@ -23,6 +23,7 @@ add_compile_options(
     -Wunused-function
     -Wreturn-type
     -Wunused-value
+    -std=c++2a
     #-Wswitch-default
     -Wuninitialized
     -Winit-self

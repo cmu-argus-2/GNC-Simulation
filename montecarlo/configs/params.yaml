@@ -2,9 +2,12 @@
 # physical properties
 mass : 1.0 # kg
 area : 0.01 # face area m^2
-inertia : [0.002, 0, 0, 
-           0, 0.002, 0,
-           0, 0, 0.002]
+inertia : [0.001796, 0.0, 0.000716, 
+               0.0, 0.002081, 0.0,
+          0.000716, 0.0, 0.002232]
+# [0.002232, 0.0, 0.0, 
+#      0.0, 0.001, 0.0,
+#      0.0, 0.0, 0.001]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
@@ -15,39 +18,54 @@ I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
 m_rw: 0.002                # kg mass of each reaction wheel
 max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
 max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
-
+nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
 # Magnetorquers
 N_mtb : 6                                     # number of magnetorquers
 mtb_orientation : [1,0,0, 
                    0,1,0, 
                    0,0,1, 
-                   -1,0,0, 
-                   0,-1,0, 
-                   0,0,-1] # alignment axis of each magnetorquer in the body frame
-max_voltage : 5.0                          # V maximum voltage that can be applied by each magnetorquer
-coils_per_layer : 32.0  # number of coils per layer
-layers : 2.0                 # number of layers
-trace_width : 0.0007317  # m
-gap_width : 0.00008999  # m
-trace_thickness : 0.0000355603556  # 1oz copper - 35um = 1.4 mils
-max_current_rating : 1.0  # A
-max_power : 1.0  # W
-
+                   1,0,0, 
+                   0,1,0, 
+                   0,0,1] # alignment axis of each magnetorquer in the body frame
+max_voltage : [5,5,5,5,5,5]  # V maximum voltage that can be applied by each magnetorquer
+coils_per_layer : [32.0,32.0,32.0,32.0,32.0,32.0]  # number of coils per layer
+layers : [2.0,2.0,2.0,2.0,2.0,2.0]                 # number of layers
+trace_width : [0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317]  # m
+gap_width : [0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999]  # m
+trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556]  # 1oz copper - 35um = 1.4 mils
+pcb_side_max: [0.1,0.1,0.1,0.1,0.1,0.1] # m
+max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
+max_power : [1,1,1,1,1,1]  # W
+# payload camera
+nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sim settings
-MAX_TIME: 108000 # [s]
-dt: 0.01             # [s]
-earliest_sim_start_time_UTC: 2027-01-01 12:00:00
-latest_sim_start_time_UTC: 2027-02-28 23:59:59
+MAX_TIME: 20000 # [s]
+dt: 1         # [s]
+earliest_sim_start_time_UTC: 2025-10-01 12:00:00
+latest_sim_start_time_UTC: 2025-10-28 23:59:59
 useDrag : False
 useSRP : False
-
+# [6981e3, 0.00064, 95, 1.0804, 27.7899, 190];
 # Initialization
-semimajor_axis : 6971000 # [m]
+semimajor_axis : 6921000 # [m]
 eccentricity : 0.007 
-inclination : 90 # [deg]
-RAAN : 167 # [deg]
-AOP : 35 # [deg]
+inclination : 96 # [deg]
+RAAN : 0 # 147 # [deg]
+AOP : 63 # [deg]
 true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
-initial_angular_rate : [0.3,0,0] # [rad/s]
+initial_angular_rate : [0.2,0.3,0.2] # [rad/s]
 
+algorithm: "Bcross" # "Lyapunov" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
+bcrossgain: 0.0028
+
+mtb_att_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
+                    [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
+                    [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
+rw_att_feedback_gains: [0.7071, 0.0028]
+rw_vel_gain: 6.5e-7
+pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
+pointing_target: "Nadir" # "Nadir" or "Sun"
+tgt_ss_ang_vel: 10 # [deg/s]
+controller_dt: 1 # [s]
+estimator_dt: 1    # [s]

@@ -2,3 +2,4 @@ numpy
 matplotlib
 basemap
 psutil
+pyigrf

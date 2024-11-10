@@ -6,69 +6,117 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from time import time
 from simulation_manager import logger
+from FSW.controllers.controller import Controller
 import os
+import yaml
+from actuators.magnetorquer import Magnetorquer
+from actuators.reaction_wheels import ReactionWheel
+# from build.world.pyphysics.models import MagneticField, SRP
 
 START_TIME = time()
 
-controller_dt = 0.1
-estimator_dt = 1
-
-
 def controller(state_estimate):
-    return np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    
+    return np.array([0, 0, 0, 0, 0, 0, 0])
 
 
 def estimator(y):
     return y
 
+
 def sensors(true_state): # TODO : sensors will return a shorter measurement vector and estimator will estimate the full state
-    return true_state + np.array([5000, 5000, 5000, 5, 5, 5, 0.05, 0.05, 0.05, 0.05, 2, 2, 2, 2])*np.random.random()
+    return true_state # + np.array([5000, 5000, 5000, 5, 5, 5, 0.05, 0.05, 0.05, 0.05, 2, 2, 2, 2])*np.random.random()
 
 
 def run(log_directory, config_path):
     logr = logger.MultiFileLogger(log_directory)
 
-    params = SimParams(config_path)
+    params = SimParams(config_path) # cpp params
+    with open(config_path, "r") as f:
+        pyparams = yaml.safe_load(f)
 
     initial_state = np.array(params.initial_state) # Get initial state
+    newstate = np.array(rk4(initial_state, np.zeros((params.num_MTBs + params.num_RWs, 1)), params, -params.dt, params.dt))
+    initial_state[13:19]  = newstate[13:19]
     num_RWs = params.num_RWs
     num_MTBs = params.num_MTBs
 
     # Logging Legend
     state_labels = ["r_x ECI [m]", "r_y ECI [m]", "r_z ECI [m]", "v_x ECI [m/s]", "v_y ECI [m/s]", "v_z ECI [m/s]",
-                "q_w", "q_x", "q_y", "q_z", "omega_x [rad/s]", "omega_y [rad/s]", "omega_z [rad/s]"] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
+                "q_w", "q_x", "q_y", "q_z", "omega_x [rad/s]", "omega_y [rad/s]", "omega_z [rad/s]",
+                "rSun_x ECI [m]","rSun_y ECI [m]","rSun_z ECI [m]","xMag ECI [T]","yMag ECI [T]","zMag ECI [T]"] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
     #measurement_labels = state_labels # TODO : Fix based on partial state measurement
     state_estimate_labels = ["r_hat_x ECI [m]", "r_hat_y ECI [m]", "r_hat_z ECI [m]", "v_hat_x ECI [m/s]", "v_hat_y ECI [m/s]", "v_hat_z ECI [m/s]",
-                "q_hat_w", "q_hat_x", "q_hat_y", "q_hat_z", "omega_hat_x [rad/s]", "omega_hat_y [rad/s]", "omega_hat_z [rad/s]"] + ["omega_hat_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
-    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + ["V_RW_" + str(i) + " [V]" for i in range(num_RWs)]
-
+                "q_hat_w", "q_hat_x", "q_hat_y", "q_hat_z", "omega_hat_x [rad/s]", "omega_hat_y [rad/s]", "omega_hat_z [rad/s]",
+                "rSun_x ECI [m]","rSun_y ECI [m]","rSun_z ECI [m]","xMag ECI [T]","yMag ECI [T]","zMag ECI [T]"] + ["omega_hat_RW_" + str(i) + " [rad/s]" for i in range(num_RWs)]
+    input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(num_MTBs)] + ["T_RW_" + str(i) + " [Nm]" for i in range(num_RWs)]
 
     true_state = initial_state
     measured_state = true_state
     state_estimate = true_state
-    print(true_state)
 
     last_controller_update = 0
     last_estimator_update = 0
     last_print_time = -1e99
+    
+    controller_dt = pyparams['controller_dt']
+    estimator_dt = pyparams['estimator_dt']
 
     current_time = 0
-    controller_command = np.zeros((num_MTBs + num_RWs, ))
+    controller_command = np.zeros((num_MTBs + num_RWs))
+    
+    Idx = {}
+    # Intialize the dynamics class as the "world"
+    Idx["NX"] = 19
+    Idx["X"]  = dict()
+    Idx["X"]["ECI_POS"]   = slice(0, 3)
+    Idx["X"]["ECI_VEL"]   = slice(3, 6)
+    Idx["X"]["TRANS"]     = slice(0, 6)
+    Idx["X"]["QUAT"]      = slice(6, 10)
+    Idx["X"]["ANG_VEL"]   = slice(10, 13)
+    Idx["X"]["ROT"]       = slice(6, 13)
+    Idx["X"]["SUN_POS"]   = slice(13, 16)
+    Idx["X"]["MAG_FIELD"] = slice(16, 19)
+
+    # Actuator specific data
+    # self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
+
+    # Actuator Indexing
+    N_rw  = pyparams["N_rw"]
+    N_mtb = pyparams["N_mtb"]
+    Idx["NU"]    = N_rw + N_mtb
+    Idx["N_rw"]  = N_rw
+    Idx["N_mtb"] = N_mtb
+    Idx["U"]  = dict()
+    Idx["U"]["MTB_TORQUE"]  = slice(0, N_mtb)
+    Idx["U"]["RW_TORQUE"] = slice(N_mtb, N_rw + N_mtb)
+    # RW speed should be a state because it depends on the torque applied and needs to be propagated
+    Idx["NX"] = Idx["NX"] + N_rw
+    Idx["X"]["RW_SPEED"]   = slice(19, 19 + N_rw)
+    Magnetorquers = [Magnetorquer(pyparams, IdMtb) for IdMtb in range(N_mtb)] 
+    ReactionWheels = [ReactionWheel(pyparams, IdRw) for IdRw in range(N_rw)]
+    controller = Controller(pyparams, Magnetorquers, ReactionWheels, Idx)
+    
     while current_time <= params.MAX_TIME:
 
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
-            controller_command = controller(state_estimate)
+            # controller_command = controller(state_estimate)            
+            controller_command = controller.run(state_estimate, Idx)
+
             assert(len(controller_command) == (num_RWs + num_MTBs))
             last_controller_update = current_time
 
         # Update Estimator Prediction at Estimator Update Frequency
         if current_time >= last_estimator_update + estimator_dt:
+            # w = get_gyro_measurement()
             state_estimate = estimator(measured_state)
             last_estimator_update = current_time
+            # print(f"Estimator update: {current_time}")
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
+            print(f"True State: {true_state}")
             last_print_time = current_time
 
         logr.log_v( # TODO : add state estimate and measurement labels
@@ -79,7 +127,6 @@ def run(log_directory, config_path):
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)
         measured_state = sensors(true_state)
-
         current_time += params.dt
 
     elapsed_seconds_wall_clock = time() - START_TIME

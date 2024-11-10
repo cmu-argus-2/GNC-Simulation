@@ -6,8 +6,8 @@
 double COPPER_RESISTIVITY = 1.724e-8;
 class Magnetorquer {
     public:
-        Magnetorquer(int N_MTBs, double maxVolt, double coilsPerLayer, double layers, double traceThickness,
-                     double traceWidth, double gapWidth, double maxPower, double maxCurrentRating,
+        Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer, VectorXd layers, VectorXd traceThickness,
+                     VectorXd pcb_side_max, VectorXd traceWidth, VectorXd gapWidth, VectorXd maxPower, VectorXd maxCurrentRating,
                      MatrixXd mtb_orientation);
 
         /**
@@ -21,20 +21,22 @@ class Magnetorquer {
         Vector3 getTorque(VectorXd voltages, Quaternion q, Vector3 magnetic_field);
 
     private:
-        double num_MTBs; 
-        double max_voltage;
-        double N; // coils per layer
-        double pcb_layers; // Number of layers
-        double N_per_face; 
-        double trace_thickness;
-        double trace_width;
-        double gap_width;
-        double coil_width;
-        double max_power;
-        double max_current_rating;
-        double pcb_side_max;
-        double A_cross;
-        double resistance;
+        int num_MTBs; 
+        VectorXd max_voltage;
+        VectorXd N; // coils per layer
+        VectorXd pcb_layers; // Number of layers
+        VectorXd N_per_face; 
+        VectorXd trace_thickness;
+        VectorXd pcb_side_max;
+        VectorXd trace_width;
+        VectorXd gap_width;
+        VectorXd coil_width;
+        VectorXd coil_length;
+        VectorXd max_power;
+        VectorXd max_current_rating;
+        VectorXd A_cross;
+        VectorXd resistance;
+        VectorXd max_dipole_moment;
         MatrixXd G_mtb_b;
 };
 

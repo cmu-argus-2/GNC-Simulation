@@ -151,7 +151,7 @@ Vector3 ECI2GEOD(Vector3 v_eci, double t_J2000);
 /**
  * @brief Converts Keplerian Elements into ECI state
  *
- * @param KOE - Keplerian Orbital ement vector
+ * @param KOE - Keplerian Orbital element vector
  * @param t_J2000 - seconds past J2000
  * @return position and velocity vector in ECI coordinates
  */

@@ -15,6 +15,8 @@
 #include "utils_and_transforms.h"
 #include "ReactionWheel.h"
 #include "Magnetorquer.h"
+//#include "MagneticField.h"
+#include "SRP.h" //../world/physics/models/
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -47,7 +49,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
 
-
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
     earliest_sim_start_unix = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());
@@ -65,6 +66,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     initial_angular_rate = Eigen::Map<Vector3>(params["initial_angular_rate"].as<std::vector<double>>().data());
     
     initial_state = initializeSatellite(earliest_sim_start_unix);
+
+    controller_dt = params["controller_dt"].as<double>();
+    estimator_dt  = params["estimator_dt"].as<double>();
 }
 
 /*
@@ -77,14 +81,22 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {
-    VectorXd State(13+num_RWs);
+    VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
     State(Eigen::seqN(10,3)) = initial_angular_rate;
-    State(Eigen::seqN(13, num_RWs)).setZero();
+    // Sun Position [m]
+    // TODO(prcachim): figure out how to get sun position
+    State(Eigen::seqN(13, 3)) = Eigen::VectorXd::Zero(3); //sun_position_eci(epoch);
+    // Magnetic Field [T]
+    // Vector3 Bfield = MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
+    // std::cout << "Magnetic Field: " << Bfield << std::endl;
+    State(Eigen::seqN(16, 3)) = Eigen::VectorXd::Zero(3); // Bfield;
+    //MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
+    State(Eigen::seqN(19, num_RWs)).setZero();
 
     return State;
 
@@ -96,20 +108,21 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename)
 
     num_MTBs = params["N_mtb"].as<int>();
     G_mtb_b = Eigen::Map<Eigen::MatrixXd>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
-
+    
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["N_mtb"].as<int>(),
-                                    params["max_voltage"].as<double>(),
-                                    params["coils_per_layer"].as<double>(),
-                                    params["layers"].as<double>(),
-                                    params["trace_width"].as<double>(),
-                                    params["gap_width"].as<double>(),
-                                    params["trace_thickness"].as<double>(),
-                                    params["max_power"].as<double>(),
-                                    params["max_current_rating"].as<double>(),
+                                    Eigen::Map<VectorXd>(params["max_voltage"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["coils_per_layer"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["layers"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["trace_thickness"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["pcb_side_max"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["trace_width"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["gap_width"].as<std::vector<double>>().data(),  num_MTBs),
+                                    Eigen::Map<VectorXd>(params["max_power"].as<std::vector<double>>().data(), num_MTBs),
+                                    Eigen::Map<VectorXd>(params["max_current_rating"].as<std::vector<double>>().data(), num_MTBs),
                                     G_mtb_b
                                     );
-    
+
     return magnetorquer;
 }
 
