@@ -10,6 +10,7 @@ import numpy as np
 from parse_bin_file import parse_bin_file_wrapper
 from mpl_toolkits.basemap import Basemap
 import os
+from matplotlib import pyplot as plt
 
 # TODO : Setup Python setuptools
 import sys
@@ -32,6 +33,7 @@ class MontecarloPlots:
         self.plot_dir = plot_directory
         self.PERCENTAGE_OF_DATA_TO_PLOT = PERCENTAGE_OF_DATA_TO_PLOT
         self.close_after_saving = close_after_saving
+        self.NUM_TRIALS = len(self.trials)
 
     def true_state_plots(self):
         filenames = []
@@ -158,7 +160,7 @@ class MontecarloPlots:
         print(f"Elapsed time to read in data: {END-START:.2f} s")
 
         # ==========================================================================
-        itm.figure()
+        self.attitude_error_figure = itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
                 data_dicts[i]["Time [s]"],
@@ -166,9 +168,8 @@ class MontecarloPlots:
                 seriesLabel=f"_{trial_number}",
             )
         annotateMultiPlot(title="Attitude error [deg]", ylabels=["$x$", "$y$", "$z$"])
-        save_figure(itm.gcf(), self.plot_dir, "attitude_estimate_error.png", self.close_after_saving)
         # ==========================================================================
-        itm.figure()
+        self.gyro_bias_error_figure = itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
                 data_dicts[i]["Time [s]"],
@@ -178,8 +179,8 @@ class MontecarloPlots:
                 seriesLabel=f"_{trial_number}",
             )
         annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
-        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)
 
+        self._plot_state_estimate_covariance()
         # ========================= True gyro bias plots =========================
         filenames = []
         for trial_number in self.trials:
@@ -251,3 +252,115 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Gyro measurement [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_measurement.png", self.close_after_saving)
+
+    def _plot_state_estimate_covariance(self):
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/state_covariance.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+
+        # point-wise minimum std-dev across all self.trials at each point in time
+        min_sigma_attitude_x = None
+        min_sigma_attitude_y = None
+        min_sigma_attitude_z = None
+        min_sigma_gyro_bias_x = None
+        min_sigma_gyro_bias_y = None
+        min_sigma_gyro_bias_z = None
+
+        summed_sigma_attitude_x = None
+        summed_sigma_attitude_y = None
+        summed_sigma_attitude_z = None
+        summed_sigma_gyro_bias_x = None
+        summed_sigma_gyro_bias_y = None
+        summed_sigma_gyro_bias_z = None
+
+        # point-wise maximum std-dev across all self.trials at each point in time
+        max_sigma_attitude_x = None
+        max_sigma_attitude_y = None
+        max_sigma_attitude_z = None
+        max_sigma_gyro_bias_x = None
+        max_sigma_gyro_bias_y = None
+        max_sigma_gyro_bias_z = None
+
+        # self.trials might have slightly different lengths; identify length of the
+        # longest trial and pad the other time series to match that length
+        num_datapoints = [len(data_dicts[i]["Time [s]"]) for i in range(len(self.trials))]
+        N_max = max(num_datapoints)
+
+        for i, trial_number in enumerate(self.trials):
+            data_dict = data_dicts[i]
+
+        t = None
+        # fmt: off
+        for i, trial_number in enumerate(self.trials):
+            data_dict = data_dicts[i]
+            N = num_datapoints[i]
+            if t is None and N == N_max:
+                t = data_dict["Time [s]"]
+
+            padding_length = N_max - N
+            padding = np.empty((padding_length))
+            padding[:] = np.nan
+
+            sigma_attitude_x = np.concatenate((np.rad2deg(data_dict["attitude error x [rad]"]), padding))
+            sigma_attitude_y = np.concatenate((np.rad2deg(data_dict["attitude error y [rad]"]), padding))
+            sigma_attitude_z = np.concatenate((np.rad2deg(data_dict["attitude error z [rad]"]), padding))
+            sigma_gyro_bias_x = np.concatenate((np.rad2deg(data_dict["gyro bias error x [rad/s]"]), padding))
+            sigma_gyro_bias_y = np.concatenate((np.rad2deg(data_dict["gyro bias error y [rad/s]"]), padding))
+            sigma_gyro_bias_z = np.concatenate((np.rad2deg(data_dict["gyro bias error z [rad/s]"]), padding))
+            # "RuntimeWarning: All-NaN axis encountered" is expected
+            min_sigma_attitude_x = sigma_attitude_x if min_sigma_attitude_x is None else np.nanmin((min_sigma_attitude_x, sigma_attitude_x), axis=0)
+            min_sigma_attitude_y = sigma_attitude_y if min_sigma_attitude_y is None else np.nanmin((min_sigma_attitude_y, sigma_attitude_y), axis=0)
+            min_sigma_attitude_z = sigma_attitude_z if min_sigma_attitude_z is None else np.nanmin((min_sigma_attitude_z, sigma_attitude_z), axis=0)
+            min_sigma_gyro_bias_x = sigma_gyro_bias_x if min_sigma_gyro_bias_x is None else np.nanmin((min_sigma_gyro_bias_x, sigma_gyro_bias_x), axis=0)
+            min_sigma_gyro_bias_y = sigma_gyro_bias_y if min_sigma_gyro_bias_y is None else np.nanmin((min_sigma_gyro_bias_y, sigma_gyro_bias_y), axis=0)
+            min_sigma_gyro_bias_z = sigma_gyro_bias_z if min_sigma_gyro_bias_z is None else np.nanmin((min_sigma_gyro_bias_z, sigma_gyro_bias_z), axis=0)
+
+            summed_sigma_attitude_x = sigma_attitude_x if summed_sigma_attitude_x is None else np.nansum((summed_sigma_attitude_x, sigma_attitude_x), axis=0)
+            summed_sigma_attitude_y = sigma_attitude_y if summed_sigma_attitude_y is None else np.nansum((summed_sigma_attitude_y, sigma_attitude_y), axis=0)
+            summed_sigma_attitude_z = sigma_attitude_z if summed_sigma_attitude_z is None else np.nansum((summed_sigma_attitude_z, sigma_attitude_z), axis=0)
+            summed_sigma_gyro_bias_x = sigma_gyro_bias_x if summed_sigma_gyro_bias_x is None else np.nansum((summed_sigma_gyro_bias_x, sigma_gyro_bias_x), axis=0)
+            summed_sigma_gyro_bias_y = sigma_gyro_bias_y if summed_sigma_gyro_bias_y is None else np.nansum((summed_sigma_gyro_bias_y, sigma_gyro_bias_y), axis=0)
+            summed_sigma_gyro_bias_z = sigma_gyro_bias_z if summed_sigma_gyro_bias_z is None else np.nansum((summed_sigma_gyro_bias_z, sigma_gyro_bias_z), axis=0)
+
+            max_sigma_attitude_x = sigma_attitude_x if max_sigma_attitude_x is None else np.nanmax((max_sigma_attitude_x, sigma_attitude_x), axis=0)
+            max_sigma_attitude_y = sigma_attitude_y if max_sigma_attitude_y is None else np.nanmax((max_sigma_attitude_y, sigma_attitude_y), axis=0)
+            max_sigma_attitude_z = sigma_attitude_z if max_sigma_attitude_z is None else np.nanmax((max_sigma_attitude_z, sigma_attitude_z), axis=0)
+            max_sigma_gyro_bias_x = sigma_gyro_bias_x if max_sigma_gyro_bias_x is None else np.nanmax((max_sigma_gyro_bias_x, sigma_gyro_bias_x), axis=0)
+            max_sigma_gyro_bias_y = sigma_gyro_bias_y if max_sigma_gyro_bias_y is None else np.nanmax((max_sigma_gyro_bias_y, sigma_gyro_bias_y), axis=0)
+            max_sigma_gyro_bias_z = sigma_gyro_bias_z if max_sigma_gyro_bias_z is None else np.nanmax((max_sigma_gyro_bias_z, sigma_gyro_bias_z), axis=0)
+
+        # point-wise mean std-dev across all self.trials at each poitn in time
+        mean_sigma_attitude_x = summed_sigma_attitude_x / self.NUM_TRIALS
+        mean_sigma_attitude_y = summed_sigma_attitude_y / self.NUM_TRIALS
+        mean_sigma_attitude_z = summed_sigma_attitude_z / self.NUM_TRIALS
+        mean_sigma_gyro_bias_x = summed_sigma_gyro_bias_x / self.NUM_TRIALS
+        mean_sigma_gyro_bias_y = summed_sigma_gyro_bias_y / self.NUM_TRIALS
+        mean_sigma_gyro_bias_z = summed_sigma_gyro_bias_z / self.NUM_TRIALS
+
+        itm.figure(self.attitude_error_figure)
+        multiPlot(t, [3 * min_sigma_attitude_x, 3 * min_sigma_attitude_y, 3 * min_sigma_attitude_z], linestyle="-.", linewidth=1, color='g', seriesLabel=r"3$\sigma$ (min)")
+        multiPlot(t, [3 * mean_sigma_attitude_x, 3 * mean_sigma_attitude_y, 3 * mean_sigma_attitude_z], linestyle="-.", linewidth=1, color='k', seriesLabel=r"3$\sigma$ (mean)")
+        multiPlot(t, [3 * max_sigma_attitude_x, 3 * max_sigma_attitude_y, 3 * max_sigma_attitude_z], linestyle="-.", linewidth=1, color='r', seriesLabel=r"3$\sigma$ (max)")
+        multiPlot(t, [-3 * min_sigma_attitude_x, -3 * min_sigma_attitude_y, -3 * min_sigma_attitude_z], linestyle="-.", linewidth=1, color='g')
+        multiPlot(t, [-3 * mean_sigma_attitude_x, -3 * mean_sigma_attitude_y, -3 * mean_sigma_attitude_z], linestyle="-.", linewidth=1, color='k')
+        multiPlot(t, [-3 * max_sigma_attitude_x, -3 * max_sigma_attitude_y, -3 * max_sigma_attitude_z], linestyle="-.", linewidth=1, color='r')
+
+        itm.figure(self.gyro_bias_error_figure)
+        multiPlot(t, [3 * min_sigma_gyro_bias_x, 3 * min_sigma_gyro_bias_y, 3 * min_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='g', seriesLabel=r"3$\sigma$ (min)")
+        multiPlot(t, [3 * mean_sigma_gyro_bias_x, 3 * mean_sigma_gyro_bias_y, 3 * mean_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='k', seriesLabel=r"3$\sigma$ (mean)")
+        multiPlot(t, [3 * max_sigma_gyro_bias_x, 3 * max_sigma_gyro_bias_y, 3 * max_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='r', seriesLabel=r"3$\sigma$ (max)")
+        multiPlot(t, [-3 * min_sigma_gyro_bias_x, -3 * min_sigma_gyro_bias_y, -3 * min_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='g')
+        multiPlot(t, [-3 * mean_sigma_gyro_bias_x, -3 * mean_sigma_gyro_bias_y, -3 * mean_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='k')
+        multiPlot(t, [-3 * max_sigma_gyro_bias_x, -3 * max_sigma_gyro_bias_y, -3 * max_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='r')
+
+        # fmt: on
+
+        save_figure(self.attitude_error_figure, self.plot_dir, "attitude_estimate_error.png", self.close_after_saving)
+        save_figure(self.gyro_bias_error_figure, self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)

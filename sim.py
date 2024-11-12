@@ -46,8 +46,8 @@ def run(log_directory, config_path):
 
     # TODO read these in from parameter file; don't hardcode
     initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
-    sigma_w_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
-    sigma_v_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
+    sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
+    sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
     scale_factor_error_range = [-0.01, 0.01]  # [-]
 
     gyro_params = []
@@ -86,6 +86,9 @@ def run(log_directory, config_path):
         + [f"omega_hat_{axis} [rad/s]" for axis in "xyz"]
         + [f"omega_hat_RW_{i} [rad/s]" for i in range(num_RWs)]
     )
+    EKF_sigma_labels = [f"attitude error {axis} [rad]" for axis in "xyz"] + [
+        f"gyro bias error {axis} [rad/s]" for axis in "xyz"
+    ]
 
     input_labels = [f"V_MTB_{i} [V]" for i in range(num_MTBs)] + [f"V_RW_{i} [V]" for i in range(num_RWs)]
 
@@ -111,9 +114,9 @@ def run(log_directory, config_path):
             last_controller_update = current_time
 
         # Sun Sensor update
-        SUN_IN_VIEW = False  # TODO actually check if sun is in view
+        SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
-            true_sun_ray_ECI = np.array([1, 0, 0])  # TODO get actual sun ray from cpp
+            true_sun_ray_ECI = np.array([10, 1, 0])  # TODO get actual sun ray from cpp
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
 
@@ -163,6 +166,13 @@ def run(log_directory, config_path):
             "states.bin",
             [current_time] + true_state.tolist() + state_estimate.tolist() + controller_command.tolist(),
             ["Time [s]"] + true_state_labels + estimated_state_labels + input_labels,
+        )
+
+        EKF_sigmas = attitude_ekf.get_uncertainty_sigma()
+        logr.log_v(
+            "state_covariance.bin",
+            [current_time] + EKF_sigmas.tolist(),
+            ["Time [s]"] + EKF_sigma_labels,
         )
 
         if current_time >= last_print_time + 1000:

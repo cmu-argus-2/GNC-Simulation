@@ -73,6 +73,9 @@ class Attitude_EKF:
         G[3:6, 3:6] = np.eye(3)
         return G
 
+    def get_uncertainty_sigma(self):
+        return np.sqrt(np.diag(self.P))
+
     def gyro_update(self, gyro_measurement, t):
         if self.last_gyro_measurement_time is None:  # first time
             dt = self.NOMINAL_GYRO_DT

@@ -1,4 +1,22 @@
 ---
+# Sim settings
+MAX_TIME: 100 # [s]
+dt: 0.01             # [s]
+earliest_sim_start_time_UTC: 2027-01-01 12:00:00
+latest_sim_start_time_UTC: 2027-02-28 23:59:59
+useDrag : False
+useSRP : False
+
+# Initialization
+semimajor_axis : 6971000 # [m]
+eccentricity : 0.007 
+inclination : 90 # [deg]
+RAAN : 167 # [deg]
+AOP : 35 # [deg]
+true_anomaly : 0 # [deg]
+initial_attitude : [1,0,0,0] 
+initial_angular_rate : [0.3,0,0] # [rad/s]
+
 # physical properties
 mass : 1.0 # kg
 area : 0.01 # face area m^2
@@ -32,22 +50,3 @@ gap_width : 0.00008999  # m
 trace_thickness : 0.0000355603556  # 1oz copper - 35um = 1.4 mils
 max_current_rating : 1.0  # A
 max_power : 1.0  # W
-
-# Sim settings
-MAX_TIME: 10 # [s]
-dt: 0.01             # [s]
-earliest_sim_start_time_UTC: 2027-01-01 12:00:00
-latest_sim_start_time_UTC: 2027-02-28 23:59:59
-useDrag : False
-useSRP : False
-
-# Initialization
-semimajor_axis : 6971000 # [m]
-eccentricity : 0.007 
-inclination : 90 # [deg]
-RAAN : 167 # [deg]
-AOP : 35 # [deg]
-true_anomaly : 0 # [deg]
-initial_attitude : [1,0,0,0] 
-initial_angular_rate : [0.3,0,0] # [rad/s]
-
