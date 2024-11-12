@@ -29,6 +29,7 @@ def run(log_directory, config_path):
 
     params = SimParams(config_path)
 
+    current_time = 0
     true_state = np.array(params.initial_true_state)  # Get initial state
     print(true_state)
     num_RWs = params.num_RWs
@@ -39,7 +40,6 @@ def run(log_directory, config_path):
     initial_gyro_bias_estimate = np.deg2rad(np.zeros(3))  # [rad/s]
 
     sigma_initial_attitude = np.deg2rad(5)  # [rad]
-    sigma_initial_gyro_bias = np.deg2rad(5)  # [rad/s]
     sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
     sigma_gyro_bias_deriv = np.deg2rad(0.15)  # [(rad/s)/sqrt(s))]
     sigma_sunsensor = np.deg2rad(5)  # [rad]
@@ -62,11 +62,11 @@ def run(log_directory, config_path):
         initial_ECI_R_b_estimate,
         initial_gyro_bias_estimate,
         sigma_initial_attitude,
-        sigma_initial_gyro_bias,
         sigma_gyro_white,
         sigma_gyro_bias_deriv,
         sigma_sunsensor,
         GYRO_DT,
+        current_time,
     )
 
     # Logging Legend
@@ -102,7 +102,6 @@ def run(log_directory, config_path):
     last_sun_sensor_measurement_time = 0
     last_print_time = -1e99
 
-    current_time = 0
     controller_command = np.zeros((num_MTBs + num_RWs,))
     while current_time <= params.MAX_TIME:
         true_ECI_R_body = R.from_quat([*true_state[7:10], true_state[6]])
@@ -116,11 +115,11 @@ def run(log_directory, config_path):
         # Sun Sensor update
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
-            true_sun_ray_ECI = np.array([10, 1, 0])  # TODO get actual sun ray from cpp
+            true_sun_ray_ECI = np.array([0.5, 0, 0.8])  # TODO get actual sun ray from cpp
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
 
-            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI)
+            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI, current_time)
 
             last_sun_sensor_measurement_time = current_time
 
@@ -150,11 +149,20 @@ def run(log_directory, config_path):
         estimated_gyro_bias = attitude_ekf.get_gyro_bias()
         gyro_bias_error = true_gyro_bias - estimated_gyro_bias
 
-        logr.log_v(
-            "attitude_ekf_error.bin",
-            [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
-            ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
-        )
+        if attitude_ekf.initialized:
+            logr.log_v(
+                "attitude_ekf_error.bin",
+                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
+            )
+
+            EKF_sigmas = attitude_ekf.get_uncertainty_sigma()
+            logr.log_v(
+                "state_covariance.bin",
+                [current_time] + EKF_sigmas.tolist(),
+                ["Time [s]"] + EKF_sigma_labels,
+            )
+
         logr.log_v("gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels)
         logr.log_v(
             "gyro_bias_estimated.bin",
@@ -166,13 +174,6 @@ def run(log_directory, config_path):
             "states.bin",
             [current_time] + true_state.tolist() + state_estimate.tolist() + controller_command.tolist(),
             ["Time [s]"] + true_state_labels + estimated_state_labels + input_labels,
-        )
-
-        EKF_sigmas = attitude_ekf.get_uncertainty_sigma()
-        logr.log_v(
-            "state_covariance.bin",
-            [current_time] + EKF_sigmas.tolist(),
-            ["Time [s]"] + EKF_sigma_labels,
         )
 
         if current_time >= last_print_time + 1000:
