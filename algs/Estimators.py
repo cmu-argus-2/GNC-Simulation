@@ -105,15 +105,16 @@ class Attitude_EKF:
     def get_sun_sensor_measurement_jacobian(self, true_sun_ray_ECI):
         H = np.zeros((3, 6))
         H[:3, :3] = -skew_symmetric(true_sun_ray_ECI)
+        return H
 
     def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI):
-        predicted_sun_ray_ECI = self.get_ECI_R_b() * measured_sun_ray_in_body
+        predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
         innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
 
         s_cross = skew_symmetric(true_sun_ray_ECI)
         self.R_sunsensor = self.sigma_sunsensor**2 * s_cross @ np.eye(3) @ s_cross.T
 
-        H = self.get_sun_sensor_measurement_jacobian()
+        H = self.get_sun_sensor_measurement_jacobian(true_sun_ray_ECI)
         S = H @ self.P @ H.T + self.R_sunsensor
         K = self.P @ H.T @ np.linalg.pinv(S, 1e-4)  # TODO tuneme
         dx = K @ innovation
@@ -126,4 +127,4 @@ class Attitude_EKF:
 
         # Symmetric Joseph update
         Identity = np.eye(6)
-        self.P = (Identity - K @ H) @ self.P @ (Identity - K @ H).T + K @ R @ K.T
+        self.P = (Identity - K @ H) @ self.P @ (Identity - K @ H).T + K @ self.R_sunsensor @ K.T

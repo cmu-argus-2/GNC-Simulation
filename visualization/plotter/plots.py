@@ -14,7 +14,8 @@ import datetime
 
 # TODO : Setup Python setuptools
 import sys
-sys.path.append('../../')
+
+sys.path.append("../../")
 from build.world.pyphysics import ECI2GEOD
 
 
@@ -72,8 +73,8 @@ class MontecarloPlots:
             lon = np.zeros_like(x_km)
             lat = np.zeros_like(x_km)
             for k in range(len(x_km)):
-                lon[k], lat[k], _ = ECI2GEOD([x_km[k]*1000, y_km[k]*1000, z_km[k]*1000], time_vec[k])
-                
+                lon[k], lat[k], _ = ECI2GEOD([x_km[k] * 1000, y_km[k] * 1000, z_km[k] * 1000], time_vec[k])
+
             # https://matplotlib.org/basemap/stable/users/examples.html
             itm.figure(ground_track)
             m.scatter(lon, lat, s=0.1, marker=".", label=f"_{trial_number}", latlon=True)
@@ -92,7 +93,9 @@ class MontecarloPlots:
         for i, trial_number in enumerate(self.trials):
             multiPlot(
                 data_dicts[i]["Time [s]"],
-                np.array([data_dicts[i]["v_x ECI [m/s]"], data_dicts[i]["v_y ECI [m/s]"], data_dicts[i]["v_z ECI [m/s]"]])
+                np.array(
+                    [data_dicts[i]["v_x ECI [m/s]"], data_dicts[i]["v_y ECI [m/s]"], data_dicts[i]["v_z ECI [m/s]"]]
+                )
                 / 1000,
                 seriesLabel=f"_{trial_number}",
             )
@@ -113,8 +116,98 @@ class MontecarloPlots:
         for i, trial_number in enumerate(self.trials):
             multiPlot(
                 data_dicts[i]["Time [s]"],
-                np.rad2deg([data_dicts[i]["omega_x [rad/s]"], data_dicts[i]["omega_y [rad/s]"], data_dicts[i]["omega_z [rad/s]"]]),
+                np.rad2deg(
+                    [
+                        data_dicts[i]["omega_x [rad/s]"],
+                        data_dicts[i]["omega_y [rad/s]"],
+                        data_dicts[i]["omega_z [rad/s]"],
+                    ]
+                ),
                 seriesLabel=f"_{trial_number}",
             )
         annotateMultiPlot(title="True body angular rate [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
         save_figure(itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving)
+
+    def EKF_plots(self):
+        # error plots
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/attitude_ekf_error.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+
+        # ==========================================================================
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(np.array([data_dicts[i]["x [rad]"], data_dicts[i]["y [rad]"], data_dicts[i]["z [rad]"]])),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Attitude error [deg]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "attitude_estimate_error.png", self.close_after_saving)
+        # ==========================================================================
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)
+
+        # True gyro bias plots
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_true.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # ==========================================================================
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_true.png", self.close_after_saving)
+
+        # Estimated gyro bias plots
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_estimated.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # ==========================================================================
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Estimated Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimated.png", self.close_after_saving)

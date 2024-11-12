@@ -91,6 +91,8 @@ def run(log_directory, config_path):
 
     attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
     gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
+    true_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
+    estimated_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
 
     last_controller_update = 0
     last_gyro_measurement_time = 0
@@ -110,9 +112,9 @@ def run(log_directory, config_path):
         # Sun Sensor update
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
-            true_sun_ray_ECI = TODO
-            body_R_ECI = R.from_quat([*true_state[7:10], true_state[6]]).inverse()  # TODO inverse?
-            true_sun_ray_body = body_R_ECI * true_sun_ray_ECI
+            true_sun_ray_ECI = np.array([1, 0, 0])  # TODO get actual sun ray from cpp
+            body_R_ECI = R.from_quat([*true_state[7:10], true_state[6]]).inv()  # TODO inverse?
+            true_sun_ray_body = body_R_ECI.as_matrix() @ true_sun_ray_ECI
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
 
             attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI)
@@ -137,12 +139,20 @@ def run(log_directory, config_path):
             gyro_bias_error = true_gyro_bias - estimated_gyro_bias
 
             logr.log_v(
-                "attitude_ekf_state.bin",
+                "attitude_ekf_error.bin",
                 [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
                 ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
             )
+            logr.log_v(
+                "gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels
+            )
+            logr.log_v(
+                "gyro_bias_estimated.bin",
+                [current_time] + estimated_gyro_bias.tolist(),
+                ["Time [s]"] + estimated_gyro_bias_labels,
+            )
 
-            last_gyro_measurement_time_time = current_time
+            last_gyro_measurement_time = current_time
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")

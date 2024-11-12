@@ -14,5 +14,5 @@ class SunSensor:
 
         perturbation = R.from_rotvec(axis_of_angular_error * angular_error)
 
-        measurement = perturbation * clean_signal
+        measurement = perturbation.as_matrix() @ clean_signal
         return measurement
