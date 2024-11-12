@@ -33,12 +33,12 @@ class Attitude_EKF:
         self.set_gyro_bias(initial_gyro_bias_estimate)
 
         self.P = np.eye(6)
-        self.P[0:3, 0:3] = sigma_initial_attitude**2
-        self.P[3:6, 3:6] = sigma_initial_gyro_bias**2
+        self.P[0:3, 0:3] *= sigma_initial_attitude**2
+        self.P[3:6, 3:6] *= sigma_initial_gyro_bias**2
 
         self.Q = np.eye(6)
-        self.Q[0:3, 0:3] = sigma_gyro_white**2
-        self.Q[3:6, 3:6] = sigma_gyro_bias_deriv**2
+        self.Q[0:3, 0:3] *= sigma_gyro_white**2
+        self.Q[3:6, 3:6] *= sigma_gyro_bias_deriv**2
         self.NOMINAL_GYRO_DT = NOMINAL_GYRO_DT
 
         self.last_gyro_measurement_time = None
@@ -101,7 +101,7 @@ class Attitude_EKF:
         """
         A = np.zeros((12, 12))
         A[0:6, 0:6] = -F
-        A[0:6, 6:12] = G * self.Q * G.transpose()
+        A[0:6, 6:12] = G @ self.Q @ G.transpose()
         A[6:12, 6:12] = F.transpose()
         A = A * dt
 
@@ -111,9 +111,9 @@ class Attitude_EKF:
         AExp = expm(A)
         Phi = AExp[6:12, 6:12].T
         Qdk = Phi @ AExp[0:6, 6:12]
-
+        np.set_printoptions(suppress=True, linewidth=999)
         # Propogate covariance
-        self.P = Phi * self.P * Phi.T + Qdk
+        self.P = Phi @ self.P @ Phi.T + Qdk
         self.last_gyro_measurement_time = t
 
     def get_sun_sensor_measurement_jacobian(self, true_sun_ray_ECI):
