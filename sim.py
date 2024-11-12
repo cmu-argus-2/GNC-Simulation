@@ -196,6 +196,8 @@ WHITE = "\033[37m"
 RESET = "\033[0m"  # Resets all attributes
 
 if __name__ == "__main__":
+    TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
+    np.random.seed(TRIAL_NUMBER)
     run(TRIAL_DIRECTORY, PARAMETER_FILEPATH)
