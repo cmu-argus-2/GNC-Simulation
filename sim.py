@@ -45,10 +45,10 @@ def run(log_directory, config_path):
     sigma_sunsensor = np.deg2rad(5)  # [rad]
 
     # TODO read these in from parameter file; don't hardcode
-    initial_bias_range = np.deg2rad([0, 0])  # [-5.0, 5.0])  # [rad/s]
-    sigma_w_range = np.deg2rad([0, 0])  # [0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
-    sigma_v_range = np.deg2rad([0, 0])  # [0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
-    scale_factor_error_range = [0, 0]  # [-0.01, 0.01]  # [-]
+    initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
+    sigma_w_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
+    sigma_v_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
+    scale_factor_error_range = [-0.01, 0.01]  # [-]
 
     gyro_params = []
     for i in range(3):
