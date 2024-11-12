@@ -41,7 +41,7 @@ def run(log_directory, config_path):
 
     sigma_initial_attitude = np.deg2rad(5)  # [rad]
     sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
-    sigma_gyro_bias_deriv = np.deg2rad(0.15)  # [(rad/s)/sqrt(s))]
+    sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
     sigma_sunsensor = np.deg2rad(5)  # [rad]
 
     # TODO read these in from parameter file; don't hardcode

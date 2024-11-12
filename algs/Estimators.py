@@ -37,6 +37,7 @@ class Attitude_EKF:
         self.P = None
         self.sigma_initial_attitude = sigma_initial_attitude
         self.sigma_gyro_white = sigma_gyro_white
+        self.sigma_gyro_bias_deriv = sigma_gyro_bias_deriv
 
         self.Q = np.eye(6)
         self.Q[0:3, 0:3] *= sigma_gyro_white**2
@@ -245,8 +246,8 @@ class Attitude_EKF:
 
             # Set the attitude
             # rotation since getting initial attitude
-            time_spinning = t - self.time_of_initial_attitude
-            b0_R_b1 = R.from_rotvec(estimated_omega_in_body_frame * time_spinning)
+            time_to_initialize = t - self.time_of_initial_attitude
+            b0_R_b1 = R.from_rotvec(estimated_omega_in_body_frame * time_to_initialize)
             current_ECI_R_b = inital_ECI_R_b * b0_R_b1
             self.set_ECI_R_b(current_ECI_R_b)
 
@@ -260,9 +261,17 @@ class Attitude_EKF:
             self.P[0:3, 0:3] = np.eye(3) * self.sigma_initial_attitude**2
 
             # TODO Deriving the initial gyro bias covaraince
-            averaging_time = time_spinning
+            random_walk_in_true_gyro_bias_while_waiting_to_initialize = (
+                np.eye(3) * time_to_initialize * self.sigma_gyro_bias_deriv**2
+            )
+            averaging_time = time_to_initialize
             average_gyro_measurement_cov = np.eye(3) * self.sigma_gyro_white**2 / (averaging_time)
-            self.P[3:6, 3:6] = average_gyro_measurement_cov + estimated_omega_in_body_frame_cov
+            initial_gyro_bias_covaraince = (
+                random_walk_in_true_gyro_bias_while_waiting_to_initialize
+                + average_gyro_measurement_cov
+                + estimated_omega_in_body_frame_cov
+            )
+            self.P[3:6, 3:6] = initial_gyro_bias_covaraince
 
             self.initialized = True
 
