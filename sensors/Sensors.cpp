@@ -21,15 +21,15 @@ VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters
     int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyro + Mag Field + Light Sensors
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
-    measurement(Eigen::seqN(0,6)) = GPS(state(Eigen::seqN(0,3)), state(Eigen::seqN(3,3)), t_J2000, sc);
-    measurement(Eigen::seqN(6,3)) = Gyroscope(state(Eigen::seqN(10,3)), sc);
+    measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
+    measurement(Eigen::seqN(6,3)) = Gyroscope(state, sc);
     measurement(Eigen::seqN(9,3)) = Magnetometer(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
 
     return measurement;
 }
 
-Vector6 GPS(const Vector3 pos, const Vector3 vel, double t_J2000, Simulation_Parameters sc)
+Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
     // Noise Distributions
     static std::normal_distribution<double> pos_noise_dist(0, sc.gps_pos_std);
@@ -43,8 +43,8 @@ Vector6 GPS(const Vector3 pos, const Vector3 vel, double t_J2000, Simulation_Par
     Vector3 vel_noise = Vector3::NullaryExpr([&](){return vel_noise_dist(gen);});
 
     // GPS returns measurements in ECEF
-    y(Eigen::seqN(0,3)) = R_ECI2ECEF*pos + sc.gps_pos_std*pos_noise; // Add noise to the measurements
-    y(Eigen::seqN(3,3)) = R_ECI2ECEF*vel + sc.gps_vel_std*vel_noise;
+    y(Eigen::seqN(0,3)) = R_ECI2ECEF*state(Eigen::seqN(0,3)) + sc.gps_pos_std*pos_noise; // Add noise to the measurements
+    y(Eigen::seqN(3,3)) = R_ECI2ECEF*state(Eigen::seqN(3,3)) + sc.gps_vel_std*vel_noise;
 
     return y;
 }
@@ -80,13 +80,12 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
     Vector3 B_eci = state(Eigen::seqN(16,3));
 
     // Noisy Measurement
-    Vector3 magnetometer_noise = Vector3::NullaryExpr([&](){return mag_noise_dist(gen);});
-    Vector3 B_body = quat.toRotationMatrix().transpose()*B_eci + magnetometer_noise;
+    Vector3 B_body = random_SO3_rotation(mag_noise_dist)*quat.toRotationMatrix().transpose()*B_eci;
 
     return B_body;
 }
 
-Vector3 Gyroscope(const Vector3 omega, Simulation_Parameters sc)
+Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
 {
     static Vector3 bias = Vector3::Zero();
 
@@ -102,7 +101,7 @@ Vector3 Gyroscope(const Vector3 omega, Simulation_Parameters sc)
     Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
 
     // Noisy Measurement
-    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*omega + bias + white_noise;
+    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(Eigen::seqN(10,3)) + bias + white_noise;
     
     return omega_meas;
 }
@@ -125,5 +124,9 @@ PYBIND11_MODULE(pysensors, m) {
     m.doc() = "pybind11 sensors plugin";   // module docstring    
 
     m.def("readSensors", &ReadSensors, "Populate Sensor Measurement Vector");
+    m.def("readGPS", &GPS, "Populate GPS Measurement Vector");
+    m.def("readGyroscope", &Gyroscope, "Populate Gyroscope Measurement Vector");
+    m.def("readSunSensor", &SunSensor, "Populate Sun Sensor Measurement Vector");
+    m.def("readMagnetometer", &Magnetometer, "Populate Magnetometer Measurement Vector");
 }
 #endif
