@@ -103,6 +103,7 @@ def run(log_directory, config_path):
     controller_command = np.zeros((num_MTBs + num_RWs,))
     while current_time <= params.MAX_TIME:
         true_ECI_R_body = R.from_quat([*true_state[7:10], true_state[6]])
+
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + CONTROLLER_DT:
             controller_command = controller(state_estimate)
@@ -124,44 +125,39 @@ def run(log_directory, config_path):
         if current_time >= last_gyro_measurement_time + GYRO_DT:
             true_omega_body_wrt_ECI_in_body = true_state[10:13]
             gyro_measurement = gyro.update(true_omega_body_wrt_ECI_in_body)
+            attitude_ekf.gyro_update(gyro_measurement, current_time)
+            last_gyro_measurement_time = current_time
 
-            attitude_ekf.gyro_update(gyro_measurement)
-
-            # get attitude estimate of the body wrt ECI
-            estimated_ECI_R_body = attitude_ekf.get_ECI_R_b()
-            attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
-
-            true_gyro_bias = gyro.get_bias()
-            estimated_gyro_bias = attitude_ekf.get_gyro_bias()
-            gyro_bias_error = true_gyro_bias - estimated_gyro_bias
-
-            logr.log_v(
-                "attitude_ekf_error.bin",
-                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
-                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
-            )
-            logr.log_v(
-                "gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels
-            )
-            logr.log_v(
-                "gyro_bias_estimated.bin",
-                [current_time] + estimated_gyro_bias.tolist(),
-                ["Time [s]"] + estimated_gyro_bias_labels,
-            )
             logr.log_v(
                 "gyro_measurement.bin",
                 [current_time] + gyro_measurement.tolist(),
                 ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
             )
 
-            last_gyro_measurement_time = current_time
-
         # write the EKF's updated attitude estimate into the overall state vector
         state_estimate[6:10] = attitude_ekf.get_quat_ECI_R_b()  # [w, x, y, z]
 
-        if current_time >= last_print_time + 1000:
-            print(f"Heartbeat: {current_time}")
-            last_print_time = current_time
+        true_state = rk4(true_state, controller_command, params, current_time, params.dt)
+
+        # get attitude estimate of the body wrt ECI
+        estimated_ECI_R_body = attitude_ekf.get_ECI_R_b()
+        attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
+
+        true_gyro_bias = gyro.get_bias()
+        estimated_gyro_bias = attitude_ekf.get_gyro_bias()
+        gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+
+        logr.log_v(
+            "attitude_ekf_error.bin",
+            [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+            ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
+        )
+        logr.log_v("gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels)
+        logr.log_v(
+            "gyro_bias_estimated.bin",
+            [current_time] + estimated_gyro_bias.tolist(),
+            ["Time [s]"] + estimated_gyro_bias_labels,
+        )
 
         logr.log_v(
             "states.bin",
@@ -169,7 +165,9 @@ def run(log_directory, config_path):
             ["Time [s]"] + true_state_labels + estimated_state_labels + input_labels,
         )
 
-        true_state = rk4(true_state, controller_command, params, current_time, params.dt)
+        if current_time >= last_print_time + 1000:
+            print(f"Heartbeat: {current_time}")
+            last_print_time = current_time
 
         current_time += params.dt
 

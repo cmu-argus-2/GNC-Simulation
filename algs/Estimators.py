@@ -26,7 +26,7 @@ class Attitude_EKF:
         sigma_gyro_white,  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv,  # [(rad/s)/sqrt(s))]
         sigma_sunsensor,  # [rad]
-        GYRO_DT,
+        NOMINAL_GYRO_DT,
     ):
         self.state_vector = np.zeros(7)
         self.set_ECI_R_b(initial_ECI_R_b_estimate)
@@ -39,7 +39,9 @@ class Attitude_EKF:
         self.Q = np.eye(6)
         self.Q[0:3, 0:3] = sigma_gyro_white**2
         self.Q[3:6, 3:6] = sigma_gyro_bias_deriv**2
-        self.GYRO_DT = GYRO_DT
+        self.NOMINAL_GYRO_DT = NOMINAL_GYRO_DT
+
+        self.last_gyro_measurement_time = None
 
         self.sigma_sunsensor = sigma_sunsensor
 
@@ -71,9 +73,14 @@ class Attitude_EKF:
         G[3:6, 3:6] = np.eye(3)
         return G
 
-    def gyro_update(self, gyro_measurement):
+    def gyro_update(self, gyro_measurement, t):
+        if self.last_gyro_measurement_time is None:  # first time
+            dt = self.NOMINAL_GYRO_DT
+        else:
+            dt = t - self.last_gyro_measurement_time
+
         unbiased_gyro_measurement = gyro_measurement - self.get_gyro_bias()
-        rotvec = unbiased_gyro_measurement * self.GYRO_DT
+        rotvec = unbiased_gyro_measurement * dt
         delta_rotation = R.from_rotvec(rotvec)
         ECI_R_b_prev = self.get_ECI_R_b()
         ECI_R_b_curr = ECI_R_b_prev * delta_rotation
@@ -93,7 +100,7 @@ class Attitude_EKF:
         A[0:6, 0:6] = -F
         A[0:6, 6:12] = G * self.Q * G.transpose()
         A[6:12, 6:12] = F.transpose()
-        A = A * self.GYRO_DT
+        A = A * dt
 
         # Compute Matrix exponential and extract values for Phi and Qdk*/
         # TODO does this matrix exponential work with circuit python?
@@ -104,6 +111,7 @@ class Attitude_EKF:
 
         # Propogate covariance
         self.P = Phi * self.P * Phi.T + Qdk
+        self.last_gyro_measurement_time = t
 
     def get_sun_sensor_measurement_jacobian(self, true_sun_ray_ECI):
         H = np.zeros((3, 6))
