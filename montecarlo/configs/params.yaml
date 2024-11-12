@@ -34,7 +34,7 @@ max_current_rating : 1.0  # A
 max_power : 1.0  # W
 
 # Sim settings
-MAX_TIME: 1080 # [s]
+MAX_TIME: 10 # [s]
 dt: 0.01             # [s]
 earliest_sim_start_time_UTC: 2027-01-01 12:00:00
 latest_sim_start_time_UTC: 2027-02-28 23:59:59

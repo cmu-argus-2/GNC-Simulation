@@ -54,6 +54,9 @@ class Attitude_EKF:
         q = self.state_vector[0:4]  # [w, x, y, z]
         return R.from_quat([*q[1:4], q[0]])  # from_quat takes in [x, y, z, w]
 
+    def get_quat_ECI_R_b(self):
+        return self.state_vector[0:4]  # [w, x, y, z]
+
     def get_gyro_bias(self):
         return self.state_vector[4:7]
 

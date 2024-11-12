@@ -10,7 +10,6 @@ import numpy as np
 from parse_bin_file import parse_bin_file_wrapper
 from mpl_toolkits.basemap import Basemap
 import os
-import datetime
 
 # TODO : Setup Python setuptools
 import sys
@@ -37,7 +36,7 @@ class MontecarloPlots:
     def true_state_plots(self):
         filenames = []
         for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/state_true.bin"))
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/states.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
@@ -102,6 +101,7 @@ class MontecarloPlots:
         annotateMultiPlot(title="True Velocity (ECI) [km/s]", ylabels=["$v_x$", "$v_y$", "$v_z$"])
         save_figure(itm.gcf(), self.plot_dir, "velocity_ECI_true.png", self.close_after_saving)
         # ==========================================================================
+        # Truth
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
@@ -111,6 +111,22 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="True attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
         save_figure(itm.gcf(), self.plot_dir, "attitude_true.png", self.close_after_saving)
+
+        # Estimated
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                [
+                    data_dicts[i]["q_hat_w"],
+                    data_dicts[i]["q_hat_x"],
+                    data_dicts[i]["q_hat_y"],
+                    data_dicts[i]["q_hat_z"],
+                ],
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Estimated attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
+        save_figure(itm.gcf(), self.plot_dir, "attitude_estimate.png", self.close_after_saving)
         # ==========================================================================
         itm.figure()
         for i, trial_number in enumerate(self.trials):
@@ -164,7 +180,7 @@ class MontecarloPlots:
         annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)
 
-        # True gyro bias plots
+        # ========================= True gyro bias plots =========================
         filenames = []
         for trial_number in self.trials:
             filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_true.bin"))
@@ -175,7 +191,7 @@ class MontecarloPlots:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
-        # ==========================================================================
+        # --------------------------------------------------------------------------
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
@@ -188,7 +204,7 @@ class MontecarloPlots:
         annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_true.png", self.close_after_saving)
 
-        # Estimated gyro bias plots
+        # ======================= Estimated gyro bias plots =======================
         filenames = []
         for trial_number in self.trials:
             filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_estimated.bin"))
@@ -199,7 +215,7 @@ class MontecarloPlots:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
-        # ==========================================================================
+        # --------------------------------------------------------------------------
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             multiPlot(
@@ -211,3 +227,27 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Estimated Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimated.png", self.close_after_saving)
+
+        # ======================= Gyro measurement plots =======================
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_measurement.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # --------------------------------------------------------------------------
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Gyro measurement [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_measurement.png", self.close_after_saving)

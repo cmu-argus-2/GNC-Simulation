@@ -45,10 +45,10 @@ def run(log_directory, config_path):
     sigma_sunsensor = np.deg2rad(5)  # [rad]
 
     # TODO read these in from parameter file; don't hardcode
-    initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
-    sigma_w_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
-    sigma_v_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
-    scale_factor_error_range = [0.99, 1.01]  # [-]
+    initial_bias_range = np.deg2rad([0, 0])  # [-5.0, 5.0])  # [rad/s]
+    sigma_w_range = np.deg2rad([0, 0])  # [0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
+    sigma_v_range = np.deg2rad([0, 0])  # [0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
+    scale_factor_error_range = [0, 0]  # [-0.01, 0.01]  # [-]
 
     gyro_params = []
     for i in range(3):
@@ -70,7 +70,7 @@ def run(log_directory, config_path):
     )
 
     # Logging Legend
-    state_labels = (
+    true_state_labels = (
         [f"r_{axis} ECI [m]" for axis in "xyz"]
         + [f"v_{axis} ECI [m/s]" for axis in "xyz"]
         + [f"q_{axis}" for axis in "wxyz"]
@@ -79,7 +79,7 @@ def run(log_directory, config_path):
     )
 
     # measurement_labels = state_labels # TODO : Fix based on partial state measurement
-    state_estimate_labels = (
+    estimated_state_labels = (
         [f"r_hat_{axis} ECI [m]" for axis in "xyz"]
         + [f"v_hat_{axis} ECI [m/s]" for axis in "xyz"]
         + [f"q_hat_{axis}" for axis in "wxyz"]
@@ -102,7 +102,7 @@ def run(log_directory, config_path):
     current_time = 0
     controller_command = np.zeros((num_MTBs + num_RWs,))
     while current_time <= params.MAX_TIME:
-
+        true_ECI_R_body = R.from_quat([*true_state[7:10], true_state[6]])
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + CONTROLLER_DT:
             controller_command = controller(state_estimate)
@@ -110,11 +110,10 @@ def run(log_directory, config_path):
             last_controller_update = current_time
 
         # Sun Sensor update
-        SUN_IN_VIEW = True  # TODO actually check if sun is in view
+        SUN_IN_VIEW = False  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
             true_sun_ray_ECI = np.array([1, 0, 0])  # TODO get actual sun ray from cpp
-            body_R_ECI = R.from_quat([*true_state[7:10], true_state[6]]).inv()  # TODO inverse?
-            true_sun_ray_body = body_R_ECI.as_matrix() @ true_sun_ray_ECI
+            true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
 
             attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI)
@@ -129,10 +128,8 @@ def run(log_directory, config_path):
             attitude_ekf.gyro_update(gyro_measurement)
 
             # get attitude estimate of the body wrt ECI
-            state_estimate[6:10] = attitude_ekf.get_ECI_R_b().as_quat()
-            attitude_estimate_error = (
-                R.from_quat(true_state[6:10]).inv() * R.from_quat(state_estimate[6:10])
-            ).as_rotvec()
+            estimated_ECI_R_body = attitude_ekf.get_ECI_R_b()
+            attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
 
             true_gyro_bias = gyro.get_bias()
             estimated_gyro_bias = attitude_ekf.get_gyro_bias()
@@ -151,17 +148,25 @@ def run(log_directory, config_path):
                 [current_time] + estimated_gyro_bias.tolist(),
                 ["Time [s]"] + estimated_gyro_bias_labels,
             )
+            logr.log_v(
+                "gyro_measurement.bin",
+                [current_time] + gyro_measurement.tolist(),
+                ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
+            )
 
             last_gyro_measurement_time = current_time
+
+        # write the EKF's updated attitude estimate into the overall state vector
+        state_estimate[6:10] = attitude_ekf.get_quat_ECI_R_b()  # [w, x, y, z]
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
             last_print_time = current_time
 
-        logr.log_v(  # TODO : add state estimate and measurement labels
-            "state_true.bin",
+        logr.log_v(
+            "states.bin",
             [current_time] + true_state.tolist() + state_estimate.tolist() + controller_command.tolist(),
-            ["Time [s]"] + state_labels + state_estimate_labels + input_labels,
+            ["Time [s]"] + true_state_labels + estimated_state_labels + input_labels,
         )
 
         true_state = rk4(true_state, controller_command, params, current_time, params.dt)
