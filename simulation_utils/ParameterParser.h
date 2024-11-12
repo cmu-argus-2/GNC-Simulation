@@ -45,12 +45,32 @@ class Simulation_Parameters {
     double max_current_rating;
     double max_power;
     Magnetorquer MTB; // Magnetorquer class object
+
+    /* Sensors */
+    // GPS
+    double gps_pos_std;
+    double gps_vel_std;
+
+    // Sun Sensors
+    int num_photodiodes;
+    MatrixXd G_pd_b; // orientation matrix for photodiodes
+    double photodiode_std;
+
+    // Magnetometer
+    double magnetometer_noise_std;
+
+    // Gyroscope
+    double gyro_sigma_w;
+    double gyro_sigma_v;
+    double gyro_correlation_time;
+    double gyro_scale_factor_err;
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
     double dt;                         // [s]
-    double earliest_sim_start_unix;    // [s]
+    double earliest_sim_start_unix;    // [s] Next three time variables are measured relative to J2000
     double latest_sim_start_unix;      // [s]
+    double sim_start_time;             // [s] 
     bool useDrag; // set to False to deactivate drag calcs
     bool useSRP; // set to False to deactivate SRP calcs
 

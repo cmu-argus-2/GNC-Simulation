@@ -15,8 +15,8 @@
 #include "utils_and_transforms.h"
 #include "ReactionWheel.h"
 #include "Magnetorquer.h"
-//#include "MagneticField.h"
-#include "SRP.h" //../world/physics/models/
+#include "MagneticField.h"
+#include "SRP.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -48,6 +48,20 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     num_RWs = params["N_rw"].as<int>();
     G_rw_b = Eigen::Map<Eigen::MatrixXd>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     I_rw = params["I_rw"].as<double>();
+
+    gps_pos_std = params["gps_pos_std"].as<double>();
+    gps_vel_std = params["gps_vel_std"].as<double>();
+
+    num_photodiodes = params["num_photodiodes"].as<int>();
+    G_pd_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["photodiode_normals"].as<std::vector<double>>().data(), 3, num_photodiodes);
+    photodiode_std = params["photodiode_std"].as<double>();
+
+    magnetometer_noise_std = params["magnetometer_noise_std"].as<double>();
+
+    gyro_sigma_w = params["gyro_sigma_w"].as<double>();
+    gyro_sigma_v = params["gyro_sigma_v"].as<double>();
+    gyro_correlation_time = params["gyro_correlation_time"].as<double>(); 
+    gyro_scale_factor_err = params["gyro_scale_factor_err"].as<double>();
 
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
@@ -81,6 +95,9 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {
+    // Initialize Time
+    sim_start_time = earliest_sim_start_unix; // TODO : change this based on MC dispersion
+    
     VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
@@ -88,14 +105,8 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
     State(Eigen::seqN(10,3)) = initial_angular_rate;
-    // Sun Position [m]
-    // TODO(prcachim): figure out how to get sun position
-    State(Eigen::seqN(13, 3)) = Eigen::VectorXd::Zero(3); //sun_position_eci(epoch);
-    // Magnetic Field [T]
-    // Vector3 Bfield = MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
-    // std::cout << "Magnetic Field: " << Bfield << std::endl;
-    State(Eigen::seqN(16, 3)) = Eigen::VectorXd::Zero(3); // Bfield;
-    //MagneticField(CartesianState(Eigen::seqN(0, 3)), epoch);
+    State(Eigen::seqN(13, 3)) = sun_position_eci(epoch);
+    State(Eigen::seqN(16, 3)) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
     State(Eigen::seqN(19, num_RWs)).setZero();
 
     return State;
@@ -144,10 +155,11 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
         //
+        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
+        //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)
-        .def_readonly("earliest_sim_start_unix", &Simulation_Parameters::earliest_sim_start_unix)
-        .def_readonly("latest_sim_start_unix", &Simulation_Parameters::latest_sim_start_unix)
+        .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         //

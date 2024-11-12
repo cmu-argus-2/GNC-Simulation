@@ -1,5 +1,7 @@
 ---
+# -----------------------------------------------------------------------------------------------------------
 # physical properties
+# -----------------------------------------------------------------------------------------------------------
 mass : 1.0 # kg
 area : 0.01 # face area m^2
 inertia : [0.001796, 0.0, 0.000716, 
@@ -11,7 +13,9 @@ inertia : [0.001796, 0.0, 0.000716,
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
+# -----------------------------------------------------------------------------------------------------------
 # Reaction Wheels
+# -----------------------------------------------------------------------------------------------------------
 N_rw : 1                   # number of reaction wheels
 rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
 I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
@@ -19,7 +23,10 @@ m_rw: 0.002                # kg mass of each reaction wheel
 max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
 max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
 nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
+
+# -----------------------------------------------------------------------------------------------------------
 # Magnetorquers
+# -----------------------------------------------------------------------------------------------------------
 N_mtb : 6                                     # number of magnetorquers
 mtb_orientation : [1,0,0, 
                    0,1,0, 
@@ -36,26 +43,59 @@ trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0
 pcb_side_max: [0.1,0.1,0.1,0.1,0.1,0.1] # m
 max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
 max_power : [1,1,1,1,1,1]  # W
-# payload camera
+
+# -----------------------------------------------------------------------------------------------------------
+# Payload
+# -----------------------------------------------------------------------------------------------------------
 nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
+
+# -----------------------------------------------------------------------------------------------------------
+# Sensors
+# -----------------------------------------------------------------------------------------------------------
+gps_pos_std : 10 # [UNITS: m]
+gps_vel_std : 1 # [UNITS: m/s]
+
+num_photodiodes : 6
+photodiode_normals : [1,0,0, 
+                       0,1,0, 
+                       0,0,1, 
+                      -1,0,0, 
+                       0,-1,0, 
+                       0,0,-1] # Light diode normals in body frame
+photodiode_std : 1000 # [UNITS: lux]
+
+magnetometer_noise_std : 0.005 # [UNITS: T]
+
+gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
+gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
+gyro_correlation_time : 500000.0 # [UNITS: s]
+gyro_scale_factor_err : 1.0e-5
+
+# -----------------------------------------------------------------------------------------------------------
 # Sim settings
-MAX_TIME: 20000 # [s]
-dt: 1         # [s]
-earliest_sim_start_time_UTC: 2025-10-01 12:00:00
-latest_sim_start_time_UTC: 2025-10-28 23:59:59
+# -----------------------------------------------------------------------------------------------------------
+MAX_TIME: 108000 # [s]
+dt: 0.01         # [s]
+earliest_sim_start_time_UTC: 2024-10-01 12:00:00
+latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
-# [6981e3, 0.00064, 95, 1.0804, 27.7899, 190];
+
+# -----------------------------------------------------------------------------------------------------------
 # Initialization
-semimajor_axis : 6921000 # [m]
+# -----------------------------------------------------------------------------------------------------------
+semimajor_axis : 6908000 # [m]
 eccentricity : 0.007 
-inclination : 96 # [deg]
-RAAN : 0 # 147 # [deg]
+inclination : 97.75 # [deg]
+RAAN : 171 # [deg]
 AOP : 63 # [deg]
 true_anomaly : 0 # [deg]
 initial_attitude : [1,0,0,0] 
 initial_angular_rate : [0.2,0.3,0.2] # [rad/s]
 
+# -----------------------------------------------------------------------------------------------------------
+# Controller Parameters
+# -----------------------------------------------------------------------------------------------------------
 algorithm: "Bcross" # "Lyapunov" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 0.0028
 
