@@ -99,6 +99,13 @@ def run(log_directory, config_path):
     
     while current_time <= params.MAX_TIME:
 
+        # Update Estimator Prediction at Estimator Update Frequency
+        if current_time >= last_estimator_update + estimator_dt:
+            # w = get_gyro_measurement()
+            state_estimate = estimator(measured_state)
+            last_estimator_update = current_time
+            # print(f"Estimator update: {current_time}")
+
         # Update Controller Command based on Controller Update Frequency
         if current_time >= last_controller_update + controller_dt:
             # controller_command = controller(state_estimate)            
@@ -106,13 +113,6 @@ def run(log_directory, config_path):
 
             assert(len(controller_command) == (num_RWs + num_MTBs))
             last_controller_update = current_time
-
-        # Update Estimator Prediction at Estimator Update Frequency
-        if current_time >= last_estimator_update + estimator_dt:
-            # w = get_gyro_measurement()
-            state_estimate = estimator(measured_state)
-            last_estimator_update = current_time
-            # print(f"Estimator update: {current_time}")
 
         if current_time >= last_print_time + 1000:
             print(f"Heartbeat: {current_time}")
