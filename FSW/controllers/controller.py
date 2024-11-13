@@ -54,7 +54,6 @@ class Controller:
         else:
             raise ValueError(f"Unrecognized controller algorithm: {self.controller_algo}")
   
-        self.allocation_mat = np.zeros((Idx["NU"],3))
     
     def allocate_torque(self, 
                         mtb_torque_cmd: np.ndarray, 

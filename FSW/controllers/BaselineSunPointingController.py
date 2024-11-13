@@ -66,7 +66,7 @@ class BaselineSunPointingController(ControllerAlgorithm):
             Bhat = crossproduct(magnetic_field)
             Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
 
-            err_vec = np.hstack((-self.I_min_direction-sun_vector, self.ref_angular_velocity - angular_velocity))
+            err_vec = np.hstack((-self.J @ (self.I_min_direction+sun_vector), self.J @ (self.ref_angular_velocity - angular_velocity)))
             u = Bhat_pseudo_inv @ self.k @ err_vec
 
         u = np.clip(a=u, a_min=self.lbmtb, a_max=self.ubmtb)
