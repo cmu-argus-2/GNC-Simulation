@@ -18,6 +18,7 @@ from build.world.pyphysics import ECI2GEOD
 from world.math.quaternions import quatrotation
 from actuators.magnetorquer import Magnetorquer
 import yaml
+from matplotlib.animation import FuncAnimation
 
 
 class MontecarloPlots:
@@ -292,7 +293,53 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Total Magnetorquer Body Frame Torque [Nm]", ylabels=["T_x [Nm]", "T_y [Nm]", "T_z [Nm]"])
         save_figure(itm.gcf(), self.plot_dir, "total_mtb_body_frame_torque.png", self.close_after_saving)
-        
 
-        
- 
+        # ==========================================================================
+        # TODO: Video of attitude
+        import matplotlib.pyplot as plt
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
+        ax.set_zlim([-1, 1])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        ax.set_title('Attitude Animation in ECI with Sun Vector')
+
+        quiver_x = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='r', label='Body X-axis')
+        quiver_y = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='g', label='Body Y-axis')
+        quiver_z = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='b', label='Body Z-axis')
+        # quiver_x2 = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, label='Min J Axis')
+        # quiver_y2 = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, label='Med J Axis')
+        quiver_im = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='k', label='Max J Axis')
+        sun_quiver = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='y', label='Sun Vector')
+        ax.legend([quiver_x, quiver_y, quiver_z, quiver_im, sun_quiver], ['Body X-axis', 'Body Y-axis', 'Body Z-axis', 'Max J Axis', 'Sun Vector'])
+
+        def update_quiver(num, data_dicts, quiver_x, quiver_y, quiver_z, quiver_im, sun_quiver):
+            quat = np.array([data_dicts[0]["q_w"][num], data_dicts[0]["q_x"][num], data_dicts[0]["q_y"][num], data_dicts[0]["q_z"][num]])
+            Re2b = quatrotation(quat)
+            body_x = Re2b @ np.array([1, 0, 0])
+            body_y = Re2b @ np.array([0, 1, 0])
+            body_z = Re2b @ np.array([0, 0, 1])
+            # inertia_min = Re2b @ eigenvectors[:, idx[0]]
+            # inertia_med = Re2b @ eigenvectors[:, idx[1]]
+            inertia_max = Re2b @ major_axis
+            sun_vector_eci = np.array([data_dicts[0]["rSun_x ECI [m]"][num], data_dicts[0]["rSun_y ECI [m]"][num], data_dicts[0]["rSun_z ECI [m]"][num]])
+            sun_vector_eci = sun_vector_eci / np.linalg.norm(sun_vector_eci)
+
+            quiver_x.set_segments([[[0, 0, 0], body_x]])
+            quiver_y.set_segments([[[0, 0, 0], body_y]])
+            quiver_z.set_segments([[[0, 0, 0], body_z]])
+            quiver_im.set_segments([[[0, 0, 0], inertia_max]])
+            sun_quiver.set_segments([[[0, 0, 0], sun_vector_eci]])
+
+            return quiver_x, quiver_y, quiver_z, quiver_im, sun_quiver
+        fps = 24
+        max_duration = 15  # seconds
+        max_frames = fps * max_duration
+        total_frames = len(data_dicts[0]["Time [s]"])
+        step = max(1, total_frames // max_frames)
+
+        ani = FuncAnimation(fig, update_quiver, frames=range(0, total_frames, step), fargs=(data_dicts, quiver_x, quiver_y, quiver_z, quiver_im, sun_quiver), interval=1000/fps, blit=False)
+        ani.save(os.path.join(self.plot_dir, 'attitude_animation.gif'), writer='pillow', fps=20)
