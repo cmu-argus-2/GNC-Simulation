@@ -75,6 +75,17 @@ class BaselineNadirPointingController(ControllerAlgorithm):
         nadir_vector = Re2b @ (-eci_pos)
         nadir_vector = nadir_vector / np.linalg.norm(nadir_vector)
 
+        # target rotation matrix
+        # Get the quaternion in the body frame that points G_rw to the orbit_vector
+        q_tgt = quat_from_two_vectors(orbit_vector, nadir_vector)
+
+        # Rotate nadir_cam_dir using q_rw_to_orbit
+        q_ref = quat_from_two_vectors(self.G_rw_b.flatten(), self.nadir_cam_dir)
+
+        # Combine the two quaternions to get the final target quaternion
+        q_target = hamiltonproduct(q_tgt, quatconj(q_ref))
+        axis, angle = quat_to_axis_angle(q_target)
+        err_att = 0*axis * angle
         # omega sat body frame ang vel
         # omega_b gyro bias
         # I_max - direction of axis of greatest inertia
@@ -83,16 +94,55 @@ class BaselineNadirPointingController(ControllerAlgorithm):
         h_norm = np.linalg.norm(h)
         
         # target quaternion from orbit_vector and nadir_vector
-        # nadir_cam_dir points t onadir_vector in target orientatio
+        # nadir_cam_dir points t onadir_vector in target orientation
 
+        """naive pd control
+        Bhat = crossproduct(magnetic_field)
+        magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
+        Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
+        Bmat = np.zeros((3,4))
+        Bmat[:3,:3] = Bhat.T 
+        Bmat[:3,-1] = self.G_rw_b.flatten()
+
+        alloc_mat = np.zeros((4,3))
+        if np.abs(np.dot(magnetic_field, self.G_rw_b.flatten())) / magnetic_field_norm < 1e-6: 
+            # [TODO]: fix this. No control over rw speed and another axis
+            alloc_mat[:,:3] = np.linalg.pinv(Bmat[:3,:])
+        else:
+            alloc_mat = np.linalg.pinv(Bmat)
+        # attitude control torque
+        u = alloc_mat @ self.k_mtb_att @ np.hstack((err_att, -angular_velocity))
+
+        # rw control torque
+        # u[:3] -= Bhat_pseudo_inv @ self.G_rw_b.flatten() *  self.k_mtb_rw * (self.target_rw_ang_vel - rw_ang_vel)
+        u_mtb = self.clip_total_dipole_moment(u[:3])
+        u_rw = self.clip_rw_torque(u[3], rw_ang_vel)
+        """
+        """
+        # clipping the torques
+        uatt[:3] = self.clip_total_dipole_moment(uatt[:3])
+        uatt[3] = self.clip_rw_torque(uatt[3], rw_ang_vel)
+
+        u_wrw[:3] = self.clip_total_dipole_moment(u_wrw[:3] + uatt[:3]) - uatt[:3]
+        u_wrw[3] = self.clip_rw_torque(u_wrw[3] + uatt[3], rw_ang_vel) - uatt[3]
+
+        max_rw_torque = min(np.linalg.norm(Bmat[3, :3] @ u_wrw[:3]), np.linalg.norm(Bmat[3, -1] * u_wrw[3]))
+        u_wrw = alloc_mat[:,-1] * max_rw_torque * np.sign(self.target_rw_ang_vel - rw_ang_vel)
+        
+        u_mtb = uatt[:3] + u_wrw[:3]
+        u_rw  = uatt[3] + u_wrw[3]
+        """
+
+        """"""
         u_mtb = np.zeros(3)
         u_rw  = np.zeros(1)
-         
         # angular momentum in a cone around the direction to be pointed
-        spin_stabilized = (h_norm <= (1.0 + np.deg2rad(15)) * self.h_tgt_norm) and \
-                          (np.arccos(np.clip(np.dot(self.I_min_direction, h / h_norm), -1.0, 1.0)) <= np.deg2rad(15))
+        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
+
+        #spin_stabilized = (h_norm <= (1.0 + np.deg2rad(15)) * self.h_tgt_norm) and \
+        #                  (np.arccos(np.clip(np.dot(self.I_min_direction, h / h_norm), -1.0, 1.0)) <= np.deg2rad(15))
         # if angular velocity low enough, then its in nadir pointing and dont need to spin stabilize
-        spin_stabilized = spin_stabilized or (np.linalg.norm(angular_velocity) <= np.deg2rad(1))
+        #spin_stabilized = spin_stabilized or (np.linalg.norm(angular_velocity) <= np.deg2rad(1))
         # orbit_pointing = (np.linalg.norm(orbit_vector-(h/h_norm))<= np.deg2rad(10))
         orbit_pointing = (np.linalg.norm(orbit_vector-self.G_rw_b.flatten())<= np.deg2rad(10))
         magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
@@ -106,15 +156,17 @@ class BaselineNadirPointingController(ControllerAlgorithm):
             Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
 
             err_vec = np.hstack((-self.G_rw_b.flatten()-orbit_vector, self.ref_angular_velocity - angular_velocity))
+            # err_vec = np.hstack((err_att, -angular_velocity))
+            
             u_mtb = Bhat_pseudo_inv @ self.k_mtb_att @ err_vec
         else:
+            # rw att control
+
+            # magnetorquer desaturation
+            """
+
             # nadir pointing controller
             Bhat = crossproduct(magnetic_field)
-            """
-            U, S, V = np.linalg.svd(Bhat)
-            idx = np.where(S > 1e-6 * np.max(S))[0]
-            S_inv = np.diag([1/s if s > 1e-10 else 0 for s in S])
-            Bhat_pseudo_inv = V.T @ S_inv @ U.T"""
             Bhat_pseudo_inv = Bhat.T / (magnetic_field_norm ** 2)
             # 1. mtb nutation control
             err_vec = np.hstack((-self.G_rw_b.flatten()-orbit_vector, angular_velocity))
@@ -138,17 +190,10 @@ class BaselineNadirPointingController(ControllerAlgorithm):
             angle_nadir = angle_sign * angle_norm
             err_att = np.hstack((angle_nadir, -self.G_rw_b.flatten() @ angular_velocity))
             u_rw = self.k_rw_att @ err_att - ff_rw_tq
-       
-        u_mtb = np.clip(a=u_mtb, a_min=self.lbmtb, a_max=self.ubmtb)
-        u_rw = np.clip(a=u_rw, a_min=self.lbrw, a_max=self.ubrw)
+            """
+
+        u_mtb = self.clip_total_dipole_moment(u_mtb)
+        u_rw = self.clip_rw_torque(u_rw, rw_ang_vel)
         # clip according to rw angular velocity
         
-        """
-        print(f"Spin-stabilizing: h = {h}, Norm of angular momentum h_norm = {h_norm}")
-        print("torque command: ", crossproduct(u) @ magnetic_field)
-        angle_sun_h = np.arccos(np.clip(np.dot(sun_vector, h / h_norm), -1.0, 1.0))
-        print("Angle between sun vector and angular momentum direction (degrees):", np.degrees(angle_sun_h))
-        print("Angle between sun vector and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(sun_vector, I_min_direction))))
-        print("Angle between angular momentum and I_min_direction (degrees):", np.degrees(np.arccos(np.dot(h/h_norm, I_min_direction))))
-        """
         return u_mtb.reshape(3, 1), u_rw
