@@ -68,8 +68,8 @@ class Simulation_Parameters {
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
     double dt;                         // [s]
-    double earliest_sim_start_unix;    // [s] Next three time variables are measured relative to J2000
-    double latest_sim_start_unix;      // [s]
+    double earliest_sim_start_J2000;    // [s] Next three time variables are measured relative to J2000
+    double latest_sim_start_J2000;      // [s]
     double sim_start_time;             // [s] 
     bool useDrag; // set to False to deactivate drag calcs
     bool useSRP; // set to False to deactivate SRP calcs

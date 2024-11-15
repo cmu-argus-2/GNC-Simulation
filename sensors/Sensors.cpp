@@ -74,13 +74,13 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
     // Magnetometer Noise Distribution
     static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
 
-    Quaternion quat {state(6), state(7), state(8), state(9)};
+    Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
 
     // True Magnetic Field
     Vector3 B_eci = state(Eigen::seqN(16,3));
 
     // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist)*quat.toRotationMatrix().transpose()*B_eci;
+    Vector3 B_body = random_SO3_rotation(mag_noise_dist)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
 
     return B_body;
 }

@@ -65,8 +65,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
 
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
-    earliest_sim_start_unix = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());
-    latest_sim_start_unix = UTCStringtoTJ2000(params["latest_sim_start_time_UTC"].as<std::string>());
+    earliest_sim_start_J2000 = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());
+    latest_sim_start_J2000 = UTCStringtoTJ2000(params["latest_sim_start_time_UTC"].as<std::string>());
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
     
@@ -79,7 +79,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename) : MTB(load_MT
     initial_attitude = Eigen::Map<Vector4>(params["initial_attitude"].as<std::vector<double>>().data());
     initial_angular_rate = Eigen::Map<Vector3>(params["initial_angular_rate"].as<std::vector<double>>().data());
     
-    initial_state = initializeSatellite(earliest_sim_start_unix);
+    initial_state = initializeSatellite(earliest_sim_start_J2000);
 
     controller_dt = params["controller_dt"].as<double>();
     estimator_dt  = params["estimator_dt"].as<double>();
@@ -96,7 +96,7 @@ void Simulation_Parameters::getParamsFromFileAndSample(std::string filename) {
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {
     // Initialize Time
-    sim_start_time = earliest_sim_start_unix; // TODO : change this based on MC dispersion
+    sim_start_time = earliest_sim_start_J2000; // TODO : change this based on MC dispersion
     
     VectorXd State(19+num_RWs);
 

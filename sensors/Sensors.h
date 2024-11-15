@@ -10,7 +10,7 @@ std::random_device rd;
 std::mt19937 gen(rd());
 
 /**
- * @brief Measures the spacecraft position and velocity in ECEF frame
+ * @brief Populates the measurement vector by querying measurements from each sensor
  * 
  * @param state : true state vector
  * @param t_J2000 : seconds since J2000 used to read sensors
@@ -48,7 +48,7 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc);
 Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc);
 
 /**
- * @brief Measures magnetic field reading in the body frame
+ * @brief Measures Angular Velocity reading in the body frame
  * 
  * @param state : True state vector of the satellite
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
