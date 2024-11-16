@@ -52,11 +52,12 @@ def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 
     R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
 
     # run vision model
-    pixel_coordinates = camera.sample_pixel_coordinates(N)
-    valid_intersections, landmark_positions_eci = camera.get_earth_intersections(pixel_coordinates, cubesat_position, R_body_to_eci)
-    pixel_coordinates = pixel_coordinates[valid_intersections, :]
+    bearing_unit_vectors = camera.sample_bearing_unit_vectors(N)
+    valid_intersections, landmark_positions_eci = camera.get_earth_intersections(bearing_unit_vectors, cubesat_position,
+                                                                                 R_body_to_eci)
+    bearing_unit_vectors = bearing_unit_vectors[valid_intersections, :]
 
-    return np.tile(R_body_to_eci, (pixel_coordinates.shape[0], 1, 1)), pixel_coordinates, landmark_positions_eci
+    return np.tile(R_body_to_eci, (bearing_unit_vectors.shape[0], 1, 1)), bearing_unit_vectors, landmark_positions_eci
 
 
 def is_over_daytime(epoch: Epoch, cubesat_position: np.ndarray) -> bool:
@@ -76,11 +77,10 @@ def test_od():
 
     # set up camera, vision model, and orbit determination objects
     camera_params = config["satellite"]["camera"]
-    focal_length = camera_params["focal_length"]
-    R_body_to_camera = Rotation.from_quat(np.asarray(camera_params["orientation_in_cubesat_frame"]), scalar_first=True).as_matrix()
+    R_body_to_camera = Rotation.from_quat(np.asarray(camera_params["orientation_in_cubesat_frame"]),
+                                          scalar_first=True).as_matrix()
     camera = Camera(
-        image_dimensions=np.array([camera_params["image_width"], camera_params["image_height"]]),
-        K=np.diag([focal_length, focal_length, 1]),
+        fov=np.deg2rad(120),
         R_body_to_camera=R_body_to_camera,
         t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
     )
@@ -100,7 +100,7 @@ def test_od():
     # set up arrays to store measurements
     times = np.array([], dtype=int)
     Rs_body_to_eci = np.zeros(shape=(0, 3, 3))
-    pixel_coordinates = np.zeros(shape=(0, 2))
+    bearing_unit_vectors = np.zeros(shape=(0, 3))
     landmarks = np.zeros(shape=(0, 3))
 
     def take_measurement(t_idx: int) -> None:
@@ -111,12 +111,12 @@ def test_od():
 
         :param t_idx: The time index at which to take the measurements.
         """
-        nonlocal times, Rs_body_to_eci, pixel_coordinates, landmarks
-        measurement_cubesat_attitudes, measurement_pixel_coordinates, measurement_landmarks = \
+        nonlocal times, Rs_body_to_eci, bearing_unit_vectors, landmarks
+        measurement_cubesat_attitudes, measurement_bearing_unit_vectors, measurement_landmarks = \
             get_measurement_info(states[t_idx, :3], camera)
         times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
         Rs_body_to_eci = np.concatenate((Rs_body_to_eci, measurement_cubesat_attitudes), axis=0)
-        pixel_coordinates = np.concatenate((pixel_coordinates, measurement_pixel_coordinates), axis=0)
+        bearing_unit_vectors = np.concatenate((bearing_unit_vectors, measurement_bearing_unit_vectors), axis=0)
         landmarks = np.concatenate((landmarks, measurement_landmarks), axis=0)
 
     for t in range(0, N - 1):
@@ -131,7 +131,7 @@ def test_od():
         raise ValueError("No measurements taken")
 
     start_time = perf_counter()
-    estimated_states = od.fit_orbit(times, landmarks, pixel_coordinates, Rs_body_to_eci, N)
+    estimated_states = od.fit_orbit(times, landmarks, bearing_unit_vectors, Rs_body_to_eci, N)
     print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
 
     position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)

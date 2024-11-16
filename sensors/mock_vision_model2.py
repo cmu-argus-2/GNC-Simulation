@@ -5,19 +5,16 @@ from brahe.constants import R_EARTH
 
 
 class Camera:
-    def __init__(self, image_dimensions: np.ndarray, K: np.ndarray,
-               R_body_to_camera: np.ndarray, t_body_to_camera: np.ndarray):
+    def __init__(self, fov: float, R_body_to_camera: np.ndarray, t_body_to_camera: np.ndarray):
         """
         Initialize the Camera object.
 
-        :param image_dimensions: The width and height of the image in pixels, as a numpy array of shape (2,).
-        :param K: The camera matrix, as a numpy array of shape (3, 3).
+        :param fov: The field of view of the camera in radians.
         :param R_body_to_camera: The rotation matrix from the body frame to the camera frame, as a numpy array of shape (3, 3).
         :param t_body_to_camera: The translation vector from the body frame to the camera frame, as a numpy array of shape (3,).
         """
-        self.image_dimensions = image_dimensions
-        self.K = K
-        self.K_inv = np.linalg.inv(K)
+        self.fov = np.deg2rad(fov)
+        self.cos_fov = np.cos(self.fov)
         self.R_body_to_camera = R_body_to_camera
         self.t_body_to_camera = t_body_to_camera
 
@@ -59,37 +56,20 @@ class Camera:
         assert intersection_points.shape[0] == np.sum(valid_intersections)
         return valid_intersections, intersection_points
 
-    def sample_pixel_coordinates(self, N: int) -> np.ndarray:
+    def sample_bearing_unit_vectors(self, N: int) -> np.ndarray:
         """
-        Sample n random pixel coordinates.
+        Sample N random bearing unit vectors in the body frame.
 
-        :param N: The number of pixel coordinates to sample.
-        :return: A numpy array of shape (N, 2) containing the sampled pixel coordinates.
+        :param N: The number of bearing unit vectors to sample.
+        :return: A numpy array of shape (N, 3) containing the sampled bearing unit vectors.
         """
-        return np.random.rand(N, 2) * self.image_dimensions[np.newaxis, :]
-
-    def pixel_coordinates_to_bearing_unit_vectors(self, pixel_coordinates: np.ndarray) -> np.ndarray:
-        """
-        Convert pixel coordinates to bearing unit vectors in the body frame.
-
-        :param pixel_coordinates: A numpy array of shape (N, 2) containing the pixel coordinates.
-                                  The origin is the top-left corner of the image, the x-axis points to the right,
-                                  and the y-axis points down.
-        :return: A numpy array of shape (N, 3) containing the bearing unit vectors in the body frame.
-        """
-        assert len(pixel_coordinates.shape) == 2, "pixel_coordinates must be a 2D array"
-        assert pixel_coordinates.shape[1] == 2, "pixel_coordinates must have 2 columns"
-
-        screen_coordinates = 1 - 2 * pixel_coordinates / self.image_dimensions
-
-        screen_coordinates_homogeneous = np.column_stack((screen_coordinates, np.ones(screen_coordinates.shape[0])))
-        bearing_vectors = (self.R_body_to_camera.T @ self.K_inv @ screen_coordinates_homogeneous.T).T
-
-        bearing_unit_vectors = bearing_vectors / np.linalg.norm(bearing_vectors, axis=1, keepdims=True)
-        return bearing_unit_vectors
+        phi = 2 * np.pi * np.random.random(N)
+        # uniformly sample cos(theta) to get a uniform distribution on the unit sphere
+        theta = np.arccos(np.random.uniform(self.cos_fov, 1))
+        return Rotation.from_euler("ZX", np.column_stack((phi, theta))).apply(np.array([0, 0, 1]))
 
     def get_earth_intersections(self,
-                                pixel_coordinates: np.ndarray,
+                                bearing_unit_vectors: np.ndarray,
                                 cubesat_position_eci: np.ndarray,
                                 R_body_to_eci: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -98,14 +78,13 @@ class Camera:
         and the returned boolean array, valid_intersections, are related as follows:
         M == np.sum(valid_intersections) <= N.
 
-        :param pixel_coordinates: A numpy array of shape (N, 2) containing the pixel coordinates.
+        :param bearing_unit_vectors: A numpy array of shape (N, 3) containing the bearing unit vectors in the body frame.
         :param cubesat_position_eci: A numpy array of shape (3,) containing the ECI coordinates of the satellite's
                                      body frame origin.
         :param R_body_to_eci: A numpy array of shape (3, 3) containing the rotation matrix from the body frame to ECI.
         :return: A tuple containing a boolean array  of shape (M,) indicating which rays intersected the Earth,
                  and a numpy array of shape (M, 3) containing the intersection points in ECI coordinates.
         """
-        bearing_unit_vectors = self.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
         bearing_unit_vectors_eci = (R_body_to_eci @ bearing_unit_vectors.T).T
 
         camera_position_eci = cubesat_position_eci + self.t_body_to_camera

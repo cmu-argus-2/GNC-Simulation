@@ -107,7 +107,7 @@ class OrbitDetermination:
 
         return model
 
-    def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, pixel_coordinates: np.ndarray,
+    def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, bearing_unit_vectors: np.ndarray,
                   Rs_body_to_eci: np.ndarray, N: int = None,
                   semi_major_axis_guess: float = R_EARTH + 600e3) -> np.ndarray:
         """
@@ -116,7 +116,7 @@ class OrbitDetermination:
         :param times: A numpy array of shape (m,) and dtype of int containing the indices of time steps at which
                       landmarks were observed. Must be sorted in non-strictly ascending order.
         :param landmarks: A numpy array of shape (m, 3) containing the ECI coordinates of the landmarks.
-        :param pixel_coordinates: A numpy array of shape (m, 2) containing the pixel coordinates of the landmarks.
+        :param bearing_unit_vectors: A numpy array of shape (m, 3) containing the bearing unit vectors in the body frame.
         :param Rs_body_to_eci: A numpy array of shape (m, 3, 3) containing the rotation matrices from the body frame to the ECI frame.
         :param N: The number of time steps. If None, it will be set to the maximum value in times plus one.
         :param semi_major_axis_guess: An initial guess for the semi-major axis of the satellite's orbit.
@@ -127,17 +127,15 @@ class OrbitDetermination:
             "times must be sorted in non-strictly ascending order"
         assert len(landmarks.shape) == 2, "landmarks must be a 2D array"
         assert landmarks.shape[1] == 3, "landmarks must have 3 columns"
-        assert len(pixel_coordinates.shape) == 2, "pixel_coordinates must be a 2D array"
-        assert pixel_coordinates.shape[1] == 2, "pixel_coordinates must have 2 columns"
+        assert len(bearing_unit_vectors.shape) == 2, "bearing_unit_vectors must be a 2D array"
+        assert bearing_unit_vectors.shape[1] == 3, "bearing_unit_vectors must have 3 columns"
         assert len(Rs_body_to_eci.shape) == 3, "cubesat_attitudes must be a 3D array"
         assert Rs_body_to_eci.shape[1:] == (3, 3), "cubesat_attitudes must have shape (m, 3, 3)"
-        assert len(times) == len(landmarks) == len(pixel_coordinates) == len(Rs_body_to_eci), \
+        assert len(times) == len(landmarks) == len(bearing_unit_vectors) == len(Rs_body_to_eci), \
             "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
         if N is None:
             N = times[-1] + 1  # number of time steps
         assert N > times[-1], "N must be greater than the maximum value in times"
-
-        bearing_unit_vectors = self.camera.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
 
         eci_to_body_rotations = self.camera.R_body_to_camera[np.newaxis, ...] @ \
                                 np.swapaxes(Rs_body_to_eci, 1, 2)  # transpose
