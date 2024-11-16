@@ -140,6 +140,10 @@ def test_od():
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
+    ax.set_xlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+    ax.set_ylim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+    ax.set_zlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+
     ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
     ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
     ax.set_xlabel("X (m)")
