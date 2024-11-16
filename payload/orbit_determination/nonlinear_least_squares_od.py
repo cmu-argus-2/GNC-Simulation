@@ -99,7 +99,7 @@ class OrbitDetermination:
             positions_2d_ = orbital_radius * np.column_stack((np.cos(angles_), np.sin(angles_)))
             positions_ = positions_2d_ @ np.row_stack((x_axis, y_axis))
 
-            velocity_directions_ = np.sign(angular_speed) * np.cross(normal, positions_)
+            velocity_directions_ = np.sign(angular_velocity) * np.cross(normal, positions_)
             velocity_directions_ = velocity_directions_ / np.linalg.norm(velocity_directions_, axis=1, keepdims=True)
             velocities_ = speed * velocity_directions_
 
