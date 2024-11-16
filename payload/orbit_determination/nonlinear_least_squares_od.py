@@ -25,8 +25,7 @@ class OrbitDetermination:
         self.camera = camera
         self.dt = dt
 
-    @staticmethod
-    def fit_circular_orbit(times: np.ndarray, positions: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
+    def fit_circular_orbit(self, times: np.ndarray, positions: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
         """
         Fits a circular orbit model to a set of timestamped ECI position estimates.
         This is used for creating an initial guess for the non-linear least squares problem.
@@ -75,10 +74,10 @@ class OrbitDetermination:
         angles = np.arctan2(positions_2d[:, 1], positions_2d[:, 0])
 
         # case 1: the orbit is counter-clockwise in the chosen basis
-        phases_ccw = angles - angular_speed * times
+        phases_ccw = angles - angular_speed * times * self.dt
 
         # case 2: the orbit is clockwise in the chosen basis
-        phases_cw = angles + angular_speed * times
+        phases_cw = angles + angular_speed * times * self.dt
 
         # choose the case with the smaller variance
         if circvar(phases_ccw) < circvar(phases_cw):
@@ -203,7 +202,7 @@ class OrbitDetermination:
             return jac
 
         altitude_normalized_landmarks = landmarks / np.linalg.norm(landmarks, axis=1, keepdims=True)
-        model = OrbitDetermination.fit_circular_orbit(times, semi_major_axis_guess * altitude_normalized_landmarks)
+        model = self.fit_circular_orbit(times, semi_major_axis_guess * altitude_normalized_landmarks)
         initial_guess = model(np.arange(N) * self.dt).flatten()
 
         result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
