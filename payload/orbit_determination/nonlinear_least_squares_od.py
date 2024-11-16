@@ -140,7 +140,7 @@ class OrbitDetermination:
         bearing_unit_vectors = self.camera.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
 
         eci_to_body_rotations = self.camera.R_body_to_camera[np.newaxis, ...] @ \
-                                np.swapaxes(Rs_body_to_eci, 1, 2)
+                                np.swapaxes(Rs_body_to_eci, 1, 2)  # transpose
 
         def residuals(X: np.ndarray) -> np.ndarray:
             """
