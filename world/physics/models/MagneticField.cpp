@@ -9,12 +9,13 @@
 
 Vector3 MagneticField(const Vector3 r, double t_J2000)
 {
+
     static Vector3 B_eci = Vector3::Zero();
     static double prev_compute_time = -100;
-
-    if ((t_J2000 - prev_compute_time) < 1) {
+    
+    if ((t_J2000 - prev_compute_time) < 1.00) {
         return B_eci;
-    }
+    } 
 
     // get year from seconds past J2000
     Vector5 UTCdoy = TJ2000toUTC(t_J2000);

@@ -37,10 +37,10 @@ Vector3 sun_position_eci(double t_J2000) {
     //Load all kernels
     loadAllKernels();
 
-    SpiceDouble state[6];
+    SpiceDouble state[3];
     SpiceDouble lt;
 
-    spkezr_c("sun", t_J2000, "J2000", "NONE", "earth", state, &lt);
+    spkpos_c("sun", t_J2000, "J2000", "NONE", "earth", state, &lt);
     Vector3 sun_pos(1000.0 * state[0], 1000.0 * state[1],
                     1000.0 * state[2]);   // convert km to m and cast SpiceDouble into Vector3
     return sun_pos;
