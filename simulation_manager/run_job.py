@@ -41,7 +41,7 @@ trial_command = "'python3 sim.py'"
 trial_command_dir = repo_root_abs
 
 # ensure repo_root_abs actually points to the "GNC-SIMULATION" repo
-assert os.path.basename(repo_root_abs) == "MCdispersion"
+assert os.path.basename(repo_root_abs) == "GNC-Simulation"
 
 # ensure paths exist
 assert os.path.exists(repo_root_abs), f"Nonexistent: {repo_root_abs}"
