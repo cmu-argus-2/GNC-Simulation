@@ -2,18 +2,19 @@
 #define _SIMULATOR_PARAMETER_PARSER_
 
 #include <string>
+#include <random>
 
 #include "math/EigenWrapper.h"
 #include "Magnetorquer.h"
+#include "yaml-cpp/yaml.h"
 
 class Simulation_Parameters {
    public:
-    Simulation_Parameters(std::string filename);
-    //void getParamsFromFileAndSample(std::string filename);
+    Simulation_Parameters(std::string filename, int trial_number, std::string results_folder);
     VectorXd initializeSatellite(double epoch);
+    void dumpSampledParametersToYAML(std::string results_folder);
 
-    // void dumpSampledParametersToYAML(std::string absolute_filename); TODO
-
+    std::mt19937 dev;
     // ========================================================================
     // ================== MAIN PARAMETERS (parsed from file) ==================
     // ========================================================================    
@@ -35,13 +36,9 @@ class Simulation_Parameters {
 
     // Magnetorquers
     int num_MTBs;
+    VectorXd resistances;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
     double max_voltage;
-    double coils_per_layer;
-    double layers;
-    double trace_width;
-    double gap_width;
-    double trace_thickness;
     double max_current_rating;
     double max_power;
     Magnetorquer MTB; // Magnetorquer class object
@@ -68,9 +65,7 @@ class Simulation_Parameters {
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
     double dt;                         // [s]
-    double earliest_sim_start_J2000;    // [s] Next three time variables are measured relative to J2000
-    double latest_sim_start_J2000;      // [s]
-    double sim_start_time;             // [s] 
+    double sim_start_time;             // [s] measured relative to J2000
     bool useDrag; // set to False to deactivate drag calcs
     bool useSRP; // set to False to deactivate SRP calcs
 
@@ -88,8 +83,45 @@ class Simulation_Parameters {
     double controller_dt; // [s]
     double estimator_dt;  // [s]
 
+    // Satellite Parameetr Dispersion distributions
+
+    // Physical
+    std::normal_distribution<double> mass_dist;
+    std::normal_distribution<double> area_dist;
+    std::normal_distribution<double> Ixx_dist;
+    std::normal_distribution<double> Iyy_dist;
+    std::normal_distribution<double> Izz_dist;
+
+    // Actuators
+    std::normal_distribution<double> rw_orientation_dist;
+    std::normal_distribution<double> I_rw_dist;
+    std::normal_distribution<double> mtb_orientation_dist;
+    std::normal_distribution<double> mtb_resistance_dist;
+
+    // Sensors
+    std::normal_distribution<double> gps_pos_dist;
+    std::normal_distribution<double> gps_vel_dist;
+    std::normal_distribution<double> photodiode_orientation_dist;
+    std::normal_distribution<double> photodiode_dist;
+    std::normal_distribution<double> magnetometer_dist;
+    std::normal_distribution<double> gyro_bias_dist;
+    std::normal_distribution<double> gyro_white_noise_dist;
+
+    // Initialization
+    std::normal_distribution<double> sma_dist;
+    std::normal_distribution<double> eccentricity_dist;
+    std::normal_distribution<double> inclination_dist;
+    std::normal_distribution<double> RAAN_dist;
+    std::normal_distribution<double> AOP_dist;
+    std::uniform_real_distribution<double> true_anomaly_dist;
+    std::uniform_real_distribution<double> initial_attitude_dist;
+    std::uniform_real_distribution<double> initial_angular_rate_dist;
+    std::uniform_real_distribution<double> sim_start_time_dist;
+
     private:
-    Magnetorquer load_MTB(std::string filename);
+    Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
+    void defineDistributions(std::string filename);
+    std::mt19937 loadSeed(int trial_number);
 };
 
 #endif

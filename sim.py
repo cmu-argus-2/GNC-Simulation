@@ -14,13 +14,16 @@ import os
 import yaml
 
 class Simulator():
-    def __init__(self, log_directory, config_path) -> None:
+    def __init__(self, trial_number, log_directory, config_path) -> None:
+        
+        self.trial_number = trial_number
+
         # Datapaths
         self.config_path = config_path
         self.log_directory = log_directory
         
         # Spacecraft Config
-        self.params = SimParams(self.config_path)
+        self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
         self.num_RWs = self.params.num_RWs
         self.num_MTBs = self.params.num_MTBs
         self.num_photodiodes = self.params.num_photodiodes
@@ -69,8 +72,8 @@ class Simulator():
         # self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
 
         # Actuator Indexing
-        self.num_RWs  = self.controller_params["N_rw"]
-        self.num_MTBs = self.controller_params["N_mtb"]
+        self.num_RWs  = self.controller_params["reaction_wheels"]["N_rw"]
+        self.num_MTBs = self.controller_params["magnetorquers"]["N_mtb"]
         self.Idx["NU"]    = self.num_RWs + self.num_MTBs
         self.Idx["N_rw"]  = self.num_RWs
         self.Idx["N_mtb"] = self.num_MTBs
@@ -81,8 +84,8 @@ class Simulator():
         self.Idx["NX"] = self.Idx["NX"] + self.num_RWs
         self.Idx["X"]["RW_SPEED"]   = slice(19, 19 + self.num_RWs)
         
-        Magnetorquers = [Magnetorquer(self.controller_params, IdMtb) for IdMtb in range(self.num_MTBs)] 
-        ReactionWheels = [ReactionWheel(self.controller_params, IdRw) for IdRw in range(self.num_RWs)]
+        Magnetorquers = [Magnetorquer(self.controller_params["magnetorquers"], IdMtb) for IdMtb in range(self.num_MTBs)] 
+        ReactionWheels = [ReactionWheel(self.controller_params["reaction_wheels"], IdRw) for IdRw in range(self.num_RWs)]
         self.controller = Controller(self.controller_params, Magnetorquers, ReactionWheels, self.Idx)
 
         # Controller Frequency
@@ -186,6 +189,7 @@ RESET = "\033[0m"  # Resets all attributes
 if __name__ == "__main__":
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
-    sim = Simulator(TRIAL_DIRECTORY, PARAMETER_FILEPATH)
+    TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
+    sim = Simulator(TRIAL_NUMBER, TRIAL_DIRECTORY, PARAMETER_FILEPATH)
     print("Initialized")
     sim.run()

@@ -6,9 +6,8 @@
 double COPPER_RESISTIVITY = 1.724e-8;
 class Magnetorquer {
     public:
-        Magnetorquer(int N_MTBs, VectorXd maxVolt, VectorXd coilsPerLayer, VectorXd layers, VectorXd traceThickness,
-                     VectorXd pcb_side_max, VectorXd traceWidth, VectorXd gapWidth, VectorXd maxPower, VectorXd maxCurrentRating,
-                     MatrixXd mtb_orientation);
+        Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double A_cross, double N_turns,
+                           double maxVolt, double maxCurrentRating, double maxPower, MatrixXd mtb_orientation);
 
         /**
         * @brief Computes Torque on the body frame from input current 
@@ -22,21 +21,12 @@ class Magnetorquer {
 
     private:
         int num_MTBs; 
-        VectorXd max_voltage;
-        VectorXd N; // coils per layer
-        VectorXd pcb_layers; // Number of layers
-        VectorXd N_per_face; 
-        VectorXd trace_thickness;
-        VectorXd pcb_side_max;
-        VectorXd trace_width;
-        VectorXd gap_width;
-        VectorXd coil_width;
-        VectorXd coil_length;
-        VectorXd max_power;
-        VectorXd max_current_rating;
-        VectorXd A_cross;
+        double A_cross;
+        double N_turns;
+        double max_voltage;
+        double max_power;
+        double max_current_rating;
         VectorXd resistance;
-        VectorXd max_dipole_moment;
         MatrixXd G_mtb_b;
 };
 

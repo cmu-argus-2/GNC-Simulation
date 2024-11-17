@@ -148,7 +148,7 @@ class MontecarloPlots:
         with open("../../montecarlo/configs/params.yaml", "r") as f:
             pyparams = yaml.safe_load(f)
         
-        J = np.array(pyparams["inertia"]).reshape((3,3))
+        J = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))
         eigenvalues, eigenvectors = np.linalg.eig(J)
         idx = np.argsort(eigenvalues)
         major_axis = eigenvectors[:, idx[2]]
@@ -191,7 +191,7 @@ class MontecarloPlots:
         save_figure(itm.gcf(), self.plot_dir, "sun_vector_body.png", self.close_after_saving)
         # ==========================================================================
         # Reaction Wheel Speed and Torque
-        num_RWs = pyparams["N_rw"]
+        num_RWs = pyparams["reaction_wheels"]["N_rw"]
          
         # G_rw_b = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
         itm.figure()
@@ -211,8 +211,8 @@ class MontecarloPlots:
         save_figure(itm.gcf(), self.plot_dir, "rw_w_T_true.png", self.close_after_saving)
         # ==========================================================================
         # Magnetorquer dipole moment
-        num_MTBs = pyparams["N_mtb"]
-        Magnetorquers = [Magnetorquer(pyparams, IdMtb) for IdMtb in range(num_MTBs)] 
+        num_MTBs = pyparams["magnetorquers"]["N_mtb"]
+        Magnetorquers = [Magnetorquer(pyparams["magnetorquers"], IdMtb) for IdMtb in range(num_MTBs)] 
         itm.figure()
         for i, trial_number in enumerate(self.trials):
             volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
@@ -233,7 +233,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Nadir Pointing
         # Orbit Pointing 
-        G_rw_b        = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
+        G_rw_b        = np.array(pyparams["reaction_wheels"]["rw_orientation"]).reshape(3, num_RWs)
         nadir_cam_dir = np.array(pyparams["nadir_cam_dir"])
         itm.figure()
         for i, trial_number in enumerate(self.trials):
