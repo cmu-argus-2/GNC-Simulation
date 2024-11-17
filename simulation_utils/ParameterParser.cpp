@@ -45,10 +45,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Physical Parameters
     mass = mass_dist(dev);
-    mass = std::min(params["max_mass"].as<double>(), std::max(mass, params["min_mass"].as<double>()));
+    mass = std::min(params["mass"]["max_mass"].as<double>(), std::max(mass, params["mass"]["min_mass"].as<double>()));
 
     A = area_dist(dev);
-    I_sat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"].as<std::vector<double>>().data());
+    I_sat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"]["nominal_inertia"].as<std::vector<double>>().data());
     I_sat(0,0) = Ixx_dist(dev);
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
@@ -60,8 +60,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     useSRP = params["useSRP"].as<bool>();
 
     // Reaction Wheel
-    num_RWs = params["N_rw"].as<int>();
-    G_rw_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
+    num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
+    G_rw_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["reaction_wheels"]["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
     for (int i=0; i<num_RWs; i++) {
         G_rw_b.col(i) = random_SO3_rotation(rw_orientation_dist, dev)*G_rw_b.col(i);
     }
@@ -72,8 +72,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gps_vel_std = gps_vel_dist(dev);
 
     // Photodiodes
-    num_photodiodes = params["num_photodiodes"].as<int>();
-    G_pd_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["photodiode_normals"].as<std::vector<double>>().data(), 3, num_photodiodes);
+    num_photodiodes = params["photodiodes"]["num_photodiodes"].as<int>();
+    G_pd_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["photodiodes"]["photodiode_normals"].as<std::vector<double>>().data(), 3, num_photodiodes);
     for (int i=0; i<num_photodiodes; i++) {
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
@@ -85,8 +85,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     // Gyroscope
     gyro_sigma_w = gyro_bias_dist(dev);
     gyro_sigma_v = gyro_white_noise_dist(dev);
-    gyro_correlation_time = params["gyro_correlation_time"].as<double>(); 
-    gyro_scale_factor_err = params["gyro_scale_factor_err"].as<double>();
+    gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
+    gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
 
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
@@ -119,25 +119,25 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 gen)
 {
     YAML::Node params = YAML::LoadFile(filename);
-    num_MTBs = params["N_mtb"].as<int>();
+    num_MTBs = params["magnetorquers"]["N_mtb"].as<int>();
     
     resistances = VectorXd::NullaryExpr(num_MTBs,[&](){return mtb_resistance_dist(gen);});
-    double resistance_bound = params["mtb_resistance_lub"].as<double>();
+    double resistance_bound = params["magnetorquers"]["mtb_resistance_lub"].as<double>();
     resistances = resistances.cwiseMax((1-resistance_bound)*resistances).cwiseMin((1+resistance_bound)*resistances);  
 
-    G_mtb_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
+    G_mtb_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["magnetorquers"]["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
     for (int i=0; i<num_MTBs; i++) {
         G_mtb_b.col(i) = random_SO3_rotation(mtb_orientation_dist, gen)*G_mtb_b.col(i);
     }
     
     Magnetorquer magnetorquer = Magnetorquer(
-                                    params["N_mtb"].as<int>(),
+                                    params["magnetorquers"]["N_mtb"].as<int>(),
                                     resistances,
-                                    params["A_cross"].as<double>(),
-                                    params["N_turns"].as<double>(),
-                                    params["max_voltage"].as<double>(),
-                                    params["max_current_rating"].as<double>(),
-                                    params["max_power"].as<double>(),
+                                    params["magnetorquers"]["A_cross"].as<double>(),
+                                    params["magnetorquers"]["N_turns"].as<double>(),
+                                    params["magnetorquers"]["max_voltage"].as<double>(),
+                                    params["magnetorquers"]["max_current_rating"].as<double>(),
+                                    params["magnetorquers"]["max_power"].as<double>(),
                                     G_mtb_b
                                     );
 
@@ -166,18 +166,18 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     YAML::Node params = YAML::LoadFile(filename);
     
     // Mass
-    double mass_nominal = params["mass"].as<double>();
-    double mass_std = mass_nominal*(params["mass_dev"].as<double>()/100);
+    double mass_nominal = params["mass"]["nominal_mass"].as<double>();
+    double mass_std = mass_nominal*(params["mass"]["mass_dev"].as<double>()/100);
     mass_dist = std::normal_distribution<double>(mass_nominal, mass_std);
 
     // Area
-    double area_nominal = params["area"].as<double>();
-    double area_std = area_nominal*(params["area_dev"].as<double>()/100);
+    double area_nominal = params["area"]["nominal_area"].as<double>();
+    double area_std = area_nominal*(params["area"]["area_dev"].as<double>()/100);
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
 
     // Inertia
-    Vector3 inertia_dev = Eigen::Map<Vector3>(params["principal_axis_dev"].as<std::vector<double>>().data());
-    MatrixXd Isat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"].as<std::vector<double>>().data());
+    Vector3 inertia_dev = Eigen::Map<Vector3>(params["inertia"]["principal_axis_dev"].as<std::vector<double>>().data());
+    MatrixXd Isat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"]["nominal_inertia"].as<std::vector<double>>().data());
     
     double Ixx_std = Isat(0,0)*inertia_dev(0)/100;
     Ixx_dist = std::normal_distribution<double>(Isat(0,0), Ixx_std);
@@ -189,71 +189,71 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     Izz_dist = std::normal_distribution<double>(Isat(2,2), Izz_std);
 
     // Reaction Wheels
-    rw_orientation_dist = std::normal_distribution<double>(0, params["rw_orientation_dev"].as<double>());
-    double I_rw_nominal = params["I_rw"].as<double>();
-    double I_rw_std = I_rw_nominal*(params["I_rw_dev"].as<double>()/100);
+    rw_orientation_dist = std::normal_distribution<double>(0, params["reaction_wheels"]["rw_orientation_dev"].as<double>());
+    double I_rw_nominal = params["reaction_wheels"]["I_rw"].as<double>();
+    double I_rw_std = I_rw_nominal*(params["reaction_wheels"]["I_rw_dev"].as<double>()/100);
     I_rw_dist = std::normal_distribution<double>(I_rw_nominal, I_rw_std);
 
     // Magnetorquers
-    mtb_orientation_dist = std::normal_distribution<double>(0, params["mtb_orientation_dev"].as<double>());
-    double mtb_resistance_nominal = params["mtb_resistance"].as<double>();
-    double mtb_resistance_std = mtb_resistance_nominal*(params["mtb_resistance_dev"].as<double>())/100;
+    mtb_orientation_dist = std::normal_distribution<double>(0, params["magnetorquers"]["mtb_orientation_dev"].as<double>());
+    double mtb_resistance_nominal = params["magnetorquers"]["mtb_resistance"].as<double>();
+    double mtb_resistance_std = mtb_resistance_nominal*(params["magnetorquers"]["mtb_resistance_dev"].as<double>())/100;
     mtb_resistance_dist = std::normal_distribution<double>(mtb_resistance_nominal, mtb_resistance_std);
 
     // GPS
-    double gps_pos_std_nominal = params["gps_pos_std"].as<double>();
-    double gps_pos_std_std = gps_pos_std_nominal*(params["gps_pos_std_dev"].as<double>()/100);
+    double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
+    double gps_pos_std_std = gps_pos_std_nominal*(params["gps"]["gps_pos_std_dev"].as<double>()/100);
     gps_pos_dist = std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
     
-    double gps_vel_std_nominal = params["gps_vel_std"].as<double>();
-    double gps_vel_std_std = gps_vel_std_nominal*(params["gps_vel_std_dev"].as<double>()/100);
+    double gps_vel_std_nominal = params["gps"]["gps_vel_std"].as<double>();
+    double gps_vel_std_std = gps_vel_std_nominal*(params["gps"]["gps_vel_std_dev"].as<double>()/100);
     gps_vel_dist = std::normal_distribution<double>(gps_vel_std_nominal, gps_vel_std_std);
 
     // Photodiodes
-    photodiode_orientation_dist = std::normal_distribution<double>(0, params["photodiode_orientation_dev"].as<double>());
-    double photodiode_std_nominal = params["photodiode_std"].as<double>();
-    double photodiode_std_std = photodiode_std_nominal*(params["photodiode_std_dev"].as<double>()/100);
+    photodiode_orientation_dist = std::normal_distribution<double>(0, params["photodiodes"]["photodiode_orientation_dev"].as<double>());
+    double photodiode_std_nominal = params["photodiodes"]["photodiode_std"].as<double>();
+    double photodiode_std_std = photodiode_std_nominal*(params["photodiodes"]["photodiode_std_dev"].as<double>()/100);
     photodiode_dist = std::normal_distribution<double>(photodiode_std_nominal, photodiode_std_std);
 
     // Magnetometer
-    double magnetometer_noise_std_nominal = params["magnetometer_noise_std"].as<double>();
-    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer_std_dev"].as<double>()/100);
+    double magnetometer_noise_std_nominal = params["magnetometer"]["magnetometer_noise_std"].as<double>();
+    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer"]["magnetometer_std_dev"].as<double>()/100);
     magnetometer_dist = std::normal_distribution<double>(magnetometer_noise_std_nominal, magnetometer_noise_std_std);
 
     // Gyroscope
-    double gyro_sigma_w_nominal = params["gyro_sigma_w"].as<double>();
-    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyro_sigma_w_dev"].as<double>()/100);
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
+    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
     gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
 
-    double gyro_sigma_v_nominal = params["gyro_sigma_v"].as<double>();
-    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyro_sigma_v_dev"].as<double>()/100);
+    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
+    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
     gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
 
     // Initialization
-    double sma_nominal = params["semimajor_axis"].as<double>();
-    double sma_std = 0.01*sma_nominal*params["semimajor_axis_dev"].as<double>();
+    double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
+    double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
-    double ecc_nominal = params["eccentricity"].as<double>();
-    double ecc_std = ecc_nominal*(params["eccentricity_dev"].as<double>()/100);
+    double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
+    double ecc_std = ecc_nominal*(params["initialization"]["eccentricity_dev"].as<double>()/100);
     eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
 
-    double incl_nominal = params["inclination"].as<double>();
-    double incl_std = incl_nominal*(params["inclination_dev"].as<double>()/100);
+    double incl_nominal = params["initialization"]["inclination"].as<double>();
+    double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
-    double RAAN_nominal = params["RAAN"].as<double>();
-    double RAAN_std = RAAN_nominal*(params["RAAN_dev"].as<double>()/100);
+    double RAAN_nominal = params["initialization"]["RAAN"].as<double>();
+    double RAAN_std = RAAN_nominal*(params["initialization"]["RAAN_dev"].as<double>()/100);
     RAAN_dist = std::normal_distribution<double>(RAAN_nominal, RAAN_std);
 
-    double AOP_nominal = params["AOP"].as<double>();
-    double AOP_std = AOP_nominal*(params["AOP_dev"].as<double>()/100);
+    double AOP_nominal = params["initialization"]["AOP"].as<double>();
+    double AOP_std = AOP_nominal*(params["initialization"]["AOP_dev"].as<double>()/100);
     AOP_dist = std::normal_distribution<double>(AOP_nominal, AOP_std);
     true_anomaly_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
 
     initial_attitude_dist = std::uniform_real_distribution<double>(-1,1);
 
-    double angular_rate_bound = params["initial_angular_rate_bound"].as<double>();
+    double angular_rate_bound = params["initialization"]["initial_angular_rate_bound"].as<double>();
     initial_angular_rate_dist = std::uniform_real_distribution<double>(-angular_rate_bound, angular_rate_bound);
 
     double earliest_sim_start_J2000 = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());

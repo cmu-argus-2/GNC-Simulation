@@ -4,9 +4,9 @@ from world.math.quaternions import *
 
 class ControllerAlgorithm:
     def __init__(self, Magnetorquers: list, ReactionWheels: list, params: dict):
-        self.G_mtb_b = np.array(params["mtb_orientation"]).reshape(params["N_mtb"], 3)
-        self.G_rw_b  = np.array(params["rw_orientation"]).reshape(params["N_rw"], 3)
-        self.J = np.array(params["inertia"]).reshape(3,3)
+        self.G_mtb_b = np.array(params["magnetorquers"]["mtb_orientation"]).reshape(params["magnetorquers"]["N_mtb"], 3)
+        self.G_rw_b  = np.array(params["reaction_wheels"]["rw_orientation"]).reshape(params["reaction_wheels"]["N_rw"], 3)
+        self.J = np.array(params["inertia"]["nominal_inertia"]).reshape(3,3)
         max_moms = np.zeros(len(Magnetorquers))
         for i, mtb in enumerate(Magnetorquers):
             max_moms[i] = mtb.max_dipole_moment

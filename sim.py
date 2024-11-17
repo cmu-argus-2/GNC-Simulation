@@ -72,8 +72,8 @@ class Simulator():
         # self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
 
         # Actuator Indexing
-        self.num_RWs  = self.controller_params["N_rw"]
-        self.num_MTBs = self.controller_params["N_mtb"]
+        self.num_RWs  = self.controller_params["reaction_wheels"]["N_rw"]
+        self.num_MTBs = self.controller_params["magnetorquers"]["N_mtb"]
         self.Idx["NU"]    = self.num_RWs + self.num_MTBs
         self.Idx["N_rw"]  = self.num_RWs
         self.Idx["N_mtb"] = self.num_MTBs
@@ -84,8 +84,8 @@ class Simulator():
         self.Idx["NX"] = self.Idx["NX"] + self.num_RWs
         self.Idx["X"]["RW_SPEED"]   = slice(19, 19 + self.num_RWs)
         
-        Magnetorquers = [Magnetorquer(self.controller_params, IdMtb) for IdMtb in range(self.num_MTBs)] 
-        ReactionWheels = [ReactionWheel(self.controller_params, IdRw) for IdRw in range(self.num_RWs)]
+        Magnetorquers = [Magnetorquer(self.controller_params["magnetorquers"], IdMtb) for IdMtb in range(self.num_MTBs)] 
+        ReactionWheels = [ReactionWheel(self.controller_params["reaction_wheels"], IdRw) for IdRw in range(self.num_RWs)]
         self.controller = Controller(self.controller_params, Magnetorquers, ReactionWheels, self.Idx)
 
         # Controller Frequency
