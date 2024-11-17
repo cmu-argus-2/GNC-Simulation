@@ -115,8 +115,8 @@ if __name__ == "__main__":
                             "TRIAL_NUMBER": str(TRIAL_NUMBER)
                         },
                         cwd=trial_command_dir,
-                        #stderr=outfile,
-                        #stdout=outfile,
+                        stderr=outfile,
+                        stdout=outfile,
                     )
 
                     process_info = {

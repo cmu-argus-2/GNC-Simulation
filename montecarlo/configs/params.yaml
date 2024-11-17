@@ -71,7 +71,7 @@ gyro_scale_factor_err : 1.0e-5
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 108000 # [s]
+MAX_TIME: 10800 # [s]
 dt: 0.01         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
@@ -154,5 +154,4 @@ eccentricity_dev : 20 # [%]
 inclination_dev : 1 # [%]
 RAAN_dev : 20 # [%]
 AOP_dev : 20 # [%]
-true_anomaly_dev : 20 # [%]
 initial_angular_rate_bound : 1 # Max initial angular rate about any axis [rad/s]

@@ -105,7 +105,7 @@ class Magnetorquer:
         self.dipole_moment = np.clip(a=dipole_moment, a_min=-self.max_dipole_moment, a_max=self.max_dipole_moment)
         I = self.convert_dipole_moment_to_current(self.dipole_moment)
         # NOTE : HARDCODED a safety margin
-        self.current = np.clip(a=I, a_min=-0.9*self.max_current, a_max=0.9*self.max_current)
+        self.current = np.clip(a=I, a_min=-0.6*self.max_current, a_max=0.6*self.max_current)
         # clip voltage to max voltage
         self.voltage = np.clip(a=self.current * self.R, a_min=-self.max_voltage, a_max=self.max_voltage)
         self.power   = self.R * self.current ** 2

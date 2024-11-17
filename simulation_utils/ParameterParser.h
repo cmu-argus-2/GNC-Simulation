@@ -113,7 +113,7 @@ class Simulation_Parameters {
     std::normal_distribution<double> inclination_dist;
     std::normal_distribution<double> RAAN_dist;
     std::normal_distribution<double> AOP_dist;
-    std::normal_distribution<double> true_anomaly_dist;
+    std::uniform_real_distribution<double> true_anomaly_dist;
     std::uniform_real_distribution<double> initial_attitude_dist;
     std::uniform_real_distribution<double> initial_angular_rate_dist;
     std::uniform_real_distribution<double> sim_start_time_dist;

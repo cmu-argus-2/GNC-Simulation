@@ -249,10 +249,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double AOP_nominal = params["AOP"].as<double>();
     double AOP_std = AOP_nominal*(params["AOP_dev"].as<double>()/100);
     AOP_dist = std::normal_distribution<double>(AOP_nominal, AOP_std);
-
-    double true_anomaly_nominal = params["true_anomaly"].as<double>();
-    double true_anomaly_std = true_anomaly_nominal*(params["true_anomaly_dev"].as<double>()/100);
-    true_anomaly_dist = std::normal_distribution<double>(true_anomaly_nominal, true_anomaly_std);
+    true_anomaly_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
 
     initial_attitude_dist = std::uniform_real_distribution<double>(-1,1);
 
