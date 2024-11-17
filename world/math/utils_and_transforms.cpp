@@ -221,6 +221,18 @@ Vector5 TJ2000toUTC(double t_J2000)
     return utc_date;
 }
 
+std::string TJ2000toUTCString(double t_J2000)
+{
+    loadAllKernels();
+    const int oplen = 35;
+    SpiceChar utc_datestring[oplen];
+
+    et2utc_c(t_J2000, "ISOC", 3, oplen, utc_datestring);
+    std::string datestring = utc_datestring;
+
+    return datestring;
+}
+
 double UTCStringtoTJ2000 (std::string UTC)
 {
     loadAllKernels();

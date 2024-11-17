@@ -35,22 +35,23 @@
 // ==========================================================================
 
 Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder) : 
-                                    dev(loadSeed(trial_number)), MTB(load_MTB(filename, dev))
+                                    dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
-    std::cout << "skdfskdjfbsdkjf";
     /* Parse parameters */
     YAML::Node params = YAML::LoadFile(filename);
+    defineDistributions(filename);
 
     results_folder = results_folder; // PLACEHOLDER
-    std::cout << "wsfyhjfsdjfh";
-    defineDistributions(params);
-
-    std::cout << "Here";
 
     // Physical Parameters
     mass = mass_dist(dev);
-    I_sat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"].as<std::vector<double>>().data());
+    mass = std::min(params["max_mass"].as<double>(), std::max(mass, params["min_mass"].as<double>()));
+
     A = area_dist(dev);
+    I_sat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"].as<std::vector<double>>().data());
+    I_sat(0,0) = Ixx_dist(dev);
+    I_sat(1,1) = Iyy_dist(dev);
+    I_sat(2,2) = Izz_dist(dev);
 
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
@@ -112,18 +113,17 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     initial_state = initializeSatellite(sim_start_time);
 
     // Dump Dispersed Parameters to YAML
-    //dumpSampledParametersToYAML(results_folder);
+    dumpSampledParametersToYAML(results_folder);
 }
 
 Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 gen)
 {
     YAML::Node params = YAML::LoadFile(filename);
-    std::cout << "HELLO";
     num_MTBs = params["N_mtb"].as<int>();
-    std::cout << "sdfhsdfjsdhfb";
-    printf("sfskjdfskdjf");
     
     resistances = VectorXd::NullaryExpr(num_MTBs,[&](){return mtb_resistance_dist(gen);});
+    double resistance_bound = params["mtb_resistance_lub"].as<double>();
+    resistances = resistances.cwiseMax((1-resistance_bound)*resistances).cwiseMin((1+resistance_bound)*resistances);  
 
     G_mtb_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
     for (int i=0; i<num_MTBs; i++) {
@@ -161,8 +161,10 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 
 }
 
-void Simulation_Parameters::defineDistributions(YAML::Node params) 
+void Simulation_Parameters::defineDistributions(std::string filename) 
 {
+    YAML::Node params = YAML::LoadFile(filename);
+    
     // Mass
     double mass_nominal = params["mass"].as<double>();
     double mass_std = mass_nominal*(params["mass_dev"].as<double>()/100);
@@ -174,7 +176,17 @@ void Simulation_Parameters::defineDistributions(YAML::Node params)
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
 
     // Inertia
+    Vector3 inertia_dev = Eigen::Map<Vector3>(params["principal_axis_dev"].as<std::vector<double>>().data());
+    MatrixXd Isat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"].as<std::vector<double>>().data());
+    
+    double Ixx_std = Isat(0,0)*inertia_dev(0)/100;
+    Ixx_dist = std::normal_distribution<double>(Isat(0,0), Ixx_std);
 
+    double Iyy_std = Isat(1,1)*inertia_dev(1)/100;
+    Iyy_dist = std::normal_distribution<double>(Isat(1,1), Iyy_std);
+
+    double Izz_std = Isat(2,2)*inertia_dev(2)/100;
+    Izz_dist = std::normal_distribution<double>(Isat(2,2), Izz_std);
 
     // Reaction Wheels
     rw_orientation_dist = std::normal_distribution<double>(0, params["rw_orientation_dev"].as<double>());
@@ -185,7 +197,7 @@ void Simulation_Parameters::defineDistributions(YAML::Node params)
     // Magnetorquers
     mtb_orientation_dist = std::normal_distribution<double>(0, params["mtb_orientation_dev"].as<double>());
     double mtb_resistance_nominal = params["mtb_resistance"].as<double>();
-    double mtb_resistance_std = mtb_resistance_nominal*(params["mtb_resistance_dev"].as<double>()/100);
+    double mtb_resistance_std = mtb_resistance_nominal*(params["mtb_resistance_dev"].as<double>())/100;
     mtb_resistance_dist = std::normal_distribution<double>(mtb_resistance_nominal, mtb_resistance_std);
 
     // GPS
@@ -219,16 +231,16 @@ void Simulation_Parameters::defineDistributions(YAML::Node params)
 
     // Initialization
     double sma_nominal = params["semimajor_axis"].as<double>();
-    double sma_std = sma_nominal*(params["semimajor_axis_dev"].as<double>()/100);
+    double sma_std = 0.01*sma_nominal*params["semimajor_axis_dev"].as<double>();
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
     double ecc_nominal = params["eccentricity"].as<double>();
-    double ecc_std = sma_nominal*(params["eccentricity_dev"].as<double>()/100);
+    double ecc_std = ecc_nominal*(params["eccentricity_dev"].as<double>()/100);
     eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
 
     double incl_nominal = params["inclination"].as<double>();
-    double incl_std = sma_nominal*(params["inclination_dev"].as<double>()/100);
-    sma_dist = std::normal_distribution<double>(incl_nominal, incl_std);
+    double incl_std = incl_nominal*(params["inclination_dev"].as<double>()/100);
+    inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
     double RAAN_nominal = params["RAAN"].as<double>();
     double RAAN_std = RAAN_nominal*(params["RAAN_dev"].as<double>()/100);
@@ -255,15 +267,67 @@ void Simulation_Parameters::defineDistributions(YAML::Node params)
 
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
 {
-    std::mt19937 gen(trial_number);
+    std::mt19937 gen;
+    gen.seed(trial_number);
 
     return gen;
 }
 
-/*void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_folder)
+void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_folder)
 {
+    YAML::Emitter out;
+    std::string outpath = results_folder.append("/trial_params.yaml");
+    
+    out << YAML::BeginSeq;
+    out << YAML::Key << "mass" << mass;
+    out << YAML::Key << "area" << A;
 
-}*/
+    std::vector<double> vec;
+    vec.assign(I_sat.data(), I_sat.data() + 9);
+    out << YAML::Key << "inertia" << YAML::Flow << vec;
+
+    vec.assign(G_rw_b.data(), G_rw_b.data() + G_rw_b.rows()*G_rw_b.cols());
+    out << YAML::Key << "rw_orientation" << YAML::Flow << vec;
+    out << YAML::Key << "I_rw" <<  I_rw;
+    
+    vec.assign(G_mtb_b.data(), G_mtb_b.data() + G_mtb_b.rows()*G_mtb_b.cols());
+    out << YAML::Key << "mtb_orientation" << YAML::Flow << vec;
+
+    vec.assign(resistances.data(), resistances.data() + resistances.size());
+    out << YAML::Key << "mtb_resistances" << YAML::Flow << vec;
+
+    out << YAML::Key << "gps_pos_std" << gps_pos_std;
+    out << YAML::Key << "gps_vel_std" << gps_vel_std;
+
+    vec.assign(G_pd_b.data(), G_pd_b.data() + G_pd_b.rows()*G_pd_b.cols());
+    out<<YAML::Key << "photodiode_orientation" << YAML::Flow << vec;
+
+    out<<YAML::Key << "magnetometer_std" << magnetometer_noise_std;
+
+    out<<YAML::Key << "gyro_sigma_w" <<gyro_sigma_w;
+    out<< YAML::Key << "gyro_sigma_v" << gyro_sigma_v;
+
+    out<<YAML::Key << "semimajor_axis" << semimajor_axis;
+    out<<YAML::Key << "eccentricity" << eccentricity;
+    out<<YAML::Key << "inclination" << inclination;
+    out<<YAML::Key << "RAAN" << RAAN;
+    out<<YAML::Key << "AOP" << AOP;
+    out<<YAML::Key << "true_anomaly" << true_anomaly;
+
+    vec.assign(initial_attitude.data(), initial_attitude.data() + initial_attitude.size());
+    out<<YAML::Key << "initial_attitude" << YAML::Flow << vec;
+    vec.assign(initial_angular_rate.data(), initial_angular_rate.data() + initial_angular_rate.size());
+    out<<YAML::Key << "initial_angular_rate" << YAML::Flow << vec;
+
+    out<<YAML::Key << "sim_start_time" << TJ2000toUTCString(sim_start_time);
+
+    out<<YAML::EndSeq;
+
+    std::ofstream fout(outpath);
+    fout << out.c_str();
+
+
+}
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysim_utils, m) {

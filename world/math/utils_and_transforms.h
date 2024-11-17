@@ -176,6 +176,14 @@ Vector6 KOE2ECI(Vector6 KOE, double t_J2000);
 Vector5 TJ2000toUTC(double t_J2000);
 
 /**
+ * @brief Converts time from seconds past J2000 to UTC date string
+ *
+ * @param t_J2000 - seconds past J2000
+ * @return UTC datestring in ISOC format
+ */
+std::string TJ2000toUTCString(double t_J2000);
+
+/**
  * @brief Converts time from UTC string in format 'YYYY-MM-DD HH:MM:SS' to seconds past J2000
  *
  * @param UTC - UTC string

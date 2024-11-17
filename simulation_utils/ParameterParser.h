@@ -12,7 +12,7 @@ class Simulation_Parameters {
    public:
     Simulation_Parameters(std::string filename, int trial_number, std::string results_folder);
     VectorXd initializeSatellite(double epoch);
-    // void dumpSampledParametersToYAML(std::string absolute_filename); TODO
+    void dumpSampledParametersToYAML(std::string results_folder);
 
     std::mt19937 dev;
     // ========================================================================
@@ -88,7 +88,9 @@ class Simulation_Parameters {
     // Physical
     std::normal_distribution<double> mass_dist;
     std::normal_distribution<double> area_dist;
-    std::normal_distribution<double> inertia_dist;
+    std::normal_distribution<double> Ixx_dist;
+    std::normal_distribution<double> Iyy_dist;
+    std::normal_distribution<double> Izz_dist;
 
     // Actuators
     std::normal_distribution<double> rw_orientation_dist;
@@ -118,7 +120,7 @@ class Simulation_Parameters {
 
     private:
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
-    void defineDistributions(YAML::Node params);
+    void defineDistributions(std::string filename);
     std::mt19937 loadSeed(int trial_number);
 };
 

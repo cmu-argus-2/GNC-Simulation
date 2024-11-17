@@ -23,7 +23,6 @@ class Simulator():
         self.log_directory = log_directory
         
         # Spacecraft Config
-        print("herewerwer")
         self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
         self.num_RWs = self.params.num_RWs
         self.num_MTBs = self.params.num_MTBs

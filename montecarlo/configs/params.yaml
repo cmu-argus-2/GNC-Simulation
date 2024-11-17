@@ -129,7 +129,8 @@ I_rw_dev : 20 # stddev from nominal I_rw as a % of nominal I_rw [%]
 
 # Magnetorquers
 mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
-mtb_resistance_dev : 20 # stddev from nominal resistance as a % of nominal resistance [%]
+mtb_resistance_dev : 5 # stddev from nominal resistance as a % of nominal resistance [%]
+mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
 
 # GPS
 gps_pos_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
@@ -150,7 +151,7 @@ gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % 
 # All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
 semimajor_axis_dev : 1 #  [%]
 eccentricity_dev : 20 # [%]
-inclination_dev : 20 # [%]
+inclination_dev : 1 # [%]
 RAAN_dev : 20 # [%]
 AOP_dev : 20 # [%]
 true_anomaly_dev : 20 # [%]
