@@ -14,13 +14,17 @@ import os
 import yaml
 
 class Simulator():
-    def __init__(self, log_directory, config_path) -> None:
+    def __init__(self, trial_number, log_directory, config_path) -> None:
+        
+        self.trial_number = trial_number
+
         # Datapaths
         self.config_path = config_path
         self.log_directory = log_directory
         
         # Spacecraft Config
-        self.params = SimParams(self.config_path)
+        print("herewerwer")
+        self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
         self.num_RWs = self.params.num_RWs
         self.num_MTBs = self.params.num_MTBs
         self.num_photodiodes = self.params.num_photodiodes
@@ -186,6 +190,7 @@ RESET = "\033[0m"  # Resets all attributes
 if __name__ == "__main__":
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
-    sim = Simulator(TRIAL_DIRECTORY, PARAMETER_FILEPATH)
+    TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
+    sim = Simulator(TRIAL_NUMBER, TRIAL_DIRECTORY, PARAMETER_FILEPATH)
     print("Initialized")
     sim.run()

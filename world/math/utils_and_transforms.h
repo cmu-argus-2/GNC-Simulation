@@ -4,6 +4,7 @@
 
 #include "math/EigenWrapper.h"
 #include "SpiceUsr.h"
+#include <random> 
 
 // How close each A(i,j) must be to A(j,i) for matrix to be considered symmetric
 static constexpr double VALID_SYMMETRIC_MATRIX_TOLERANCE = 1E-60;
@@ -50,6 +51,15 @@ Matrix_3x3 toSkew(const Vector3 &v);
  * @return Matrix_3x3 cleaned up rotation matrix
  */
 Matrix_3x3 cleanRotMatrix(Matrix_3x3 R);
+
+/**
+ * @brief Defines a random rotation about a random axis
+ * 
+ * @param dist : Normal Distribution characterizing the noise profile
+ * @param gen : seeded random generator
+ * @return 3x3 matrix represnting a random rotation
+ */
+Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist, std::mt19937 gen);
 
 /**
  * @brief Get the ENU to ECEF transform based on latitude and longitude of the

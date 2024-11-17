@@ -34,15 +34,12 @@ mtb_orientation : [1,0,0,
                    1,0,0, 
                    0,1,0, 
                    0,0,1] # alignment axis of each magnetorquer in the body frame
-max_voltage : [5,5,5,5,5,5]  # V maximum voltage that can be applied by each magnetorquer
-coils_per_layer : [32.0,32.0,32.0,32.0,32.0,32.0]  # number of coils per layer
-layers : [2.0,2.0,2.0,2.0,2.0,2.0]                 # number of layers
-trace_width : [0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317, 0.0007317]  # m
-gap_width : [0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999, 0.00008999]  # m
-trace_thickness : [0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556, 0.00003556]  # 1oz copper - 35um = 1.4 mils
-pcb_side_max: [0.1,0.1,0.1,0.1,0.1,0.1] # m
-max_current_rating : [1.0,1.0,1.0,1.0,1.0,1.0]  # A
-max_power : [1,1,1,1,1,1]  # W
+mtb_resistance : 3.25e-7 # [UNITS: Ω]
+A_cross : 5.4326e-3 # [UNITS : m^2]
+N_turns : 64
+max_voltage : 5  # V maximum voltage that can be applied by each magnetorquer
+max_current_rating : 1.0  # A
+max_power : 1  # W
 
 # -----------------------------------------------------------------------------------------------------------
 # Payload
@@ -109,3 +106,52 @@ pointing_target: "Nadir" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 10 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
+
+# -----------------------------------------------------------------------------------------------------------
+# PARAMETER DISPERSION
+# -----------------------------------------------------------------------------------------------------------
+
+# Mass
+min_mass : 0.5 # Min allowable mass [kg]
+mass_dev : 50 # Stddev from nominal mass as a % of nominal mass [%]
+max_mass : 2.0 # Max allowable mass [kg]
+
+# Area
+min_area : 0.01 # Min area [m^2]
+area_dev : 20 # stddev from nominal area as a % of nominal area [%]
+
+# Inertia
+principal_axis_dev : [20,20,20] # stddev of principal axis inertias about nominal as a % of nominal [%]
+
+# Reaction wheels
+rw_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector [rad]
+I_rw_dev : 20 # stddev from nominal I_rw as a % of nominal I_rw [%]
+
+# Magnetorquers
+mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
+mtb_resistance_dev : 20 # stddev from nominal resistance as a % of nominal resistance [%]
+
+# GPS
+gps_pos_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
+gps_vel_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
+
+# Photodiodes
+photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
+photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
+
+# Magnetometer
+magnetometer_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+
+# Gyroscope
+gyro_sigma_w_dev : 20 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
+gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+
+# Initialization
+# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+semimajor_axis_dev : 1 #  [%]
+eccentricity_dev : 20 # [%]
+inclination_dev : 20 # [%]
+RAAN_dev : 20 # [%]
+AOP_dev : 20 # [%]
+true_anomaly_dev : 20 # [%]
+initial_angular_rate_bound : 1 # Max initial angular rate about any axis [rad/s]
