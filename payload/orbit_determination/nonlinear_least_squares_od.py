@@ -94,7 +94,7 @@ class OrbitDetermination:
             :param ts: The timestamps to map to state estimates as a numpy array of shape (m,).
             :return: The resulting state estimates as a numpy array of shape (m, 6).
             """
-            angles_ = angular_velocity * ts + angle_0
+            angles_ = angular_velocity * ts * self.dt + angle_0
             positions_2d_ = orbital_radius * np.column_stack((np.cos(angles_), np.sin(angles_)))
             positions_ = positions_2d_ @ np.row_stack((x_axis, y_axis))
 
@@ -108,7 +108,7 @@ class OrbitDetermination:
 
     def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, bearing_unit_vectors: np.ndarray,
                   Rs_body_to_eci: np.ndarray, N: int = None,
-                  semi_major_axis_guess: float = R_EARTH + 600e3) -> np.ndarray:
+                  semi_major_axis_guess: float = R_EARTH + 550e3) -> np.ndarray:
         """
         Solve the orbit determination problem using non-linear least squares.
 
@@ -203,7 +203,7 @@ class OrbitDetermination:
 
         altitude_normalized_landmarks = landmarks / np.linalg.norm(landmarks, axis=1, keepdims=True)
         model = self.fit_circular_orbit(times, semi_major_axis_guess * altitude_normalized_landmarks)
-        initial_guess = model(np.arange(N) * self.dt).flatten()
-
-        result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
-        return result.x.reshape(N, 6)
+        initial_guess = model(np.arange(N)).flatten()
+        return initial_guess.reshape(N, 6)
+        # result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
+        # return result.x.reshape(N, 6)

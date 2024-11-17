@@ -84,18 +84,15 @@ class Camera():
         coords: np.ndarray,
         cubesat_att_in_ecef: np.ndarray,
     ) -> np.ndarray:
-        cam_ray_dirs = self.convert_pixel_coordinates_to_camera_ray_directions(coords)
-        return self.convert_camera_directions_to_ecef_directions(
-            cam_ray_dirs, cubesat_att_in_ecef
-        )
+        coords_ndc = (coords + 0.5) / self.dims
+        screen_coordinates = [1, -1] * (2 * coords_ndc - 1)
 
-    def convert_camera_directions_to_ecef_directions(
-        self,
-        dirs_in_camera_frame: np.ndarray,
-        cubesat_att_in_ecef: np.ndarray,
-    ) -> np.ndarray:
+        ray_dirs_xy = -screen_coordinates / self.f
+        ray_dirs_z = self.f * np.ones((screen_coordinates.shape[0], 1))
+        cam_ray_dirs = np.hstack((ray_dirs_xy, ray_dirs_z))
+
         R_ecef_sat = self.get_rotation(cubesat_att_in_ecef)
-        return (R_ecef_sat @ self.R_sat_cam @ dirs_in_camera_frame.T).T
+        return (R_ecef_sat @ self.R_sat_cam @ cam_ray_dirs.T).T
 
     def get_camera_position_in_ecef(
         self,
@@ -126,29 +123,6 @@ class Camera():
         orientation: np.ndarray,
     ) -> np.ndarray:
         return Rotation.from_quat(orientation, scalar_first=True).as_matrix()
-
-    def convert_screen_coordinates_to_camera_ray_directions(
-        self,
-        coords: np.ndarray,
-    ) -> np.ndarray:
-        ray_dirs_xy = -coords / self.f
-        ray_dirs_z = self.f * np.ones((coords.shape[0], 1))
-        return np.hstack((ray_dirs_xy, ray_dirs_z))
-
-    def convert_pixel_coordinates_to_screen_coordinates(
-        self,
-        coords: np.ndarray,
-    ) -> np.ndarray:
-        coords_ndc = (coords + 0.5) / self.dims
-        return [1,-1] * (2*coords_ndc - 1)
-
-    def convert_pixel_coordinates_to_camera_ray_directions(
-            self,
-            coords: np.ndarray
-    ) -> np.ndarray:
-        return self.convert_screen_coordinates_to_camera_ray_directions(
-            self.convert_pixel_coordinates_to_screen_coordinates(coords)
-        )
 
 
 class MockVisionModel:

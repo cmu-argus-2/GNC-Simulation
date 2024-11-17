@@ -3,6 +3,7 @@ import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
 from matplotlib import pyplot as plt
+from matplotlib import use
 from typing import Any
 
 import brahe
@@ -16,6 +17,19 @@ from sensors.mock_vision_model2 import Camera
 from nonlinear_least_squares_od import OrbitDetermination
 
 
+"""
+TODO:
+- Perform camera calibration
+- Project landsat data to simulate images
+- Play with the vision model
+- Implement outlier rejection
+Need from Ibra
+- How to get images off of the cameras
+- How to run the vision model
+- Walkthrough of Kyle's landsat projection code
+"""
+
+
 def load_config() -> dict[str, Any]:
     """
     Load the configuration file and modify it for the purposes of this test.
@@ -27,7 +41,7 @@ def load_config() -> dict[str, Any]:
 
     # decrease world update rate since we only care about position dynamics
     config["solver"]["world_update_rate"] = 1 / 60  # Hz
-    config["mission"]["duration"] = 90 * 60  # s, roughly 1 orbit
+    config["mission"]["duration"] = 3 * 90 * 60  # s, roughly 1 orbit
 
     return config
 
@@ -71,8 +85,57 @@ def is_over_daytime(epoch: Epoch, cubesat_position: np.ndarray) -> bool:
     return np.dot(brahe.ephemerides.sun_position(epoch), cubesat_position) > 0
 
 
+def get_SO3_noise_matrices(N: int, magnitude_std: float) -> np.ndarray:
+    """
+    Generate a set of matrices representing random rotations in SO(3) with a given standard deviation.
+
+    :param N: The number of noise matrices to generate.
+    :param magnitude_std: The standard deviation of the magnitudes of the rotations in radians.
+    :return: A numpy array of shape (N, 3, 3) containing the noise rotations.
+    """
+    magnitudes = np.abs(np.random.normal(scale=magnitude_std, size=N))
+    directions = np.random.normal(size=(N, 3))
+    directions /= np.linalg.norm(directions, axis=1, keepdims=True)
+    return Rotation.from_rotvec(magnitudes[:, np.newaxis] * directions).as_matrix()
+
+
+def animate_orbits(positions: np.ndarray, estimated_positions: np.ndarray, landmarks: np.ndarray) -> None:
+    """
+    Creates an animation where the orbital paths of the true and estimated states are plotted as evolving over time.
+    The landmarks are also plotted statically.
+
+    :param positions: A numpy array of shape (N, 3) containing the true positions.
+    :param estimated_positions: A numpy array of shape (N, 3) containing the estimated positions.
+    :param landmarks: A numpy array of shape (M, 3) containing the landmark positions.
+    """
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    for t in range(positions.shape[0]):
+        start_idx = max(0, t - 100)
+        ax.clear()
+        ax.plot(positions[start_idx:t, 0],
+                positions[start_idx:t, 1],
+                positions[start_idx:t, 2],
+                label="True orbit")
+        ax.plot(estimated_positions[start_idx:t, 0],
+                estimated_positions[start_idx:t, 1],
+                estimated_positions[start_idx:t, 2],
+                label="Estimated orbit")
+        ax.scatter(landmarks[:, 0], landmarks[:, 1], landmarks[:, 2], label="Landmarks")
+
+        ax.set_xlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+        ax.set_ylim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+        ax.set_zlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+        ax.set_xlabel("X (m)")
+        ax.set_ylabel("Y (m)")
+        ax.set_zlabel("Z (m)")
+        ax.legend()
+        plt.pause(0.01)
+
+
 def test_od():
-    update_brahe_data_files()
+    # update_brahe_data_files()
     config = load_config()
 
     # set up camera, vision model, and orbit determination objects
@@ -130,6 +193,9 @@ def test_od():
     if len(times) == 0:
         raise ValueError("No measurements taken")
 
+    # so3_noise_matrices = get_SO3_noise_matrices(len(times), np.deg2rad(0.001))
+    # bearing_unit_vectors = np.einsum("ijk,ik->ij", so3_noise_matrices, bearing_unit_vectors)
+
     start_time = perf_counter()
     estimated_states = od.fit_orbit(times, landmarks, bearing_unit_vectors, Rs_body_to_eci, N)
     print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
@@ -146,6 +212,8 @@ def test_od():
 
     ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
     ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
+    ax.scatter(landmarks[:, 0], landmarks[:, 1], landmarks[:, 2], label="Landmarks")
+
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y (m)")
     ax.set_zlabel("Z (m)")
@@ -153,5 +221,30 @@ def test_od():
     plt.show()
 
 
+def fake_plots():
+    plt.figure()
+    plt.xlabel("Bearing Unit Vector SO(3) Noise Variance (deg)")
+    plt.ylabel("RMS Position Error (m)")
+    plt.title("Effect of Bearing Unit Vector Noise on Orbit Determination")
+    plt.plot(np.exp(np.arange(10)))
+    plt.show()
+
+    plt.figure()
+    plt.xlabel("Attitude SO(3) Noise Variance (deg)")
+    plt.ylabel("RMS Position Error (m)")
+    plt.title("Effect of Attitude Noise on Orbit Determination")
+    plt.plot(np.exp(np.arange(10)))
+    plt.show()
+
+    plt.figure()
+    plt.xlabel("RMS Position Error")
+    plt.ylabel("Relative Frequency")
+    plt.title("Histogram of RMS Position Error")
+    plt.hist(np.random.normal(loc=100, size=1000), bins=30)
+    plt.show()
+
+
 if __name__ == "__main__":
+    np.random.seed(69420)
+    use("TkAgg")
     test_od()

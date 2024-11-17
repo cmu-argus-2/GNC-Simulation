@@ -89,3 +89,67 @@ class Camera:
 
         camera_position_eci = cubesat_position_eci + self.t_body_to_camera
         return self.get_ray_and_earth_intersections(bearing_unit_vectors_eci, camera_position_eci)
+
+
+def test():
+    import yaml
+    from matplotlib import pyplot as plt
+    from matplotlib import use
+
+    use("TkAgg")
+
+    with open("../config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    camera_params = config["satellite"]["camera"]
+    camera = Camera(
+        image_dimensions=np.array([camera_params["image_width"], camera_params["image_height"]]),
+        K=np.asarray(camera_params["intrinsics"]),
+        R_body_to_camera=np.eye(3),
+        t_body_to_camera=np.zeros(3)
+    )
+
+    pixel_coordinates = camera.sample_pixel_coordinates(1)
+    bearing_unit_vectors = camera.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
+    print(pixel_coordinates)
+    print(bearing_unit_vectors)
+
+    # cubesat_position = np.array([R_EARTH + 600e3, 0, 0])
+    #
+    # # define nadir cubesat attitude
+    # y_axis = [0, 1, 0]  # along orbital angular momentum
+    # z_axis = cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
+    # x_axis = np.cross(y_axis, z_axis)
+    # R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
+    #
+    # valid_intersections, intersection_points = camera.get_earth_intersections(pixel_coordinates, cubesat_position,
+    #                                                                           R_body_to_eci)
+    # print(valid_intersections)
+    # print(intersection_points)
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
+    # ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
+    # altitude_normalized_landmarks = landmarks
+    # ax.scatter(altitude_normalized_landmarks[:, 0],
+    #            altitude_normalized_landmarks[:, 1],
+    #            altitude_normalized_landmarks[:, 2],
+    #            label="Landmarks")
+    # bearing_unit_vectors = 100e3 * camera.pixel_coordinates_to_bearing_unit_vectors(pixel_coordinates)
+    # bearing_unit_vectors = np.array([R_body_to_eci @ bearing_unit_vector
+    #                                  for R_body_to_eci, bearing_unit_vector in
+    #                                  zip(Rs_body_to_eci, bearing_unit_vectors)])
+    # ax.quiver(states[times, 0], states[times, 1], states[times, 2],
+    #           bearing_unit_vectors[:, 0], bearing_unit_vectors[:, 1], bearing_unit_vectors[:, 2],
+    #           color="r", label="Bearing Unit Vectors")
+    # ax.set_xlabel("X (m)")
+    # ax.set_ylabel("Y (m)")
+    # ax.set_zlabel("Z (m)")
+    # ax.legend()
+    # plt.show()
+
+
+if __name__ == "__main__":
+    np.random.seed(69420)
+    test()
