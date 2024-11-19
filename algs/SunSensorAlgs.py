@@ -9,6 +9,7 @@ def _compute_body_ang_vel_from_sun_rays(init_sun_rays):
     #     the sat has rotated less than 180 degrees between every other sun ray measurement
     sun_rays = np.array([sun_ray for (t, sun_ray) in init_sun_rays])
     plane, inlier_idxs = fit_plane_RANSAC(sun_rays, tolerance=3e-2)  # TODO tune tolerance
+    # print(sum(inlier_idxs != 0), len(init_sun_rays))
 
     # TODO ensure we don't div-by-0
     plane_normal = plane[0:3] / np.linalg.norm(plane[0:3])
@@ -34,16 +35,18 @@ def _compute_body_ang_vel_from_sun_rays(init_sun_rays):
         rough_axis_estimate /= np.linalg.norm(rough_axis_estimate)
         similarity = np.dot(rough_axis_estimate, rotation_axis)
 
+        # print(similarity)
         if similarity > 0.8:
             N_consistent_with_axis += 1
         elif similarity < -0.8:
             N_consistent_with_opposite_axis += 1
 
-    min_consistent = 0.7 * N
+    min_consistent = 0.5 * N
     if N_consistent_with_opposite_axis >= min_consistent:
         rotation_axis *= -1
     elif N_consistent_with_axis < min_consistent:
-        # print("Couldn't find enough consistent data")
+        print(f"Couldn't find enough consistent data {N_consistent_with_axis} {N_consistent_with_opposite_axis}")
+        print(sun_rays)
         return None, None  # couldn't find enough consistent data
     # print("rotation_axis:", rotation_axis)
 

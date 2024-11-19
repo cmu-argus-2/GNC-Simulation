@@ -21,7 +21,7 @@ from scipy.spatial.transform import Rotation as R
 
 GYRO_DT = 0.1
 MAGNETOMETER_DT = 1  # [s]
-SUN_SENSOR_DT = 10  # [s]
+SUN_SENSOR_DT = 1  # [s]
 
 attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
 gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
@@ -72,21 +72,15 @@ class Simulator:
         self.gyro = TriAxisSensor(GYRO_DT, gyro_params)
 
         # Attitde Estimator Config
-        # TODO disperse initial attitude error
-        initial_ECI_R_b_estimate = R.from_quat([*self.true_state[7:10], self.true_state[6]])  # TODO inverse?
-        initial_gyro_bias_estimate = np.deg2rad(np.zeros(3))  # [rad/s]
         sigma_initial_attitude = np.deg2rad(5)  # [rad]
         sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
 
         # TODO bootstrap with triad
         self.attitude_ekf = Attitude_EKF(
-            initial_ECI_R_b_estimate,
-            initial_gyro_bias_estimate,
             sigma_initial_attitude,
             sigma_gyro_white,
             sigma_gyro_bias_deriv,
-            self.J2000_start_time,
         )
 
         # Logging
@@ -233,7 +227,7 @@ class Simulator:
             self.last_sun_sensor_measurement_time = current_time
             self.logr.log_v(
                 "sun_sensor_measurement.bin",
-                [current_time] + measured_sun_ray_in_body.tolist(),
+                [current_time - self.J2000_start_time] + measured_sun_ray_in_body.tolist(),
                 ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
             )
 
@@ -248,7 +242,7 @@ class Simulator:
             self.last_magnetometer_measurement_time = current_time
             self.logr.log_v(
                 "magnetometer_measurement.bin",
-                [current_time] + measured_Bfield_in_body.tolist(),
+                [current_time - self.J2000_start_time] + measured_Bfield_in_body.tolist(),
                 ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
             )
         # Propogate on Gyro
@@ -260,46 +254,52 @@ class Simulator:
 
             self.logr.log_v(
                 "gyro_measurement.bin",
-                [current_time] + gyro_measurement.tolist(),
+                [current_time - self.J2000_start_time] + gyro_measurement.tolist(),
                 ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
             )
 
         # Log pertinent Quantities
 
-        # get attitude estimate of the body wrt ECI
-        estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
-        attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
-
         true_gyro_bias = self.gyro.get_bias()
-        estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
-        gyro_bias_error = true_gyro_bias - estimated_gyro_bias
 
         if self.attitude_ekf.initialized:
+            # get attitude estimate of the body wrt ECI
+            estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
+            attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
+
+            estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
+            gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+
             self.logr.log_v(
                 "EKF_state.bin",
-                [current_time] + self.attitude_ekf.get_state().tolist(),
+                [current_time - self.J2000_start_time] + self.attitude_ekf.get_state().tolist(),
                 ["Time [s]"] + EKF_state_labels,
             )
             self.logr.log_v(
                 "EKF_error.bin",
-                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+                [current_time - self.J2000_start_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
                 ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
             )
 
             EKF_sigmas = self.attitude_ekf.get_uncertainty_sigma()
             self.logr.log_v(
                 "state_covariance.bin",
-                [current_time] + EKF_sigmas.tolist(),
+                [current_time - self.J2000_start_time] + EKF_sigmas.tolist(),
                 ["Time [s]"] + EKF_sigma_labels,
             )
 
         self.logr.log_v(
-            "gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels
+            "gyro_bias_true.bin",
+            [current_time - self.J2000_start_time] + true_gyro_bias.tolist(),
+            ["Time [s]"] + true_gyro_bias_labels,
         )
 
         self.logr.log_v(
             "state_true.bin",
-            [current_time] + self.true_state.tolist() + measurement.tolist() + control_input.tolist(),
+            [current_time - self.J2000_start_time]
+            + self.true_state.tolist()
+            + measurement.tolist()
+            + control_input.tolist(),
             ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
         )
 

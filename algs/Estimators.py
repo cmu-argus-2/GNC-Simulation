@@ -2,6 +2,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from scipy.linalg import expm
 from .SunSensorAlgs import compute_body_ang_vel_from_sun_rays
+import collections
 
 
 def skew_symmetric(v):
@@ -16,23 +17,19 @@ def skew_symmetric(v):
 
 # TODO convert to sqrt form if fixed precision math ends up being an issue
 
+# STATES: WAIT_FOR_CONSTANT_OMEGA, INITIALIZING, INITIALIZED
+
 
 class Attitude_EKF:
     def __init__(
         self,
-        initial_ECI_R_b_estimate,  # [w, x, y, z]
-        initial_gyro_bias_estimate,
         sigma_initial_attitude,  # [rad]
         sigma_gyro_white,  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv,  # [(rad/s)/sqrt(s))]
-        time_of_initial_attitude,  # [s]
     ):
         self.state_vector = np.zeros(7)
-        self.set_ECI_R_b(initial_ECI_R_b_estimate)
-        self.set_gyro_bias(initial_gyro_bias_estimate)
-        self.time_of_initial_attitude = time_of_initial_attitude
 
-        self.P = None
+        self.P = np.zeros((6, 6))
         self.sigma_initial_attitude = sigma_initial_attitude
         self.sigma_gyro_white = sigma_gyro_white
         self.sigma_gyro_bias_deriv = sigma_gyro_bias_deriv
@@ -43,10 +40,15 @@ class Attitude_EKF:
 
         self.last_gyro_measurement_time = None
 
+        self.gyro_ringbuff = collections.deque(maxlen=100)
+        self.sun_ray_ringbuff = collections.deque(maxlen=40)
+        self.Bfield_ringbuff = collections.deque(maxlen=40)
+
         # State variable pertaining to initialization
         self.initialized = False
-        self.init_gyro_measurements = []
-        self.init_sun_rays = []
+        self.attitude_initialized = False
+        self.gyro_bias_initialized = False
+        self.spinning_at_roughly_constant_rate = False
         self.min_degress_changed_to_init_from_sun_rays = 30  # [deg]  # TODO put me in param file
 
     def set_ECI_R_b(self, ECI_R_b):
@@ -80,9 +82,25 @@ class Attitude_EKF:
     def get_uncertainty_sigma(self):
         return np.sqrt(np.diag(self.P))
 
+    def sun_buff_full(self):
+        return len(self.sun_ray_ringbuff) == self.sun_ray_ringbuff.maxlen
+
+    def gyro_buff_full(self):
+        return len(self.gyro_ringbuff) == self.gyro_ringbuff.maxlen
+
+    def Bfield_buff_full(self):
+        return len(self.Bfield_ringbuff) == self.Bfield_ringbuff.maxlen
+
     def gyro_update(self, gyro_measurement, t):
+        self.gyro_ringbuff.append((t, gyro_measurement))
+        if self.gyro_buff_full():
+            norms = [np.linalg.norm(v) for (t, v) in self.gyro_ringbuff]
+            std_deviation = np.std(norms)
+            self.spinning_at_roughly_constant_rate = std_deviation < np.deg2rad(0.75)
+
         if not self.initialized:
-            self.init_gyro_measurements.append((t, gyro_measurement))
+            if self.spinning_at_roughly_constant_rate:
+                self.attempt_to_initialize(t)
             return
         if self.last_gyro_measurement_time is None:  # first time
             dt = 0
@@ -150,10 +168,11 @@ class Attitude_EKF:
 
     def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t, sigma_sunsensor):
         # sigma_sunsensor [rad]
+        measured_sun_ray_in_body /= np.linalg.norm(measured_sun_ray_in_body)
         true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
         if not self.initialized:
-            self.init_sun_rays.append((t, measured_sun_ray_in_body))
-            self.attempt_to_initialize(t)
+            if self.spinning_at_roughly_constant_rate:
+                self.sun_ray_ringbuff.append((t, measured_sun_ray_in_body, true_sun_ray_ECI))
             return
         predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
         innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
@@ -166,8 +185,11 @@ class Attitude_EKF:
 
     def Bfield_update(self, measured_Bfield_in_body, true_Bfield_ECI, t, sigma_Bfield):
         # sigma_Bfield [rad]
+        measured_Bfield_in_body /= np.linalg.norm(measured_Bfield_in_body)
         true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
         if not self.initialized:
+            if self.spinning_at_roughly_constant_rate:
+                self.Bfield_ringbuff.append((t, measured_Bfield_in_body, true_Bfield_ECI))
             return
         predicted_Bfield_ECI = self.get_ECI_R_b().as_matrix() @ measured_Bfield_in_body
         innovation = true_Bfield_ECI - predicted_Bfield_ECI
@@ -178,14 +200,17 @@ class Attitude_EKF:
         H = self.get_Bfield_measurement_jacobian(true_Bfield_ECI)
         self.EKF_update(H, innovation, Cov_Bfield)
 
-    def attempt_to_initialize(self, t):
-        if len(self.init_sun_rays) < 10:
+    def attempt_to_initialize_gyro_bias(self, t):
+        if not self.spinning_at_roughly_constant_rate:
+            return None
+        print(len(self.sun_ray_ringbuff))
+        if not self.sun_buff_full():
             return
 
-        average_gyro_measurement = np.average([gyro for (t, gyro) in self.init_gyro_measurements], axis=0)
+        average_gyro_measurement = np.average([gyro for (t, gyro) in self.gyro_ringbuff], axis=0)
         # print("average_gyro_measurement [deg/s]: ", np.rad2deg(average_gyro_measurement))
 
-        result = compute_body_ang_vel_from_sun_rays(self.init_sun_rays)
+        result = compute_body_ang_vel_from_sun_rays([(t, meas) for (t, meas, _) in self.sun_ray_ringbuff])
         if result is not None:
             (estimated_omega_in_body_frame, estimated_omega_in_body_frame_cov) = result
             print("estimated_omega_in_body_frame [deg/s]: ", np.rad2deg(estimated_omega_in_body_frame))
@@ -194,36 +219,77 @@ class Attitude_EKF:
                 np.rad2deg(np.sqrt(np.diag(estimated_omega_in_body_frame_cov))),
             )
 
-            # Initialize the attitude
-            time_to_initialize = t - self.time_of_initial_attitude
-            # rotation since getting initial attitude:
-            b0_R_b1 = R.from_rotvec(estimated_omega_in_body_frame * time_to_initialize)
-            inital_ECI_R_b = self.get_ECI_R_b()
-            current_ECI_R_b = inital_ECI_R_b * b0_R_b1
-            self.set_ECI_R_b(current_ECI_R_b)
-
             # Initialize the Gyro Bias
             gyro_bias_estimate = average_gyro_measurement - estimated_omega_in_body_frame
             self.set_gyro_bias(gyro_bias_estimate)
 
-            # ======================== Initialize the Covariance ========================
-            self.P = np.zeros((6, 6))
-
-            # TODO Initialize the Attitude Covariance
-            self.P[0:3, 0:3] = np.eye(3) * self.sigma_initial_attitude**2
-
+            # ======================== Initialize the Gyro Bias Covariance ========================
             # TODO Initialize the Gyro Bias Covariance
-            uncertainty_increase_in_true_gyro_bias_while_waiting_to_initialize = (
-                np.eye(3) * time_to_initialize * self.sigma_gyro_bias_deriv**2
-            )
+            time_to_initialize = self.gyro_ringbuff[-1][0] - self.gyro_ringbuff[0][0]
             averaging_time = time_to_initialize
             average_gyro_measurement_cov = np.eye(3) * self.sigma_gyro_white**2 / averaging_time
 
-            initial_gyro_bias_covariance = (
-                uncertainty_increase_in_true_gyro_bias_while_waiting_to_initialize
-                + average_gyro_measurement_cov
-                + estimated_omega_in_body_frame_cov
-            )
+            initial_gyro_bias_covariance = +average_gyro_measurement_cov + estimated_omega_in_body_frame_cov
             self.P[3:6, 3:6] = initial_gyro_bias_covariance
 
-            self.initialized = True
+            self.gyro_bias_initialized = True
+            return estimated_omega_in_body_frame
+
+    def attempt_to_initialize_attitude(self, w_body):
+        # Triad Algorithm - accumulate several and assuming constnat omega, transform vectors into initial bodyy frame. assume b and sun vectors don't change much ion ECI over time
+
+        assert self.gyro_bias_initialized
+        assert self.sun_buff_full()
+        assert self.Bfield_buff_full()
+
+        t_ref = np.average([t for (t, _, _) in self.sun_ray_ringbuff] + [t for (t, _, _) in self.Bfield_ringbuff])
+
+        avg_sun_ray_at_t_ref = np.zeros(
+            3,
+        )
+        for t, meas_body, true_ECI in self.sun_ray_ringbuff:
+            delta_t = t - t_ref
+            # transform the measurement back in time assuming constnat w
+            sun_ray_at_t_ref = R.from_rotvec(-w_body * delta_t).as_matrix() @ meas_body
+            avg_sun_ray_at_t_ref += sun_ray_at_t_ref
+        avg_sun_ray_at_t_ref /= len(self.sun_ray_ringbuff)
+
+        avg_Bfield_at_t_ref = np.zeros(
+            3,
+        )
+        for t, meas_body, true_ECI in self.Bfield_ringbuff:
+            delta_t = t - t_ref
+            # transform the measurement back in time assuming constnat w
+            Bfield_at_t_ref = R.from_rotvec(-w_body * delta_t).as_matrix() @ meas_body
+            avg_Bfield_at_t_ref += Bfield_at_t_ref
+        avg_Bfield_at_t_ref /= len(self.Bfield_ringbuff)
+
+        avg_sun_ray_ECI = np.average([v for (_, _, v) in self.sun_ray_ringbuff], axis=0)
+        avg_Bfield_ECI = np.average([v for (_, _, v) in self.Bfield_ringbuff], axis=0)
+
+        print(f"avg_sun_ray_at_t_ref: {avg_sun_ray_at_t_ref}")
+        print(f"avg_Bfield_at_t_ref: {avg_Bfield_at_t_ref}")
+
+        print(f"avg_sun_ray_ECI: {avg_sun_ray_ECI}")
+        print(f"avg_Bfield_ECI: {avg_Bfield_ECI}")
+
+        Body_Vectors = np.array(
+            [avg_sun_ray_at_t_ref, avg_Bfield_at_t_ref, np.cross(avg_sun_ray_at_t_ref, avg_Bfield_at_t_ref)]
+        )
+        ECI_Vectors = np.array([avg_sun_ray_ECI, avg_Bfield_ECI, np.cross(avg_sun_ray_ECI, avg_Bfield_ECI)])
+
+        U, sigma, Vt = np.linalg.svd(ECI_Vectors @ Body_Vectors.T)
+        initial_ECI_R_body = U @ Vt
+        assert abs(np.linalg.det(initial_ECI_R_body) - 1) < 1e-5
+
+        self.set_ECI_R_b(R.from_matrix(initial_ECI_R_body))
+        self.P[0:3, 0:3] = np.eye(3) * self.sigma_initial_attitude**2
+        self.attitude_initialized = True
+
+    def attempt_to_initialize(self, t):
+        w_body = self.attempt_to_initialize_gyro_bias(t)
+
+        if w_body is not None and self.gyro_bias_initialized and self.sun_buff_full() and self.Bfield_buff_full():
+            self.attempt_to_initialize_attitude(w_body)
+
+        self.initialized = self.attitude_initialized and self.gyro_bias_initialized
