@@ -29,6 +29,20 @@ initialization:
      AOP : 63 # [deg]
      AOP_dev : 20 # [%]
 
+     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
+     # If False, the nominal_true_anomaly is chosen across trials
+     disperse_true_anomaly : True
+     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
+
+     # If disperse_initial_attitude is True, initial attitude is randomly sampled
+     # If False, the nominal_initial_attitude is chosen across trials
+     disperse_initial_attitude : True
+     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
+
+     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
+     # If False, the nominal_initial_angular_rate is chosen across trials
+     disperse_initial_angular_rate : True
+     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
      initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
 
 # -----------------------------------------------------------------------------------------------------------
