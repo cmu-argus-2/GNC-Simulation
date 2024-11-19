@@ -1,5 +1,18 @@
 import numpy as np
 
+
+def quatnormalize(q: np.ndarray):
+    """
+    Normalize a quaternion.
+
+    Parameters:
+    q (np.ndarray): A quaternion represented as a numpy array of shape (4,).
+
+    Returns:
+    np.ndarray: The normalized quaternion.
+    """
+    return q / np.linalg.norm(q)
+
 """
     FUNCTION HAMILTONPRODUCT
     Computes the hamilton product q⊗v
@@ -48,11 +61,6 @@ def rotmat2quat(R):
 
     return q
 
-def q_inv(q):
-    q_inv = np.zeros_like(q)
-    q_inv[0] = q[0]
-    q_inv[1:] = -q[1:]
-    return q_inv
 
 def Left(q):
     Q = np.zeros((4, 4))

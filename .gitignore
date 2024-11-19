@@ -8,3 +8,4 @@ data/
 montecarlo/results/
 *.pyc
 venv/
+unit_testing/*.yaml
