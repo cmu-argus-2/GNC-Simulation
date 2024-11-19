@@ -25,7 +25,6 @@ class Attitude_EKF:
         sigma_initial_attitude,  # [rad]
         sigma_gyro_white,  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv,  # [(rad/s)/sqrt(s))]
-        NOMINAL_GYRO_DT,
         time_of_initial_attitude,  # [s]
     ):
         self.state_vector = np.zeros(7)
@@ -41,7 +40,6 @@ class Attitude_EKF:
         self.Q = np.eye(6)
         self.Q[0:3, 0:3] *= sigma_gyro_white**2
         self.Q[3:6, 3:6] *= sigma_gyro_bias_deriv**2
-        self.NOMINAL_GYRO_DT = NOMINAL_GYRO_DT
 
         self.last_gyro_measurement_time = None
 
@@ -62,8 +60,8 @@ class Attitude_EKF:
         q = self.state_vector[0:4]  # [w, x, y, z]
         return R.from_quat([*q[1:4], q[0]])  # from_quat takes in [x, y, z, w]
 
-    def get_quat_ECI_R_b(self):
-        return self.state_vector[0:4]  # [w, x, y, z]
+    def get_state(self):
+        return self.state_vector
 
     def get_gyro_bias(self):
         return self.state_vector[4:7]
@@ -87,7 +85,7 @@ class Attitude_EKF:
             self.init_gyro_measurements.append((t, gyro_measurement))
             return
         if self.last_gyro_measurement_time is None:  # first time
-            dt = self.NOMINAL_GYRO_DT
+            dt = 0
         else:
             dt = t - self.last_gyro_measurement_time
 

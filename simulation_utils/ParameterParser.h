@@ -54,7 +54,7 @@ class Simulation_Parameters {
     double photodiode_std;
 
     // Magnetometer
-    double magnetometer_noise_std;
+    double magnetometer_direction_noise_std;
 
     // Gyroscope
     double gyro_sigma_w;

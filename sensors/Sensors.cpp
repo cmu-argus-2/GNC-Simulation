@@ -70,8 +70,8 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 
 Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 {
-    // Magnetometer Noise Distribution
-    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
+    // Magnetometer Direction Noise Distribution
+    static std::normal_distribution<double> mag_dir_noise_dist(0, sc.magnetometer_direction_noise_std);
 
     Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
 
@@ -79,7 +79,7 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
     Vector3 B_eci = state(Eigen::seqN(16,3));
 
     // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
+    Vector3 B_body = random_SO3_rotation(mag_dir_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
 
     return B_body;
 }

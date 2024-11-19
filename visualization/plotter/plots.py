@@ -134,29 +134,6 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="True body angular rate [rad/s]", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "body_omega_true.png", self.close_after_saving)
-        # ========================= True gyro bias plots =========================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_true.bin"))
-
-        START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
-        with Pool() as pool:
-            data_dicts = pool.map(parse_bin_file_wrapper, args)
-        END = time.time()
-        print(f"Elapsed time to read in data: {END-START:.2f} s")
-        # --------------------------------------------------------------------------
-        itm.figure()
-        for i, trial_number in enumerate(self.trials):
-            multiPlot(
-                data_dicts[i]["Time [s]"],
-                np.rad2deg(
-                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
-                ),
-                seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
-        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_true.png", self.close_after_saving)
         # ==========================================================================
         # Truth magnetic field in ECI
         itm.figure()
@@ -364,6 +341,29 @@ class MontecarloPlots:
             title="Total Magnetorquer Body Frame Torque [Nm]", ylabels=["T_x [Nm]", "T_y [Nm]", "T_z [Nm]"]
         )
         save_figure(itm.gcf(), self.plot_dir, "total_mtb_body_frame_torque.png", self.close_after_saving)
+        # ========================= True gyro bias plots =========================
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_true.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # --------------------------------------------------------------------------
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_true.png", self.close_after_saving)
 
     def sensor_measurement_plots(self):
         # ======================= Gyro measurement plots =======================
@@ -372,7 +372,7 @@ class MontecarloPlots:
             filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_measurement.bin"))
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filename, 100) for filename in filenames]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
@@ -410,6 +410,27 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Measured Sun Ray in body frame", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "sun_sensor_body_measurement.png", self.close_after_saving)
+        # ====================== Magnetometor measurement plots ======================
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/magnetometer_measurement.bin"))
+
+        START = time.time()
+        args = [(filename, 100) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # --------------------------------------------------------------------------
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.array([data_dicts[i]["x [T]"], data_dicts[i]["y [T]"], data_dicts[i]["z [T]"]]),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Measured B field in body frame", ylabels=["x", "y", "z"])
+        save_figure(itm.gcf(), self.plot_dir, "magnetometer_measurement.png", self.close_after_saving)
 
     def _plot_state_estimate_covariance(self):
         filenames = []
@@ -523,35 +544,10 @@ class MontecarloPlots:
         save_figure(self.attitude_error_figure, self.plot_dir, "attitude_estimate_error.png", self.close_after_saving)
         save_figure(self.gyro_bias_error_figure, self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)
 
-    def estimated_gyro_bias(self):
-        # ======================= Estimated gyro bias =======================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_estimated.bin"))
-
-        START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
-        with Pool() as pool:
-            data_dicts = pool.map(parse_bin_file_wrapper, args)
-        END = time.time()
-        print(f"Elapsed time to read in data: {END-START:.2f} s")
-        # --------------------------------------------------------------------------
-        itm.figure()
-        for i, trial_number in enumerate(self.trials):
-            multiPlot(
-                data_dicts[i]["Time [s]"],
-                np.rad2deg(
-                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
-                ),
-                seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(title="Estimated Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
-        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimated.png", self.close_after_saving)
-
     def EKF_error_plots(self):
         filenames = []
         for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/attitude_ekf_error.bin"))
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/EKF_error.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
@@ -583,3 +579,39 @@ class MontecarloPlots:
         annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         # --------------------------------------------------------------------------
         self._plot_state_estimate_covariance()  # show 3 sigma bounds
+
+    def EKF_state_plots(self):
+        # ======================= Estimated gyro bias =======================
+        filenames = []
+        for trial_number in self.trials:
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/EKF_state.bin"))
+
+        START = time.time()
+        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        with Pool() as pool:
+            data_dicts = pool.map(parse_bin_file_wrapper, args)
+        END = time.time()
+        print(f"Elapsed time to read in data: {END-START:.2f} s")
+        # ==========================================================================
+        # Estimated Attitude
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                [data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]],
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Estimated attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
+        save_figure(itm.gcf(), self.plot_dir, "attitude_estimated.png", self.close_after_saving)
+        # ==========================================================================
+        itm.figure()
+        for i, trial_number in enumerate(self.trials):
+            multiPlot(
+                data_dicts[i]["Time [s]"],
+                np.rad2deg(
+                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+                ),
+                seriesLabel=f"_{trial_number}",
+            )
+        annotateMultiPlot(title="Estimated Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimated.png", self.close_after_saving)

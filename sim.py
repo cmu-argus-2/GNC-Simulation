@@ -16,6 +16,20 @@ from sensors.SunSensor import SunSensor
 from sensors.Bias import BiasParams
 from algs.Estimators import Attitude_EKF
 import yaml
+from scipy.spatial.transform import Rotation as R
+
+
+GYRO_DT = 0.1
+MAGNETOMETER_DT = 1  # [s]
+SUN_SENSOR_DT = 10  # [s]
+
+attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
+gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
+true_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
+EKF_sigma_labels = [f"attitude error {axis} [rad]" for axis in "xyz"] + [
+    f"gyro bias error {axis} [rad/s]" for axis in "xyz"
+]
+EKF_state_labels = [f"q_{component}" for component in "wxyz"] + [f"{axis} [rad/s]" for axis in "xyz"]
 
 
 class Simulator:
@@ -43,6 +57,37 @@ class Simulator:
         self.true_state = np.array(self.params.initial_true_state)
         self.J2000_start_time = self.params.sim_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs))
+
+        # Gyro config
+        # TODO read these in from parameter file; don't hardcode
+        initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
+        sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
+        sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
+        scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
+
+        gyro_params = []
+        for i in range(3):
+            biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
+            gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
+        self.gyro = TriAxisSensor(GYRO_DT, gyro_params)
+
+        # Attitde Estimator Config
+        # TODO disperse initial attitude error
+        initial_ECI_R_b_estimate = R.from_quat([*self.true_state[7:10], self.true_state[6]])  # TODO inverse?
+        initial_gyro_bias_estimate = np.deg2rad(np.zeros(3))  # [rad/s]
+        sigma_initial_attitude = np.deg2rad(5)  # [rad]
+        sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
+        sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
+
+        # TODO bootstrap with triad
+        self.attitude_ekf = Attitude_EKF(
+            initial_ECI_R_b_estimate,
+            initial_gyro_bias_estimate,
+            sigma_initial_attitude,
+            sigma_gyro_white,
+            sigma_gyro_bias_deriv,
+            self.J2000_start_time,
+        )
 
         # Logging
         self.logr = logger.MultiFileLogger(log_directory)
@@ -128,7 +173,11 @@ class Simulator:
 
         # Controller Frequency
         self.controller_dt = self.controller_params["controller_dt"]
-        self.estimator_dt = self.controller_params["estimator_dt"]
+
+        # sensor sampling frequency
+        self.last_sun_sensor_measurement_time = 0.0
+        self.last_magnetometer_measurement_time = 0.0
+        self.last_gyro_measurement_time = 0.0
 
     def set_control_input(self, u):
         """
@@ -165,7 +214,89 @@ class Simulator:
         # Mask state through sensors
         measurement = self.sensors(current_time, self.true_state)
 
+        true_ECI_R_body = R.from_quat([*self.true_state[7:10], self.true_state[6]])
+
+        # Sun Sensor update
+        SUN_IN_VIEW = True  # TODO actually check if sun is in view
+        if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + SUN_SENSOR_DT):
+            sigma_sunsensor = np.deg2rad(3)  # [rad]
+            # TODO simulate RTC and use its drifting time
+            true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
+            true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
+            true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
+            sunSensor = SunSensor(sigma_sunsensor)
+            # TODO use measurement variable
+            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
+            self.attitude_ekf.sun_sensor_update(
+                measured_sun_ray_in_body, true_sun_ray_ECI, current_time, sigma_sunsensor
+            )
+            self.last_sun_sensor_measurement_time = current_time
+            self.logr.log_v(
+                "sun_sensor_measurement.bin",
+                [current_time] + measured_sun_ray_in_body.tolist(),
+                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
+            )
+
+        if current_time >= self.last_magnetometer_measurement_time + MAGNETOMETER_DT:
+            # TODO get b field using estiamted position not true position
+            true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
+            true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
+            measured_Bfield_in_body = measurement[9:12]
+            self.attitude_ekf.Bfield_update(
+                measured_Bfield_in_body, true_Bfield_ECI, current_time, self.params.magnetometer_direction_noise_std
+            )
+            self.last_magnetometer_measurement_time = current_time
+            self.logr.log_v(
+                "magnetometer_measurement.bin",
+                [current_time] + measured_Bfield_in_body.tolist(),
+                ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
+            )
+        # Propogate on Gyro
+        if current_time >= self.last_gyro_measurement_time + GYRO_DT:
+            true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
+            gyro_measurement = self.gyro.update(true_omega_body_wrt_ECI_in_body)
+            self.attitude_ekf.gyro_update(gyro_measurement, current_time)
+            self.last_gyro_measurement_time = current_time
+
+            self.logr.log_v(
+                "gyro_measurement.bin",
+                [current_time] + gyro_measurement.tolist(),
+                ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
+            )
+
         # Log pertinent Quantities
+
+        # get attitude estimate of the body wrt ECI
+        estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
+        attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
+
+        true_gyro_bias = self.gyro.get_bias()
+        estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
+        gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+
+        if self.attitude_ekf.initialized:
+            self.logr.log_v(
+                "EKF_state.bin",
+                [current_time] + self.attitude_ekf.get_state().tolist(),
+                ["Time [s]"] + EKF_state_labels,
+            )
+            self.logr.log_v(
+                "EKF_error.bin",
+                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
+            )
+
+            EKF_sigmas = self.attitude_ekf.get_uncertainty_sigma()
+            self.logr.log_v(
+                "state_covariance.bin",
+                [current_time] + EKF_sigmas.tolist(),
+                ["Time [s]"] + EKF_sigma_labels,
+            )
+
+        self.logr.log_v(
+            "gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels
+        )
+
         self.logr.log_v(
             "state_true.bin",
             [current_time] + self.true_state.tolist() + measurement.tolist() + control_input.tolist(),

@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10800 # [s]
+MAX_TIME: 300 # [s]
 dt: 0.01         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
@@ -128,8 +128,8 @@ photodiodes:
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
-     magnetometer_noise_std : 0.005 # [UNITS: T]
-     magnetometer_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+     magnetometer_direction_noise_std : 0.1 # [UNITS: rad]
+     magnetometer_direction_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
 
 gyroscope:
      gyro_correlation_time : 500000.0 # [UNITS: s]
