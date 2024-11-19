@@ -40,6 +40,7 @@ Checks: '
 -hicpp-avoid-c-arrays,
 -hicpp-uppercase-literal-suffix,
 -hicpp-special-member-functions,
+-hicpp-use-auto,
 -google-readability-casting,
 -google-build-using-namespace,
 -google-global-names-in-headers,
