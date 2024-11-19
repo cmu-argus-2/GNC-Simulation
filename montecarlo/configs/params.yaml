@@ -71,3 +71,6 @@ pointing_target: "Nadir" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 2.0 # [deg/s]
 controller_dt: 0.10 # [s]
 estimator_dt: 1    # [s]
+debugFlags:
+  bypass_controller: False # Open-loop
+  bypass_estimator: True  # Perfect state knowledge

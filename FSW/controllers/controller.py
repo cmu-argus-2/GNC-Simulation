@@ -53,7 +53,11 @@ class Controller:
                                                     config)
         else:
             raise ValueError(f"Unrecognized controller algorithm: {self.controller_algo}")
-  
+        
+        # debug flags
+        # bypass controller and allocation matrix
+        
+        self.bypass_controller = config["debugFlags"]["bypass_controller"]
     
     def allocate_torque(self, 
                         mtb_torque_cmd: np.ndarray, 
@@ -85,6 +89,8 @@ class Controller:
         Returns:
             np.ndarray: A flattened array of actuator commands.
         """
+        if self.bypass_controller:
+            return np.zeros((Idx["NU"],))
         
         self.est_world_states = est_world_states
        
