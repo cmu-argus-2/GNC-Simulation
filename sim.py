@@ -18,6 +18,7 @@ START_TIME = time()
 CONTROLLER_DT = 0.1  # [s]
 GYRO_DT = 0.05  # [s]
 SUN_SENSOR_DT = 10  # [s]
+MAGNETOMETER_DT = 1  # [s]
 
 
 def controller(state_estimate):
@@ -41,10 +42,11 @@ def run(log_directory, config_path):
     sigma_initial_attitude = np.deg2rad(5)  # [rad]
     sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
     sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
-    sigma_sunsensor = np.deg2rad(5)  # [rad]
+    sigma_sunsensor = np.deg2rad(3)  # [rad]
+    sigma_Bfield = np.deg2rad(10)  # [rad]
 
     # TODO read these in from parameter file; don't hardcode
-    initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
+    initial_bias_range = np.deg2rad([5.0, 5.0])  # [rad/s]
     sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
     sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
     scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
@@ -56,6 +58,7 @@ def run(log_directory, config_path):
     gyro = TriAxisSensor(GYRO_DT, gyro_params)
 
     sunSensor = SunSensor(sigma_sunsensor)
+    magnetometer = SunSensor(sigma_Bfield)  # TODO use a seperate Bfield sensor model
 
     attitude_ekf = Attitude_EKF(
         initial_ECI_R_b_estimate,
@@ -63,7 +66,6 @@ def run(log_directory, config_path):
         sigma_initial_attitude,
         sigma_gyro_white,
         sigma_gyro_bias_deriv,
-        sigma_sunsensor,
         GYRO_DT,
         current_time,
     )
@@ -99,6 +101,7 @@ def run(log_directory, config_path):
     last_controller_update = 0
     last_gyro_measurement_time = 0
     last_sun_sensor_measurement_time = 0
+    last_magnetometer_measurement_time = 0
     last_print_time = -1e99
 
     controller_command = np.zeros((num_MTBs + num_RWs,))
@@ -115,16 +118,27 @@ def run(log_directory, config_path):
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
             true_sun_ray_ECI = np.array([0.5, 0, 0.8])  # TODO get actual sun ray from cpp
+            true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
-
-            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI, current_time)
-
+            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI, current_time, sigma_sunsensor)
             last_sun_sensor_measurement_time = current_time
-
             logr.log_v(
                 "sun_sensor_measurement.bin",
                 [current_time] + measured_sun_ray_in_body.tolist(),
+                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
+            )
+
+        if current_time >= last_magnetometer_measurement_time + MAGNETOMETER_DT:
+            true_Bfield_ECI = np.array([0.1, 0.2, 0.3])  # TODO get actual Bfield from cpp
+            true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
+            true_Bfield_body = true_ECI_R_body.inv().as_matrix() @ true_Bfield_ECI
+            measured_Bfield_in_body = magnetometer.get_measurement(true_Bfield_body)
+            attitude_ekf.Bfield_update(measured_Bfield_in_body, true_Bfield_ECI, current_time, sigma_Bfield)
+            last_magnetometer_measurement_time = current_time
+            logr.log_v(
+                "magnetometer_measurement.bin",
+                [current_time] + measured_Bfield_in_body.tolist(),
                 ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
             )
 

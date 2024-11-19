@@ -25,7 +25,6 @@ class Attitude_EKF:
         sigma_initial_attitude,  # [rad]
         sigma_gyro_white,  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv,  # [(rad/s)/sqrt(s))]
-        sigma_sunsensor,  # [rad]
         NOMINAL_GYRO_DT,
         time_of_initial_attitude,  # [s]
     ):
@@ -45,8 +44,6 @@ class Attitude_EKF:
         self.NOMINAL_GYRO_DT = NOMINAL_GYRO_DT
 
         self.last_gyro_measurement_time = None
-
-        self.sigma_sunsensor = sigma_sunsensor
 
         # State variable pertaining to initialization
         self.initialized = False
@@ -128,25 +125,8 @@ class Attitude_EKF:
         self.P = Phi @ self.P @ Phi.T + Qdk
         self.last_gyro_measurement_time = t
 
-    def get_sun_sensor_measurement_jacobian(self, true_sun_ray_ECI):
-        H = np.zeros((3, 6))
-        H[:3, :3] = -skew_symmetric(true_sun_ray_ECI)
-        return H
-
-    def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t):
-        true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
-        if not self.initialized:
-            self.init_sun_rays.append((t, measured_sun_ray_in_body))
-            self.attempt_to_initialize(t)
-            return
-        predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
-        innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
-
-        s_cross = skew_symmetric(true_sun_ray_ECI)
-        self.R_sunsensor = self.sigma_sunsensor**2 * s_cross @ np.eye(3) @ s_cross.T
-
-        H = self.get_sun_sensor_measurement_jacobian(true_sun_ray_ECI)
-        S = H @ self.P @ H.T + self.R_sunsensor
+    def EKF_update(self, H, innovation, R_noise):
+        S = H @ self.P @ H.T + R_noise
         K = self.P @ H.T @ np.linalg.pinv(S, 1e-4)  # TODO tuneme
         dx = K @ innovation
 
@@ -158,7 +138,47 @@ class Attitude_EKF:
 
         # Symmetric Joseph update
         Identity = np.eye(6)
-        self.P = (Identity - K @ H) @ self.P @ (Identity - K @ H).T + K @ self.R_sunsensor @ K.T
+        self.P = (Identity - K @ H) @ self.P @ (Identity - K @ H).T + K @ R_noise @ K.T
+
+    def get_sun_sensor_measurement_jacobian(self, true_sun_ray_ECI):
+        H = np.zeros((3, 6))
+        H[:3, :3] = -skew_symmetric(true_sun_ray_ECI)
+        return H
+
+    def get_Bfield_measurement_jacobian(self, true_B_field_ECI):
+        H = np.zeros((3, 6))
+        H[:3, :3] = -skew_symmetric(true_B_field_ECI)
+        return H
+
+    def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t, sigma_sunsensor):
+        # sigma_sunsensor [rad]
+        true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
+        if not self.initialized:
+            self.init_sun_rays.append((t, measured_sun_ray_in_body))
+            self.attempt_to_initialize(t)
+            return
+        predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
+        innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
+
+        s_cross = skew_symmetric(true_sun_ray_ECI)
+        Cov_sunsensor = sigma_sunsensor**2 * s_cross @ np.eye(3) @ s_cross.T
+
+        H = self.get_sun_sensor_measurement_jacobian(true_sun_ray_ECI)
+        self.EKF_update(H, innovation, Cov_sunsensor)
+
+    def Bfield_update(self, measured_Bfield_in_body, true_Bfield_ECI, t, sigma_Bfield):
+        # sigma_Bfield [rad]
+        true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
+        if not self.initialized:
+            return
+        predicted_Bfield_ECI = self.get_ECI_R_b().as_matrix() @ measured_Bfield_in_body
+        innovation = true_Bfield_ECI - predicted_Bfield_ECI
+
+        s_cross = skew_symmetric(true_Bfield_ECI)
+        Cov_Bfield = sigma_Bfield**2 * s_cross @ np.eye(3) @ s_cross.T
+
+        H = self.get_Bfield_measurement_jacobian(true_Bfield_ECI)
+        self.EKF_update(H, innovation, Cov_Bfield)
 
     def attempt_to_initialize(self, t):
         if len(self.init_sun_rays) < 10:
