@@ -1,3 +1,5 @@
+add_compile_options(-std=c++2a) # CMake 2.8.12 or newer
+find_package (Eigen3 3.4 REQUIRED)
 add_library(math SHARED math/utils_and_transforms.cpp)
 target_link_libraries(math PUBLIC Eigen3::Eigen tjLib spice)
 target_include_directories(math PUBLIC "math")

@@ -113,10 +113,11 @@ if __name__ == "__main__":
                             "TRIAL_NUMBER": str(TRIAL_NUMBER),
                             "TRIAL_DIRECTORY": trial_directory_abs,
                             "PARAMETER_FILEPATH": parameter_file_abs,
+                            "TRIAL_NUMBER": str(TRIAL_NUMBER)
                         },
                         cwd=trial_command_dir,
-                        # stderr=outfile,
-                        # stdout=outfile,
+                        stderr=outfile,
+                        stdout=outfile,
                     )
 
                     process_info = {

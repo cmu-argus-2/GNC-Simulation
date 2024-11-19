@@ -2,210 +2,221 @@
 
 from build.world.pyphysics import rk4
 from build.simulation_utils.pysim_utils import Simulation_Parameters as SimParams
-import numpy as np
-from scipy.spatial.transform import Rotation as R
-from time import time
+from build.sensors.pysensors import readSensors
 from simulation_manager import logger
+from FSW.controllers.controller import Controller
+from actuators.magnetorquer import Magnetorquer
+from actuators.reaction_wheels import ReactionWheel
+
+from time import time
+import numpy as np
 import os
 from sensors.Sensor import SensorNoiseParams, TriAxisSensor
 from sensors.SunSensor import SunSensor
 from sensors.Bias import BiasParams
 from algs.Estimators import Attitude_EKF
-
-START_TIME = time()
-
-# TODO read these in from parameter file; don't hardcode
-CONTROLLER_DT = 0.1  # [s]
-GYRO_DT = 0.05  # [s]
-SUN_SENSOR_DT = 10  # [s]
-MAGNETOMETER_DT = 1  # [s]
+import yaml
 
 
-def controller(state_estimate):
-    return np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+class Simulator:
+    def __init__(self, trial_number, log_directory, config_path) -> None:
+        np.random.seed(TRIAL_NUMBER)  # determinism
 
+        self.trial_number = trial_number
 
-def run(log_directory, config_path):
-    logr = logger.MultiFileLogger(log_directory)
+        # Datapaths
+        self.config_path = config_path
+        self.log_directory = log_directory
 
-    params = SimParams(config_path)
+        # Spacecraft Config
+        self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
+        self.num_RWs = self.params.num_RWs
+        self.num_MTBs = self.params.num_MTBs
+        self.num_photodiodes = self.params.num_photodiodes
 
-    current_time = 0
-    true_state = np.array(params.initial_true_state)  # Get initial state
-    num_RWs = params.num_RWs
-    num_MTBs = params.num_MTBs
+        # Controller Config
+        with open(config_path, "r") as f:
+            self.controller_params = yaml.safe_load(f)
+        self.define_controller()
 
-    state_estimate = true_state
-    initial_ECI_R_b_estimate = R.from_quat([*state_estimate[7:10], state_estimate[6]])  # TODO inverse?
-    initial_gyro_bias_estimate = np.deg2rad(np.zeros(3))  # [rad/s]
+        # Initialization
+        self.state = np.array(self.params.initial_state)
+        self.J2000_start_time = self.params.sim_start_time
+        self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs))
 
-    sigma_initial_attitude = np.deg2rad(5)  # [rad]
-    sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
-    sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
-    sigma_sunsensor = np.deg2rad(3)  # [rad]
-    sigma_Bfield = np.deg2rad(10)  # [rad]
+        # Logging
+        self.logr = logger.MultiFileLogger(log_directory)
+        self.state_labels = [
+            "r_x ECI [m]",
+            "r_y ECI [m]",
+            "r_z ECI [m]",
+            "v_x ECI [m/s]",
+            "v_y ECI [m/s]",
+            "v_z ECI [m/s]",
+            "q_w",
+            "q_x",
+            "q_y",
+            "q_z",
+            "omega_x [rad/s]",
+            "omega_y [rad/s]",
+            "omega_z [rad/s]",
+            "rSun_x ECI [m]",
+            "rSun_y ECI [m]",
+            "rSun_z ECI [m]",
+            "xMag ECI [T]",
+            "yMag ECI [T]",
+            "zMag ECI [T]",
+        ] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
 
-    # TODO read these in from parameter file; don't hardcode
-    initial_bias_range = np.deg2rad([5.0, 5.0])  # [rad/s]
-    sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
-    sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
-    scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
+        self.measurement_labels = [
+            "gps_posx ECEF [m]",
+            "gps_posy ECEF [m]",
+            "gps_posz ECEF [m]",
+            "gps_velx ECEF [m/s]",
+            "gps_vely ECEF [m/s]",
+            "gps_velz ECEF [m/s]",
+            "gyro_x [rad/s]",
+            "gyro_y [rad/s]",
+            "gyro_z [rad/s]",
+            "mag_x_body [T]",
+            "mag_y_body [T]",
+            "mag_z_body [T]",
+        ] + ["light_sensor_lux " + str(i) for i in range(self.num_photodiodes)]
 
-    gyro_params = []
-    for i in range(3):
-        biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
-        gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
-    gyro = TriAxisSensor(GYRO_DT, gyro_params)
+        self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + [
+            "T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)
+        ]
 
-    sunSensor = SunSensor(sigma_sunsensor)
-    magnetometer = SunSensor(sigma_Bfield)  # TODO use a seperate Bfield sensor model
+    def define_controller(self):
+        """
+        Defines the world for the controller objects
+        """
+        self.Idx = {}
+        # Intialize the dynamics class as the "world"
+        self.Idx["NX"] = 19
+        self.Idx["X"] = dict()
+        self.Idx["X"]["ECI_POS"] = slice(0, 3)
+        self.Idx["X"]["ECI_VEL"] = slice(3, 6)
+        self.Idx["X"]["TRANS"] = slice(0, 6)
+        self.Idx["X"]["QUAT"] = slice(6, 10)
+        self.Idx["X"]["ANG_VEL"] = slice(10, 13)
+        self.Idx["X"]["ROT"] = slice(6, 13)
+        self.Idx["X"]["SUN_POS"] = slice(13, 16)
+        self.Idx["X"]["MAG_FIELD"] = slice(16, 19)
 
-    attitude_ekf = Attitude_EKF(
-        initial_ECI_R_b_estimate,
-        initial_gyro_bias_estimate,
-        sigma_initial_attitude,
-        sigma_gyro_white,
-        sigma_gyro_bias_deriv,
-        GYRO_DT,
-        current_time,
-    )
+        # Actuator specific data
+        # self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
 
-    # Logging Legend
-    true_state_labels = (
-        [f"r_{axis} ECI [m]" for axis in "xyz"]
-        + [f"v_{axis} ECI [m/s]" for axis in "xyz"]
-        + [f"q_{axis}" for axis in "wxyz"]
-        + [f"omega_{axis} [rad/s]" for axis in "xyz"]
-        + [f"omega_RW_{i} [rad/s]" for i in range(num_RWs)]
-    )
+        # Actuator Indexing
+        self.num_RWs = self.controller_params["reaction_wheels"]["N_rw"]
+        self.num_MTBs = self.controller_params["magnetorquers"]["N_mtb"]
+        self.Idx["NU"] = self.num_RWs + self.num_MTBs
+        self.Idx["N_rw"] = self.num_RWs
+        self.Idx["N_mtb"] = self.num_MTBs
+        self.Idx["U"] = dict()
+        self.Idx["U"]["MTB_TORQUE"] = slice(0, self.num_MTBs)
+        self.Idx["U"]["RW_TORQUE"] = slice(self.num_MTBs, self.num_RWs + self.num_MTBs)
+        # RW speed should be a state because it depends on the torque applied and needs to be propagated
+        self.Idx["NX"] = self.Idx["NX"] + self.num_RWs
+        self.Idx["X"]["RW_SPEED"] = slice(19, 19 + self.num_RWs)
 
-    # measurement_labels = state_labels # TODO : Fix based on partial state measurement
-    estimated_state_labels = (
-        [f"r_hat_{axis} ECI [m]" for axis in "xyz"]
-        + [f"v_hat_{axis} ECI [m/s]" for axis in "xyz"]
-        + [f"q_hat_{axis}" for axis in "wxyz"]
-        + [f"omega_hat_{axis} [rad/s]" for axis in "xyz"]
-        + [f"omega_hat_RW_{i} [rad/s]" for i in range(num_RWs)]
-    )
-    EKF_sigma_labels = [f"attitude error {axis} [rad]" for axis in "xyz"] + [
-        f"gyro bias error {axis} [rad/s]" for axis in "xyz"
-    ]
+        Magnetorquers = [Magnetorquer(self.controller_params["magnetorquers"], IdMtb) for IdMtb in range(self.num_MTBs)]
+        ReactionWheels = [
+            ReactionWheel(self.controller_params["reaction_wheels"], IdRw) for IdRw in range(self.num_RWs)
+        ]
+        self.controller = Controller(self.controller_params, Magnetorquers, ReactionWheels, self.Idx)
 
-    input_labels = [f"V_MTB_{i} [V]" for i in range(num_MTBs)] + [f"V_RW_{i} [V]" for i in range(num_RWs)]
+        # Controller Frequency
+        self.controller_dt = self.controller_params["controller_dt"]
+        self.estimator_dt = self.controller_params["estimator_dt"]
 
-    attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
-    gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
-    true_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
-    estimated_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
+    def set_control_input(self, u):
+        """
+        Sets the control input field of the class
+        Exists for FSW to provide control inputs
+        """
+        if len(u) < len(self.control_input) - 1:
+            raise Exception("Control Input not provided to all Magnetorquers")
+        elif len(u) == len(self.control_input) - 1:
+            self.control_input[0 : len(u)] = u  # Only magnetorquers
+        else:
+            self.control_input = u  # magnetorquers + RWs
 
-    last_controller_update = 0
-    last_gyro_measurement_time = 0
-    last_sun_sensor_measurement_time = 0
-    last_magnetometer_measurement_time = 0
-    last_print_time = -1e99
+    def sensors(self, current_time, state):
+        """
+        Implements partial observability using sensor models
+        """
+        return readSensors(state, current_time, self.params)
 
-    controller_command = np.zeros((num_MTBs + num_RWs,))
-    while current_time <= params.MAX_TIME:
-        true_ECI_R_body = R.from_quat([*true_state[7:10], true_state[6]])
+    def step(self, sim_time, dt):
+        """
+        Executes a single simulation step of a given step size
+        This function is written separately to allow FSW to access simualtion stepping
+        """
+        # Time
+        current_time = self.J2000_start_time + sim_time
 
-        # Update Controller Command based on Controller Update Frequency
-        if current_time >= last_controller_update + CONTROLLER_DT:
-            controller_command = controller(state_estimate)
-            assert len(controller_command) == (num_RWs + num_MTBs)
-            last_controller_update = current_time
+        # Get control input
+        control_input = self.control_input
 
-        # Sun Sensor update
-        SUN_IN_VIEW = True  # TODO actually check if sun is in view
-        if SUN_IN_VIEW and (current_time >= last_sun_sensor_measurement_time + SUN_SENSOR_DT):
-            true_sun_ray_ECI = np.array([0.5, 0, 0.8])  # TODO get actual sun ray from cpp
-            true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
-            true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
-            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
-            attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI, current_time, sigma_sunsensor)
-            last_sun_sensor_measurement_time = current_time
-            logr.log_v(
-                "sun_sensor_measurement.bin",
-                [current_time] + measured_sun_ray_in_body.tolist(),
-                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
-            )
+        # Step through the simulation
+        self.state = rk4(self.state, control_input, self.params, current_time, dt)
 
-        if current_time >= last_magnetometer_measurement_time + MAGNETOMETER_DT:
-            true_Bfield_ECI = np.array([0.1, 0.2, 0.3])  # TODO get actual Bfield from cpp
-            true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
-            true_Bfield_body = true_ECI_R_body.inv().as_matrix() @ true_Bfield_ECI
-            measured_Bfield_in_body = magnetometer.get_measurement(true_Bfield_body)
-            attitude_ekf.Bfield_update(measured_Bfield_in_body, true_Bfield_ECI, current_time, sigma_Bfield)
-            last_magnetometer_measurement_time = current_time
-            logr.log_v(
-                "magnetometer_measurement.bin",
-                [current_time] + measured_Bfield_in_body.tolist(),
-                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
-            )
+        # Mask state through sensors
+        measurement = self.sensors(current_time, self.state)
 
-        # Propogate on Gyro
-        if current_time >= last_gyro_measurement_time + GYRO_DT:
-            true_omega_body_wrt_ECI_in_body = true_state[10:13]
-            gyro_measurement = gyro.update(true_omega_body_wrt_ECI_in_body)
-            attitude_ekf.gyro_update(gyro_measurement, current_time)
-            last_gyro_measurement_time = current_time
-
-            logr.log_v(
-                "gyro_measurement.bin",
-                [current_time] + gyro_measurement.tolist(),
-                ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
-            )
-
-        # write the EKF's updated attitude estimate into the overall state vector
-        state_estimate[6:10] = attitude_ekf.get_quat_ECI_R_b()  # [w, x, y, z]
-
-        true_state = rk4(true_state, controller_command, params, current_time, params.dt)
-
-        # get attitude estimate of the body wrt ECI
-        estimated_ECI_R_body = attitude_ekf.get_ECI_R_b()
-        attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
-
-        true_gyro_bias = gyro.get_bias()
-        estimated_gyro_bias = attitude_ekf.get_gyro_bias()
-        gyro_bias_error = true_gyro_bias - estimated_gyro_bias
-
-        if attitude_ekf.initialized:
-            logr.log_v(
-                "attitude_ekf_error.bin",
-                [current_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
-                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
-            )
-
-            EKF_sigmas = attitude_ekf.get_uncertainty_sigma()
-            logr.log_v(
-                "state_covariance.bin",
-                [current_time] + EKF_sigmas.tolist(),
-                ["Time [s]"] + EKF_sigma_labels,
-            )
-
-        logr.log_v("gyro_bias_true.bin", [current_time] + true_gyro_bias.tolist(), ["Time [s]"] + true_gyro_bias_labels)
-        logr.log_v(
-            "gyro_bias_estimated.bin",
-            [current_time] + estimated_gyro_bias.tolist(),
-            ["Time [s]"] + estimated_gyro_bias_labels,
+        # Log pertinent Quantities
+        self.logr.log_v(
+            "state_true.bin",
+            [current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist(),
+            ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
         )
 
-        logr.log_v(
-            "states.bin",
-            [current_time] + true_state.tolist() + state_estimate.tolist() + controller_command.tolist(),
-            ["Time [s]"] + true_state_labels + estimated_state_labels + input_labels,
+        return measurement
+
+    def run(self):
+        """
+        Runs the entire simulation
+        Calls the 'step' function to run through the sim
+
+        NOTE: This function operates on delta time i.e., seconds since mission start
+              This is done to allow FSW to provide a delta time to step()
+        """
+
+        WALL_START_TIME = time()
+
+        # Load Sim start times
+        sim_delta_time = 0
+        last_controller_update = 0
+        last_print_time = 0
+
+        # Run iterations
+        while sim_delta_time <= self.params.MAX_TIME:
+
+            # Update the controller
+            if sim_delta_time >= last_controller_update + self.controller_dt:
+                self.control_input = self.controller.run(
+                    self.state, self.Idx
+                )  # TODO : Replace this with a state estimate
+                assert len(self.control_input) == (self.num_RWs + self.num_MTBs)
+                last_controller_update = sim_delta_time
+
+            # Echo the Heartbeat once every 1000s
+            if sim_delta_time - last_print_time >= 1000:
+                print(f"Heartbeat: {sim_delta_time}")
+                last_print_time = sim_delta_time
+
+            # Step through the sim
+            self.step(sim_delta_time, self.params.dt)
+
+            sim_delta_time += self.params.dt
+
+        # Report the sim speed-up
+        elapsed_seconds_wall_clock = time() - WALL_START_TIME
+        speed_up = self.params.MAX_TIME / elapsed_seconds_wall_clock
+        print(
+            f'Sim ran {speed_up:.4g}x faster than realtime. Took {elapsed_seconds_wall_clock:.1f} [s] "wall-clock" to simulate {self.params.MAX_TIME} [s]'
         )
-
-        if current_time >= last_print_time + 1000:
-            print(f"Heartbeat: {current_time}")
-            last_print_time = current_time
-
-        current_time += params.dt
-
-    elapsed_seconds_wall_clock = time() - START_TIME
-    speed_up = params.MAX_TIME / elapsed_seconds_wall_clock
-    print(
-        f'Sim ran {speed_up:.4g}x faster than realtime. Took {elapsed_seconds_wall_clock:.1f} [s] "wall-clock" to simulate {params.MAX_TIME} [s]'
-    )
 
 
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
@@ -219,5 +230,7 @@ if __name__ == "__main__":
     TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
-    np.random.seed(TRIAL_NUMBER)
-    run(TRIAL_DIRECTORY, PARAMETER_FILEPATH)
+    TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
+    sim = Simulator(TRIAL_NUMBER, TRIAL_DIRECTORY, PARAMETER_FILEPATH)
+    print("Initialized")
+    sim.run()

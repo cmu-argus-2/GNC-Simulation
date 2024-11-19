@@ -1,8 +1,10 @@
 #include "utils_and_transforms.h"
+#include <unsupported/Eigen/MatrixFunctions>
 #include <filesystem>
 
 #include "SpiceUsr.h"
 #include <cmath>
+#include <random>
 
 // rotation matrix elements under this threshhold will be reset to 0
 static constexpr double ROT_MAT_0_THRESH = 1e-10;
@@ -32,6 +34,17 @@ Matrix_3x3 cleanRotMatrix(Matrix_3x3 R) {
         }
     }
     return R_cleaned;
+}
+
+
+Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist, std::mt19937 gen)
+{
+    Vector3 noise = Vector3::NullaryExpr([&](){return dist(gen);});
+
+    Matrix_3x3 W = toSkew(noise);
+    Matrix_3x3 W_so3 = W.exp();
+
+    return W_so3;
 }
 
 Matrix_3x3 get_ECEF_R_ENU(double latitude_deg, double longitude_deg) {
@@ -206,6 +219,18 @@ Vector5 TJ2000toUTC(double t_J2000)
     utc_date(4) = atof(datestring.substr(15,6).c_str());
 
     return utc_date;
+}
+
+std::string TJ2000toUTCString(double t_J2000)
+{
+    loadAllKernels();
+    const int oplen = 35;
+    SpiceChar utc_datestring[oplen];
+
+    et2utc_c(t_J2000, "ISOC", 3, oplen, utc_datestring);
+    std::string datestring = utc_datestring;
+
+    return datestring;
 }
 
 double UTCStringtoTJ2000 (std::string UTC)
