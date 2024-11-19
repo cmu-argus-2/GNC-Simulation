@@ -7,7 +7,7 @@ from plot_menu import get_user_selections
 from matplotlib import pyplot as plt
 import argparse
 
-PERCENTAGE_OF_DATA_TO_PLOT = 100
+PERCENTAGE_OF_DATA_TO_PLOT = 1
 
 # Create a dictionary to hold method names and their corresponding functions
 all_plotting_task_names = []

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from scipy.linalg import expm
-from .PlaneFitting import fit_plane_RANSAC
+from .SunSensorAlgs import compute_body_ang_vel_from_sun_rays
 
 
 def skew_symmetric(v):
@@ -160,120 +160,52 @@ class Attitude_EKF:
         Identity = np.eye(6)
         self.P = (Identity - K @ H) @ self.P @ (Identity - K @ H).T + K @ self.R_sunsensor @ K.T
 
-    def compute_body_ang_vel_from_sun_rays(self):
-        # Find the satellite rotaiton axis as the unit vector with a constant dot product with all measured sun vectors.
-        # This assumes:
-        #     the satellite has a constant angular velocity
-        #     the sat has rotated less than 180 degrees between every other sun ray measurement
-        sun_rays = np.array([sun_ray for (t, sun_ray) in self.init_sun_rays])
-        plane, inlier_idxs = fit_plane_RANSAC(sun_rays, tolerance=0.01)  # TODO tune tolerance
-
-        # TODO ensure we don't div-by-0
-        plane_normal = plane[0:3] / np.linalg.norm(plane[0:3])
-
-        # TODO dont accept the plane if the sun rays are bunched up (the differences between measurements will get swamped out by noise)
-        rotation_axis = plane_normal
-
-        # Choose sign for rotation axis that is consistent with the sun ray measurement history
-        N = len(self.init_sun_rays)
-        N_consistent_with_axis = 0
-        N_consistent_with_opposite_axis = 0
-        for i in range(1, N - 1):
-            _, sun_ray0 = self.init_sun_rays[i - 1]
-            _, sun_ray1 = self.init_sun_rays[i]
-            _, sun_ray2 = self.init_sun_rays[i + 1]
-
-            delta_ray10 = sun_ray1 - sun_ray0
-            delta_ray21 = sun_ray2 - sun_ray1
-
-            # negative cross product because sat's rotation is opposite the apparent motion of the sun relative to the sat
-            rough_axis_estimate = -np.cross(delta_ray10, delta_ray21)
-            rough_axis_estimate /= np.linalg.norm(rough_axis_estimate)
-            similarity = np.dot(rough_axis_estimate, rotation_axis)
-
-            if similarity > 0.9:
-                N_consistent_with_axis += 1
-            elif similarity < -0.9:
-                N_consistent_with_opposite_axis += 1
-
-        min_consistent = 0.7 * N
-        N_consistent = N_consistent_with_axis
-        if N_consistent_with_opposite_axis >= min_consistent:
-            rotation_axis *= -1
-            N_consistent = N_consistent_with_opposite_axis
-        elif N_consistent_with_axis < min_consistent:
-            print("Couldn't find enough consistent data")
-            return None  # couldn't find enough consistent data
-
-        # Compute the angular velocity magnitude
-        omega_norm_estimates = []
-        for i in range(N - 1):
-            t0, sun_ray0 = self.init_sun_rays[i]
-            t1, sun_ray1 = self.init_sun_rays[i + 1]
-
-            # get componenets perpendicular to the rotation axis
-            sun_ray0_perp = sun_ray0 - rotation_axis * np.dot(sun_ray0, rotation_axis)
-            sun_ray1_perp = sun_ray1 - rotation_axis * np.dot(sun_ray1, rotation_axis)
-
-            sun_ray0_perp_unit = sun_ray0_perp / np.linalg.norm(sun_ray0_perp)
-            sun_ray1_perp_unit = sun_ray1_perp / np.linalg.norm(sun_ray1_perp)
-
-            dot_prod = np.dot(sun_ray0_perp_unit, sun_ray1_perp_unit)
-            dot_prod = np.clip(dot_prod, -1, 1)
-            delta_theta = np.arccos(dot_prod)
-            delta_time = t1 - t0
-
-            omega_norm_estimates.append(delta_theta / delta_time)
-
-        omega_norm_estimate = np.average(omega_norm_estimates)
-
-        cov = np.eye(3) * self.sigma_sunsensor**2 / N_consistent
-        return rotation_axis * omega_norm_estimate, cov
-
     def attempt_to_initialize(self, t):
         if len(self.init_sun_rays) < 10:
             return
 
         average_gyro_measurement = np.average([gyro for (t, gyro) in self.init_gyro_measurements], axis=0)
-        print("average_gyro_measurement [deg/s]: ", np.rad2deg(average_gyro_measurement))
+        # print("average_gyro_measurement [deg/s]: ", np.rad2deg(average_gyro_measurement))
 
-        estimated_omega_in_body_frame, estimated_omega_in_body_frame_cov = self.compute_body_ang_vel_from_sun_rays()
-        if estimated_omega_in_body_frame is not None:
+        result = compute_body_ang_vel_from_sun_rays(self.init_sun_rays)
+        if result is not None:
+            (estimated_omega_in_body_frame, estimated_omega_in_body_frame_cov) = result
             print("estimated_omega_in_body_frame [deg/s]: ", np.rad2deg(estimated_omega_in_body_frame))
+            print(
+                "estimated_omega_in_body_frame_cov [deg/s]:\n",
+                np.rad2deg(np.sqrt(np.diag(estimated_omega_in_body_frame_cov))),
+            )
 
-            gyro_bias_estimate = average_gyro_measurement - estimated_omega_in_body_frame
-            inital_ECI_R_b = self.get_ECI_R_b()
-
-            # Set the attitude
-            # rotation since getting initial attitude
+            # Initialize the attitude
             time_to_initialize = t - self.time_of_initial_attitude
+            # rotation since getting initial attitude:
             b0_R_b1 = R.from_rotvec(estimated_omega_in_body_frame * time_to_initialize)
+            inital_ECI_R_b = self.get_ECI_R_b()
             current_ECI_R_b = inital_ECI_R_b * b0_R_b1
             self.set_ECI_R_b(current_ECI_R_b)
 
-            # Set the Gyro Bias
+            # Initialize the Gyro Bias
+            gyro_bias_estimate = average_gyro_measurement - estimated_omega_in_body_frame
             self.set_gyro_bias(gyro_bias_estimate)
 
-            # Set the Initial Covariance
+            # ======================== Initialize the Covariance ========================
             self.P = np.zeros((6, 6))
 
-            # TODO Deriving the Initial Attitude Covariance
+            # TODO Initialize the Attitude Covariance
             self.P[0:3, 0:3] = np.eye(3) * self.sigma_initial_attitude**2
 
-            # TODO Deriving the initial gyro bias covaraince
-            random_walk_in_true_gyro_bias_while_waiting_to_initialize = (
+            # TODO Initialize the Gyro Bias Covariance
+            uncertainty_increase_in_true_gyro_bias_while_waiting_to_initialize = (
                 np.eye(3) * time_to_initialize * self.sigma_gyro_bias_deriv**2
             )
             averaging_time = time_to_initialize
-            average_gyro_measurement_cov = np.eye(3) * self.sigma_gyro_white**2 / (averaging_time)
-            initial_gyro_bias_covaraince = (
-                random_walk_in_true_gyro_bias_while_waiting_to_initialize
+            average_gyro_measurement_cov = np.eye(3) * self.sigma_gyro_white**2 / averaging_time
+
+            initial_gyro_bias_covariance = (
+                uncertainty_increase_in_true_gyro_bias_while_waiting_to_initialize
                 + average_gyro_measurement_cov
                 + estimated_omega_in_body_frame_cov
             )
-            self.P[3:6, 3:6] = initial_gyro_bias_covaraince
+            self.P[3:6, 3:6] = initial_gyro_bias_covariance
 
             self.initialized = True
-
-        # if delta_degrees
-        # min_degress_changed_to_init_from_sun_rays

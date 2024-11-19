@@ -3,8 +3,8 @@ from scipy.spatial.transform import Rotation as R
 
 
 class SunSensor:
-    def __init__(self, angular_error_deg):
-        self.sigma_angular_error = np.deg2rad(angular_error_deg)
+    def __init__(self, sigma_angular_error):
+        self.sigma_angular_error = sigma_angular_error
 
     def get_measurement(self, clean_signal):
         angular_error = self.sigma_angular_error * np.random.standard_normal()

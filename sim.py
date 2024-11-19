@@ -31,7 +31,6 @@ def run(log_directory, config_path):
 
     current_time = 0
     true_state = np.array(params.initial_true_state)  # Get initial state
-    print(true_state)
     num_RWs = params.num_RWs
     num_MTBs = params.num_MTBs
 
@@ -48,7 +47,7 @@ def run(log_directory, config_path):
     initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
     sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
     sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
-    scale_factor_error_range = [-0.01, 0.01]  # [-]
+    scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
 
     gyro_params = []
     for i in range(3):
@@ -122,6 +121,12 @@ def run(log_directory, config_path):
             attitude_ekf.sun_sensor_update(measured_sun_ray_in_body, true_sun_ray_ECI, current_time)
 
             last_sun_sensor_measurement_time = current_time
+
+            logr.log_v(
+                "sun_sensor_measurement.bin",
+                [current_time] + measured_sun_ray_in_body.tolist(),
+                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
+            )
 
         # Propogate on Gyro
         if current_time >= last_gyro_measurement_time + GYRO_DT:
