@@ -40,7 +40,7 @@ class Simulator:
         self.define_controller()
 
         # Initialization
-        self.state = np.array(self.params.initial_state)
+        self.true_state = np.array(self.params.initial_true_state)
         self.J2000_start_time = self.params.sim_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs))
 
@@ -160,15 +160,15 @@ class Simulator:
         control_input = self.control_input
 
         # Step through the simulation
-        self.state = rk4(self.state, control_input, self.params, current_time, dt)
+        self.true_state = rk4(self.true_state, control_input, self.params, current_time, dt)
 
         # Mask state through sensors
-        measurement = self.sensors(current_time, self.state)
+        measurement = self.sensors(current_time, self.true_state)
 
         # Log pertinent Quantities
         self.logr.log_v(
             "state_true.bin",
-            [current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist(),
+            [current_time] + self.true_state.tolist() + measurement.tolist() + control_input.tolist(),
             ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
         )
 
@@ -196,7 +196,7 @@ class Simulator:
             # Update the controller
             if sim_delta_time >= last_controller_update + self.controller_dt:
                 self.control_input = self.controller.run(
-                    self.state, self.Idx
+                    self.true_state, self.Idx
                 )  # TODO : Replace this with a state estimate
                 assert len(self.control_input) == (self.num_RWs + self.num_MTBs)
                 last_controller_update = sim_delta_time

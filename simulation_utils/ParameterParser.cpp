@@ -110,7 +110,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     sim_start_time = sim_start_time_dist(dev);
     
     // Populate State Vector
-    initial_state = initializeSatellite(sim_start_time);
+    initial_true_state = initializeSatellite(sim_start_time);
 
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);

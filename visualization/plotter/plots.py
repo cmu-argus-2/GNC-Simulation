@@ -41,7 +41,7 @@ class MontecarloPlots:
     def true_state_plots(self):
         filenames = []
         for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/states.bin"))
+            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/state_true.bin"))
 
         START = time.time()
         args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
