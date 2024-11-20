@@ -172,7 +172,7 @@ class Attitude_EKF:
         if not self.initialized:
             if self.spinning_at_roughly_constant_rate:
                 self.sun_ray_ringbuff.append((t, measured_sun_ray_in_body, true_sun_ray_ECI))
-        return
+            return
         print("sun_sensor_update update")
         predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
         innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
@@ -190,7 +190,7 @@ class Attitude_EKF:
         if not self.initialized:
             if self.spinning_at_roughly_constant_rate:
                 self.Bfield_ringbuff.append((t, measured_Bfield_in_body, true_Bfield_ECI))
-        return
+            return
         print("Bfield update")
         predicted_Bfield_ECI = self.get_ECI_R_b().as_matrix() @ measured_Bfield_in_body
         innovation = true_Bfield_ECI - predicted_Bfield_ECI
