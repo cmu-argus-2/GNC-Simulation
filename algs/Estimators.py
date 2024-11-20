@@ -235,6 +235,13 @@ class Attitude_EKF:
             self.gyro_bias_initialized = True
             return estimated_omega_in_body_frame
 
+    def triad(self, sun_ECI, sun_body, B_ECI, B_body):
+        Body_Vectors = np.array([sun_body, B_body, np.cross(sun_body, B_body)]).T
+        ECI_Vectors = np.array([sun_ECI, B_ECI, np.cross(sun_ECI, B_ECI)]).T
+        U, sigma, Vt = np.linalg.svd(ECI_Vectors @ Body_Vectors.T)
+        ECI_R_body = U @ Vt
+        return ECI_R_body
+
     def attempt_to_initialize_attitude(self, w_body):
         # Triad Algorithm - accumulate several and assuming constnat omega, transform vectors into initial bodyy frame. assume b and sun vectors don't change much ion ECI over time
 
@@ -273,13 +280,7 @@ class Attitude_EKF:
         print(f"avg_sun_ray_ECI: {avg_sun_ray_ECI}")
         print(f"avg_Bfield_ECI: {avg_Bfield_ECI}")
 
-        Body_Vectors = np.array(
-            [avg_sun_ray_at_t_ref, avg_Bfield_at_t_ref, np.cross(avg_sun_ray_at_t_ref, avg_Bfield_at_t_ref)]
-        )
-        ECI_Vectors = np.array([avg_sun_ray_ECI, avg_Bfield_ECI, np.cross(avg_sun_ray_ECI, avg_Bfield_ECI)])
-
-        U, sigma, Vt = np.linalg.svd(ECI_Vectors @ Body_Vectors.T)
-        initial_ECI_R_body = U @ Vt
+        initial_ECI_R_body = self.triad(avg_sun_ray_ECI, avg_sun_ray_at_t_ref, avg_Bfield_ECI, avg_Bfield_at_t_ref)
         assert abs(np.linalg.det(initial_ECI_R_body) - 1) < 1e-5
 
         self.set_ECI_R_b(R.from_matrix(initial_ECI_R_body))
