@@ -5,6 +5,7 @@
 #include "SRP.h"
 #include "MagneticField.h"
 #include <cmath>
+#include <functional>
 #include <random>
 #include <iostream>
 
@@ -17,6 +18,7 @@
 
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
+    gen.seed(std::hash<double>{}(t_J2000));
     int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyro + Mag Field + Light Sensors
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
