@@ -264,6 +264,7 @@ class Simulator:
             )
             self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
             self.attitude_ekf.initialized = True
+            self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
 
         # Propogate on Gyro
         if current_time >= self.last_gyro_measurement_time + GYRO_DT:
