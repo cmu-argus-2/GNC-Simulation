@@ -1,7 +1,5 @@
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from scipy.linalg import expm
-from .SunSensorAlgs import compute_body_ang_vel_from_sun_rays
 import collections
 
 
@@ -129,10 +127,10 @@ class Attitude_EKF:
         A[6:12, 6:12] = F.transpose()
         A = A * dt
 
-        # Compute Matrix exponential and extract values for Phi and Qdk*/
-        # TODO does this matrix exponential work with circuit python?
-        # if not - consider taylor series, horner's method?
-        AExp = expm(A)
+        # Approximate the Matrix exponential using horner's method to evaluate the 4th order taylor series approx
+        # AExp = expm(A)
+        I = np.eye(12)
+        AExp = I + A
         Phi = AExp[6:12, 6:12].T
         Qdk = Phi @ AExp[0:6, 6:12]
         np.set_printoptions(suppress=True, linewidth=999)
