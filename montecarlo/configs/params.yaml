@@ -123,7 +123,7 @@ photodiodes:
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
-     magnetometer_direction_noise_std : 0.1 # [UNITS: rad]
+     magnetometer_direction_noise_std : 0.2 # [UNITS: rad]
      magnetometer_direction_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
 
 gyroscope:
