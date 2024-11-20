@@ -110,10 +110,9 @@ if __name__ == "__main__":
                     process = subprocess.Popen(
                         trial_command.strip("'").split(" "),
                         env={
-                            "TRIAL_NUMBER": str(TRIAL_NUMBER),
                             "TRIAL_DIRECTORY": trial_directory_abs,
                             "PARAMETER_FILEPATH": parameter_file_abs,
-                            "TRIAL_NUMBER": str(TRIAL_NUMBER)
+                            "TRIAL_NUMBER": str(TRIAL_NUMBER),
                         },
                         cwd=trial_command_dir,
                         stderr=outfile,
