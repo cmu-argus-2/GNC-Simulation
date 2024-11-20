@@ -3,4 +3,5 @@ matplotlib
 basemap
 psutil
 pyigrf
+flask
 pytest

@@ -57,15 +57,4 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc);
 Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
 
 
-
-/* UTILITY FUNCTIONS */
-
-/**
- * @brief Defines a random rotation about a random axis
- * 
- * @param dist : Normal Distribution characterizing the noise profile
- * @return 3x3 matrix represnting a random rotation
- */
-Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist);
-
 #endif

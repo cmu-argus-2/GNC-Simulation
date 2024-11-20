@@ -20,15 +20,15 @@ class Controller:
         self.tgt_ang_vel      = np.array(config["tgt_ss_ang_vel"], dtype=np.float64)
         self.est_world_states = None
         self.mtb              = Magnetorquers
-        self.G_mtb_b = np.array(config["mtb_orientation"]).reshape(config["N_mtb"], 3)
+        self.G_mtb_b = np.array(config["magnetorquers"]["mtb_orientation"]).reshape(config["magnetorquers"]["N_mtb"], 3)
         # normalize the rows
         self.G_mtb_b = self.G_mtb_b / np.linalg.norm(self.G_mtb_b, axis=1, keepdims=True)
-        self.G_rw_b  = np.array(config["rw_orientation"]).reshape(config["N_rw"], 3)
+        self.G_rw_b  = np.array(config["reaction_wheels"]["rw_orientation"]).reshape(config["reaction_wheels"]["N_rw"], 3)
         # control allocation matrix (only for magnetorquers)
         self.allocation_mat = np.zeros((Idx["NU"],3))
         self.allocation_mat[Idx["U"]["MTB_TORQUE"],:] = np.linalg.pinv(self.G_mtb_b.T)
         # no point allocating rw if its only one
-        self.inertia = np.array(config["inertia"]).reshape(3,3)
+        self.inertia = np.array(config["inertia"]["nominal_inertia"]).reshape(3,3)
     
         self.controller_algorithm = None
         if self.controller_algo == "Bcross":

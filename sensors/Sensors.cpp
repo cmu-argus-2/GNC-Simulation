@@ -4,7 +4,6 @@
 #include "ParameterParser.h"
 #include "SRP.h"
 #include "MagneticField.h"
-#include <unsupported/Eigen/MatrixFunctions>
 #include <cmath>
 #include <random>
 #include <iostream>
@@ -80,7 +79,7 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
     Vector3 B_eci = state(Eigen::seqN(16,3));
 
     // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
+    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
 
     return B_body;
 }
@@ -104,18 +103,6 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
     Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(Eigen::seqN(10,3)) + bias + white_noise;
     
     return omega_meas;
-}
-
-/* UTILITY FUNCTIONS */
-
-Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist)
-{
-    Vector3 noise = Vector3::NullaryExpr([&](){return dist(gen);});
-
-    Matrix_3x3 W = toSkew(noise);
-    Matrix_3x3 W_so3 = W.exp();
-
-    return W_so3;
 }
 
 
