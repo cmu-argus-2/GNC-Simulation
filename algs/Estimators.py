@@ -236,8 +236,14 @@ class Attitude_EKF:
             return estimated_omega_in_body_frame
 
     def triad(self, sun_ECI, sun_body, B_ECI, B_body):
-        Body_Vectors = np.array([sun_body, B_body, np.cross(sun_body, B_body)]).T
-        ECI_Vectors = np.array([sun_ECI, B_ECI, np.cross(sun_ECI, B_ECI)]).T
+        cross_ECI = np.cross(sun_ECI, B_ECI)
+        cross_body = np.cross(sun_body, B_body)
+
+        cross_ECI /= np.linalg.norm(cross_ECI)
+        cross_body /= np.linalg.norm(cross_body)
+
+        ECI_Vectors = np.array([sun_ECI, B_ECI, cross_ECI]).T
+        Body_Vectors = np.array([sun_body, B_body, cross_body]).T
         U, sigma, Vt = np.linalg.svd(ECI_Vectors @ Body_Vectors.T)
         ECI_R_body = U @ Vt
         return ECI_R_body
