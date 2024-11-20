@@ -29,11 +29,8 @@ initialization:
      AOP : 63 # [deg]
      AOP_dev : 20 # [%]
 
-     true_anomaly : 0 # [deg] -> Placeholder not accessed
 
-     initial_attitude : [1,0,0,0] # -> Placeholder not accessed
 
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] -> Placeholder not accessed
      initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
 
 # -----------------------------------------------------------------------------------------------------------
