@@ -203,7 +203,7 @@ class Simulator:
         control_input = self.control_input
 
         # Step through the simulation
-        self.true_state = rk4(self.true_state, control_input, self.params, current_time, dt)
+        self.true_state = rk4(self.true_state, 0 * control_input, self.params, current_time, dt)
 
         # Mask state through sensors
         measurement = self.sensors(current_time, self.true_state)
