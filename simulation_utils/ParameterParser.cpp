@@ -100,13 +100,31 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     inclination = inclination_dist(dev);
     RAAN = RAAN_dist(dev);
     AOP = AOP_dist(dev);
-    true_anomaly = true_anomaly_dist(dev);
+
+    bool disperse_true_anomaly = params["initialization"]["disperse_true_anomaly"].as<bool>();
+    if (disperse_true_anomaly) {
+        true_anomaly = true_anomaly_dist(dev);
+    } else {
+        true_anomaly = params["initialization"]["true_anomaly"].as<double>();
+    }
     
     // Satellite Attitude Initialization
-    initial_attitude = Vector4::NullaryExpr([&](){return initial_attitude_dist(dev);});
-    initial_attitude = initial_attitude/initial_attitude.norm();
+    bool disperse_initial_attitude = params["initialization"]["disperse_initial_attitude"].as<bool>();
+    if (disperse_initial_attitude) {
+        initial_attitude = Vector4::NullaryExpr([&](){return initial_attitude_dist(dev);});
+        initial_attitude = initial_attitude/initial_attitude.norm();
+    } else {
+        initial_attitude = Eigen::Map<Vector4>(params["initialization"]["initial_attitude"].as<std::vector<double>>().data());
+    }
 
-    initial_angular_rate = Vector3::NullaryExpr([&](){return initial_angular_rate_dist(dev);});
+    bool disperse_initial_angular_rate = params["initialization"]["disperse_initial_angular_rate"].as<bool>();
+    if (disperse_initial_angular_rate) {
+        initial_angular_rate = Vector3::NullaryExpr([&](){return initial_angular_rate_dist(dev);});
+    } else {
+        initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
+    }
+
+    // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
     
     // Populate State Vector
