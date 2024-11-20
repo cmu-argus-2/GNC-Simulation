@@ -66,11 +66,13 @@ def test_magfieldECI():
     lon = np.zeros_like(time_vec)
     lat = np.zeros_like(time_vec)
     alt = np.zeros_like(time_vec)
+    expectedBNED = np.zeros((len(time_vec), 3))
     for k in range(len(time_vec)):
         lon[k], lat[k], alt[k] = ECI2GEOD(Pos_ECI[k,:], time_vec[k])
+        expectedBNED[k,:] =  pyIGRF.igrf_variation(lat, lon, alt, time_vec)
                 
     #expected Bxyz
-    pyIGRF.igrf_variation(lat, lon, alt, time_vec)
+    
 
     # validate sun direction too
     rSun = np.array([data_dicts["rSun_x ECI [m]"], data_dicts["rSun_y ECI [m]"], data_dicts["rSun_z ECI [m]"]]).T

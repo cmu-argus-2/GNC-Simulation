@@ -76,9 +76,9 @@ gyro_scale_factor_err : 1.0e-5
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
 MAX_TIME: 10000 # [s]
-dt: 0.01         # [s]
-earliest_sim_start_time_UTC: 2025-10-01 12:00:00
-latest_sim_start_time_UTC: 2025-10-28 23:59:59
+dt: 0.1         # [s]
+earliest_sim_start_time_UTC: 2024-10-01 12:00:00
+latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
 
@@ -104,7 +104,7 @@ rw_att_feedback_gains: [0.07071, 0.00028]
 rw_vel_gain: 3.3878e-06 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Nadir" # "Nadir" or "Sun"
-tgt_ss_ang_vel: 2.0 # [deg/s]
+tgt_ss_ang_vel: 3.0 # [deg/s]
 controller_dt: 0.10 # [s]
 estimator_dt: 1    # [s]
 debugFlags:
