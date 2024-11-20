@@ -251,13 +251,18 @@ class Simulator:
             got_B = True
 
         if got_B and got_sun:
-            attitude_estimate = self.attitude_ekf.triad(
-                true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
-            )
-            self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
-            self.attitude_ekf.initialized = True
-            self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
-            self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
+            if not self.attitude_ekf.initialized:
+                attitude_estimate = self.attitude_ekf.triad(
+                    true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
+                )
+                self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
+                self.attitude_ekf.initialized = True
+                self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
+                self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
+            else:
+                attitude_estimate = self.attitude_ekf.triad_update(
+                    true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
+                )
 
         # Propogate on Gyro
         if current_time >= self.last_gyro_measurement_time + GYRO_DT:
