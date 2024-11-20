@@ -211,6 +211,7 @@ class Simulator:
         true_ECI_R_body = R.from_quat([*self.true_state[7:10], self.true_state[6]])
 
         # Sun Sensor update
+        got_sun = False
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
         if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + SUN_SENSOR_DT):
             sigma_sunsensor = np.deg2rad(3)  # [rad]
@@ -230,7 +231,9 @@ class Simulator:
                 [current_time - self.J2000_start_time] + measured_sun_ray_in_body.tolist(),
                 ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
             )
+            got_sun = True
 
+        got_B = False
         if current_time >= self.last_magnetometer_measurement_time + MAGNETOMETER_DT:
             # TODO get b field using estiamted position not true position
             true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
@@ -245,11 +248,28 @@ class Simulator:
                 [current_time - self.J2000_start_time] + measured_Bfield_in_body.tolist(),
                 ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
             )
+            got_B = True
+
+        if got_B and got_sun:
+            print(f"true_sun_ray_ECI: {true_sun_ray_ECI}")
+            print(f"measured_sun_ray_in_body: {measured_sun_ray_in_body}")
+            print(f"true_Bfield_ECI: {true_Bfield_ECI}")
+            print(f"measured_Bfield_in_body: {measured_Bfield_in_body}")
+
+            print(f"recovered sun_ray_in_ECI: {true_ECI_R_body.as_matrix()@ measured_sun_ray_in_body}")
+            print(f"recovered Bfield_in_ECI: {true_ECI_R_body.as_matrix()@ measured_Bfield_in_body}")
+
+            attitude_estimate = self.attitude_ekf.triad(
+                true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
+            )
+            self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
+            self.attitude_ekf.initialized = True
+
         # Propogate on Gyro
         if current_time >= self.last_gyro_measurement_time + GYRO_DT:
             true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
             gyro_measurement = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            self.attitude_ekf.gyro_update(gyro_measurement, current_time)
+            # self.attitude_ekf.gyro_update(gyro_measurement, current_time)
             self.last_gyro_measurement_time = current_time
 
             self.logr.log_v(
