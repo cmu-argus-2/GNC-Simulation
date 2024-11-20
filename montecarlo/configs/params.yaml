@@ -29,7 +29,7 @@ initialization:
      AOP : 63 # [deg]
      AOP_dev : 20 # [%]
 
-     initial_angular_rate_bound : 0.0 # Max initial angular rate about any axis [rad/s]
+     initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
 
 # -----------------------------------------------------------------------------------------------------------
 # physical properties
