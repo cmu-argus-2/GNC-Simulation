@@ -251,26 +251,19 @@ class Simulator:
             got_B = True
 
         if got_B and got_sun:
-            print(f"true_sun_ray_ECI: {true_sun_ray_ECI}")
-            print(f"measured_sun_ray_in_body: {measured_sun_ray_in_body}")
-            print(f"true_Bfield_ECI: {true_Bfield_ECI}")
-            print(f"measured_Bfield_in_body: {measured_Bfield_in_body}")
-
-            print(f"recovered sun_ray_in_ECI: {true_ECI_R_body.as_matrix()@ measured_sun_ray_in_body}")
-            print(f"recovered Bfield_in_ECI: {true_ECI_R_body.as_matrix()@ measured_Bfield_in_body}")
-
             attitude_estimate = self.attitude_ekf.triad(
                 true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
             )
             self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
             self.attitude_ekf.initialized = True
             self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
+            self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
 
         # Propogate on Gyro
         if current_time >= self.last_gyro_measurement_time + GYRO_DT:
             true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
             gyro_measurement = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            # self.attitude_ekf.gyro_update(gyro_measurement, current_time)
+            self.attitude_ekf.gyro_update(gyro_measurement, current_time)
             self.last_gyro_measurement_time = current_time
 
             self.logr.log_v(

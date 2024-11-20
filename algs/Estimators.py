@@ -92,16 +92,16 @@ class Attitude_EKF:
         return len(self.Bfield_ringbuff) == self.Bfield_ringbuff.maxlen
 
     def gyro_update(self, gyro_measurement, t):
-        self.gyro_ringbuff.append((t, gyro_measurement))
-        if self.gyro_buff_full():
-            norms = [np.linalg.norm(v) for (t, v) in self.gyro_ringbuff]
-            std_deviation = np.std(norms)
-            self.spinning_at_roughly_constant_rate = std_deviation < np.deg2rad(0.75)
+        # self.gyro_ringbuff.append((t, gyro_measurement))
+        # if self.gyro_buff_full():
+        #     norms = [np.linalg.norm(v) for (t, v) in self.gyro_ringbuff]
+        #     std_deviation = np.std(norms)
+        #     self.spinning_at_roughly_constant_rate = std_deviation < np.deg2rad(0.75)
 
-        if not self.initialized:
-            if self.spinning_at_roughly_constant_rate:
-                self.attempt_to_initialize(t)
-            return
+        # if not self.initialized:
+        #     if self.spinning_at_roughly_constant_rate:
+        #         self.attempt_to_initialize(t)
+        #     return
         if self.last_gyro_measurement_time is None:  # first time
             dt = 0
         else:
@@ -113,7 +113,6 @@ class Attitude_EKF:
         ECI_R_b_prev = self.get_ECI_R_b()
         ECI_R_b_curr = ECI_R_b_prev * delta_rotation
         self.set_ECI_R_b(ECI_R_b_curr)
-
         # TODO propogate error state covariance
         F = self.get_F()
         G = self.get_G()
@@ -173,7 +172,8 @@ class Attitude_EKF:
         if not self.initialized:
             if self.spinning_at_roughly_constant_rate:
                 self.sun_ray_ringbuff.append((t, measured_sun_ray_in_body, true_sun_ray_ECI))
-            return
+        return
+        print("sun_sensor_update update")
         predicted_sun_ray_ECI = self.get_ECI_R_b().as_matrix() @ measured_sun_ray_in_body
         innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
 
@@ -190,7 +190,8 @@ class Attitude_EKF:
         if not self.initialized:
             if self.spinning_at_roughly_constant_rate:
                 self.Bfield_ringbuff.append((t, measured_Bfield_in_body, true_Bfield_ECI))
-            return
+        return
+        print("Bfield update")
         predicted_Bfield_ECI = self.get_ECI_R_b().as_matrix() @ measured_Bfield_in_body
         innovation = true_Bfield_ECI - predicted_Bfield_ECI
 
@@ -247,6 +248,19 @@ class Attitude_EKF:
         U, sigma, Vt = np.linalg.svd(ECI_Vectors @ Body_Vectors.T)
         ECI_R_body = U @ Vt
         return ECI_R_body
+
+    def triad_update(self, sun_ECI, sun_body, B_ECI, B_body):
+        new_ECI_R_body = self.triad(sun_ECI, sun_body, B_ECI, B_body)
+        curr_ECI_R_body = self.get_ECI_R_b().as_matrix()
+        rho_estimate = R.from_matrix(new_ECI_R_body @ curr_ECI_R_body.T).as_rotvec()
+        innovation = rho_estimate
+
+        # TODO take into account asymmetrical uncertainty
+        cov = np.eye(3) * np.deg2rad(10) ** 2
+
+        H = np.zeros((3, 6))
+        H[:, 0:3] = np.eye(3)
+        self.EKF_update(H, innovation, cov)
 
     def attempt_to_initialize_attitude(self, w_body):
         # Triad Algorithm - accumulate several and assuming constnat omega, transform vectors into initial bodyy frame. assume b and sun vectors don't change much ion ECI over time
