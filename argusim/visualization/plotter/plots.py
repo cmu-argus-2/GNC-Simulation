@@ -145,7 +145,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
-        with open("../../montecarlo/configs/params.yaml", "r") as f:
+        with open(os.path.join(self.trials_dir, '../../../configs/params.yaml'), "r") as f:
             pyparams = yaml.safe_load(f)
         
         J = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))

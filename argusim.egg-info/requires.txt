@@ -1,0 +1,6 @@
+basemap
+flask
+matplotlib
+numpy
+psutil
+pyigrf

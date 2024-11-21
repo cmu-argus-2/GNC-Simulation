@@ -2,51 +2,37 @@
 
 This repo simulates the 3d Dynamics of a satellite in orbit. The core dynamics are comptued and the state is propogated in C++. This is exposed to python via pybind. 
 
-Credits to Derek Fan for his approach to C++ Eigen <--> Python bindings. I used his method with pybind11. 
-
-## SPICE data download
-Run `./build_sim_debug.sh` to download all necessary SPICE kernel files during build. 
-This step requires curl installed with a version higher than 7.73.0.
-
 ## Setting Up
 ### First time
-1. Run `git submodule update --recursive --init` to set up dependencies
-2. Run `sudo apt install python3-tk -y` to install tkinter
-3. Run `python -m venv .venv --system-site-packages` to create a virtual environment (venv)
-4. Run `source .venv/bin/activate` to activate the venv
-5. Run `pip install -r requirements.txt`
+Run the following commands:
+- `python3 -m venv .venv --system-site-packages`
+- `source .venv/bin/activate`
+- `./install.sh`
 
 ### Each time
-1. Run `source .venv/bin/activate` to activate the venv
-2. Once done with devlopment, run `deactivate` to exit the venv
-
-## Running the sim
-1. `cd simulation_manager/`
-2. Run `python3 run_job.py`
-3. Results and plots are written into the `results/` directory
- 
-## Manual Build Instructions
-Run `./build_sim_debug.sh`
+- Run `source .venv/bin/activate` to activate the venv
+- Run `./run.sh <NUM_TRIALS>`
+- Once done with devlopment, run `deactivate` to exit the venv
 
 ## Debugging
 
 ### Plot Visualization
 
 #### Web Viewer Comparison tool 
-1. `cd visualization/web_visualizer`
+1. `cd argusim/visualization/web_visualizer`
 2. Open a web browser and go to `http://127.0.0.1:5000/`
 3. `python3 job_comparison_tool.py`
 
 #### Interactive - all trials
-1. `cd visualization/plotter`
+1. `cd argusim/visualization/plotter`
 2. `python3 plot.py <JOB_NAME> -i`
 
 #### Interactive - specific trials
-1. `cd visualization/plotter`
+1. `cd argusim/visualization/plotter`
 2. `python3 plot.py <JOB_NAME> -i -t [list of trail numbers to debug]`
 
 #### Replotting an existing job after changing the plotting scripts
-1. `cd visualization/plotter`
+1. `cd argusim/visualization/plotter`
 2. `python3 plot.py <JOB_NAME>`
 
 ### ModuleNotFoundError: No module named XXXX

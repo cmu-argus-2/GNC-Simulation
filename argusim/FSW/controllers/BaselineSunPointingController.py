@@ -1,8 +1,8 @@
 
 import numpy as np
-from actuators.magnetorquer import Magnetorquer
-from world.math.quaternions import *
-from FSW.controllers.ControllerAlgorithm import ControllerAlgorithm  
+from argusim.actuators import Magnetorquer
+from argusim.world.math.quaternions import *
+from argusim.FSW.controllers.ControllerAlgorithm import ControllerAlgorithm  
 
 
 class BaselineSunPointingController(ControllerAlgorithm):
