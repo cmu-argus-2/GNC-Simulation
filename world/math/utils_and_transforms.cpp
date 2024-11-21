@@ -12,6 +12,9 @@ static constexpr double ROT_MAT_0_THRESH = 1e-10;
 // seconds elapsed between the Unix and J2000 epoch
 static constexpr int64_t J2000epochInUnixTime = 946727936;
 
+// Astronomical Unit [m]
+static constexpr double ASTRONOMICAL_UNIT = 149597870700;
+
 int64_t unixToJ2000(int64_t unixSeconds) {
     return unixSeconds - J2000epochInUnixTime;
 }
@@ -244,4 +247,105 @@ double UTCStringtoTJ2000 (std::string UTC)
     utc2et_c(UTC_char, &t_J2000);
 
     return t_J2000;
+}
+
+Eigen::Vector3d sun_position_mod(double t_J2000)
+{
+    // Number of Julian centuries from J2000 epoch.
+    // double t_J2000 = (jd_tdb - JD_J2000) / 36525.0;
+    t_J2000 = t_J2000 / (36525.0 * 86400.0);
+
+    // Mean anomaly of the Sun [deg].
+    double Ms = 357.5291092 + 35999.05034 * t_J2000;
+
+    // Convert Ms to [rad] and limit to the interval [0, 2π].
+    Ms = fmod(Ms * M_PI / 180.0, 2 * M_PI);
+
+    // Compute auxiliary variables.
+    double sin_Ms = sin(Ms);
+    double cos_Ms = cos(Ms);
+
+    // Let's compute `sin(2Ms)` and `cos(2Ms)` more efficiently.
+    double sin_2Ms = 2 * sin_Ms * cos_Ms;
+    double cos_2Ms = cos_Ms * cos_Ms - sin_Ms * sin_Ms;
+
+    // Mean longitude of the Sun [deg].
+    double lambda_m = 280.460 + 36000.771 * t_J2000;
+
+    // Ecliptic latitude of the Sun [deg].
+    double lambda_e = lambda_m + 1.914666471 * sin_Ms + 0.019994643 * sin_2Ms;
+
+    // Obliquity of the ecliptic [deg].
+    double epsilon = 23.439291 - 0.0130042 * t_J2000;
+
+    // Convert lambda_e and epsilon to [rad] and limit to the interval [0, 2π].
+    lambda_e = fmod(lambda_e * M_PI / 180.0, 2 * M_PI);
+    epsilon = fmod(epsilon * M_PI / 180.0, 2 * M_PI);
+
+    // Auxiliary variables.
+    double sin_epsilon = sin(epsilon);
+    double cos_epsilon = cos(epsilon);
+    double sin_lambda_e = sin(lambda_e);
+    double cos_lambda_e = cos(lambda_e);
+
+    // Distance of the Sun from Earth [m].
+    double r = (1.000140612 - 0.016708617 * cos_Ms - 0.000139589 * cos_2Ms) * ASTRONOMICAL_UNIT;
+
+    // Compute the Sun vector represented in the Mean Equinox of Date (MOD).
+    Eigen::Vector3d s_mod;
+    s_mod << r * cos_lambda_e, r * cos_epsilon * sin_lambda_e, r * sin_epsilon * sin_lambda_e;
+
+    return s_mod;
+}
+
+double equation_of_time(double t_J2000)
+{
+    // Mean longitude of the Sun.
+    double lambda_m = fmod(280.460 + 36000.771 * t_J2000, 360);
+
+    // Mean anomaly of the Sun.
+    double Ms = fmod(357.5291092 + 35999.05034 * t_J2000, 360) * M_PI / 180.0;
+
+    // Auxiliary variables.
+    double sin_Ms = sin(Ms);
+    double sin_2Ms = sin(2 * Ms);
+
+    // Ecliptic latitude of the Sun.
+    double lambda_ecliptic = fmod(lambda_m + 1.914666471 * sin_Ms + 0.019994643 * sin_2Ms, 360) * M_PI / 180.0;
+
+    // Compute the equation of time [deg].
+    double eot = -1.914666471 * sin_Ms - 0.019994643 * sin_2Ms + 2.466 * sin(2 * lambda_ecliptic) - 0.0053 * sin(4 * lambda_ecliptic);
+
+    return eot * M_PI / 180.0;
+}
+
+double LTAN_to_RAAN(double ltan, double t_J2000)
+{
+    // Get the sun position at noon (UT) represented in the MOD reference frame.
+    Eigen::Vector3d s_i = sun_position_mod(t_J2000);
+
+    // Get the desired angle between the Sun and the ascending node [rad].
+    double alpha = (ltan - 12) * M_PI / 12;
+
+    // Get the right ascension of the Sun in the MOD reference frame. This is the Sun
+    // apparent local time.
+    double salt = atan2(s_i[1], s_i[0]);
+
+    // Get the equation of time to compute the Sun mean local time [rad].
+    double eot = equation_of_time(t_J2000);
+
+    // Compute the Sun mean local time.
+    double smlt = salt + eot;
+
+    // Compute the desired RAAN in the interval [0, 2π].
+    double raan = fmod(smlt + alpha, 2 * M_PI);
+    if (raan < 0) {
+        raan += 2 * M_PI;
+    }
+
+    return raan;
+}
+
+double LTDN_to_RAAN(double ltdn, double t_J2000) {
+    return LTAN_to_RAAN(fmod(ltdn + 12, 24), t_J2000);
 }
