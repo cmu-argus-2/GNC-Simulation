@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: argusim
-Version: 1.0.0
-Summary: Pybind'ed C++ orbital dynamics simulation for the Argus cibesat
-Home-page: https://github.com/cmu-argus-2/GNC-Simulation.git
-Author: Karthik Karumanchi
-Author-email: kkaruman@andrew.cmu.edu
