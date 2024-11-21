@@ -38,7 +38,7 @@ reaction_wheels:
      rw_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector [rad]
 
      I_rw : 3.3878e-06 # 6.5e-7   # kg.m^2 inertia of each reaction wheel
-     I_rw_dev : 20 # stddev from nominal I_rw as a % of nominal I_rw [%]
+     I_rw_dev : 5 # stddev from nominal I_rw as a % of nominal I_rw [%]
 
 # -----------------------------------------------------------------------------------------------------------
 # Magnetorquers
@@ -73,11 +73,11 @@ nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sensors
 # -----------------------------------------------------------------------------------------------------------
 gps:
-     gps_pos_std : 10 # [UNITS: m]
-     gps_pos_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
+     gps_pos_std : 5 # [UNITS: m]
+     gps_pos_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
 
-     gps_vel_std : 1 # [UNITS: m/s]
-     gps_vel_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
+     gps_vel_std : 0.03 # [UNITS: m/s]
+     gps_vel_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
 
 photodiodes:
      num_photodiodes : 6
@@ -94,17 +94,17 @@ photodiodes:
 
 magnetometer:
      magnetometer_noise_std : 0.005 # [UNITS: T]
-     magnetometer_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+     magnetometer_std_dev : 0 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
 
 gyroscope:
      gyro_correlation_time : 500000.0 # [UNITS: s]
      gyro_scale_factor_err : 1.0e-5
 
      gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
-     gyro_sigma_w_dev : 20 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
+     gyro_sigma_w_dev : 0 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
 
      gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
-     gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+     gyro_sigma_v_dev : 0 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
      
 
 # -----------------------------------------------------------------------------------------------------------
@@ -121,21 +121,28 @@ useSRP : False
 # Initialization
 # -----------------------------------------------------------------------------------------------------------
 # All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
 initialization:
      semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 1 #  [%]
+     semimajor_axis_dev : 20000 #  [m]
 
      eccentricity : 0.007 
-     eccentricity_dev : 20 # [%]
+     eccentricity_dev : 0.0040 # [-] 
 
      inclination : 97.75 # [deg]
-     inclination_dev : 1 # [%]
+     inclination_dev : 0.1 # [deg]
 
      RAAN : 171 # [deg]
      RAAN_dev : 20 # [%]
+     # disperse_LTAN : True
+     # LTAN : 10:30:00 # [HH:MM:SS]
+     # LTAN_min : 10:00:00 # [HH:MM:SS]
+     # LTAN_max : 14:00:00 # [HH:MM:SS]
 
+     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
+     disperse_AOP : True 
      AOP : 63 # [deg]
-     AOP_dev : 20 # [%]
+     # AOP_dev : 20 # [%]
 
      # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
      # If False, the nominal_true_anomaly is chosen across trials
@@ -151,7 +158,7 @@ initialization:
      # If False, the nominal_initial_angular_rate is chosen across trials
      disperse_initial_angular_rate : True
      initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
+     initial_angular_rate_dev : 0.5 # Max initial angular rate about any axis [rad/s]
 
 
 # -----------------------------------------------------------------------------------------------------------

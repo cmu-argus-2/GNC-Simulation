@@ -162,11 +162,13 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
     return magnetorquer;
 }
 
+
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
     VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
+    std::cout << "KOE: " << KOE.transpose() << std::endl;
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
@@ -249,7 +251,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
 
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
-    double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
+    double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
     double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
@@ -260,24 +262,35 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
+    //disperse_LTAN : True
+    //LTAN : 10:30:00 # [HH:MM:SS]
+    //LTAN_min : 10:00:00 # [HH:MM:SS]
+    //LTAN_max : 14:00:00 # [HH:MM:SS]
     double RAAN_nominal = params["initialization"]["RAAN"].as<double>();
     double RAAN_std = RAAN_nominal*(params["initialization"]["RAAN_dev"].as<double>()/100);
     RAAN_dist = std::normal_distribution<double>(RAAN_nominal, RAAN_std);
 
-    double AOP_nominal = params["initialization"]["AOP"].as<double>();
-    double AOP_std = AOP_nominal*(params["initialization"]["AOP_dev"].as<double>()/100);
-    AOP_dist = std::normal_distribution<double>(AOP_nominal, AOP_std);
+    //double AOP_nominal = params["initialization"]["AOP"].as<double>();
+    //double AOP_std = AOP_nominal*(params["initialization"]["AOP_dev"].as<double>()/100);
+    // std::normal_distribution<double>(AOP_nominal, AOP_std);
+    AOP_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
+
     true_anomaly_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
 
     initial_attitude_dist = std::uniform_real_distribution<double>(-1,1);
 
-    double angular_rate_bound = params["initialization"]["initial_angular_rate_bound"].as<double>();
-    initial_angular_rate_dist = std::uniform_real_distribution<double>(-angular_rate_bound, angular_rate_bound);
+    // auto angular_rate_bound = params["initialization"]["initial_angular_rate_bound"].as<double>();
+    // initial_angular_rate_dist = std::uniform_real_distribution<double>(-angular_rate_bound, angular_rate_bound);
+    double angular_rate_std = params["initialization"]["initial_angular_rate_dev"].as<double>();
+    initial_angular_rate_dist = std::normal_distribution<double>(0, angular_rate_std);
+    
+    //double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
+    //double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
+    //sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
     double earliest_sim_start_J2000 = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());
     double latest_sim_start_J2000 = UTCStringtoTJ2000(params["latest_sim_start_time_UTC"].as<std::string>());
     sim_start_time_dist = std::uniform_real_distribution<double>(earliest_sim_start_J2000, latest_sim_start_J2000);
-
 }
 
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
