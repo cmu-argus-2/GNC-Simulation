@@ -17,10 +17,9 @@ inertia :
      nominal_inertia : [0.00149, 0.0, 0.00014,
                         0.0, 0.00147, 0.0,
                         0.00014,   0.0, 0.00154]
-# [0.001796, 0.0, 0.000716, 
-#                0.0, 0.002081, 0.0,
-#           0.000716, 0.0, 0.002232]
-     principal_axis_dev : [20,20,20] # stddev of principal axis inertias about nominal as a % of nominal [%]
+     # [Ixx, Iyy, Izz, Ixy, Iyz, Ixz] [kgm^2]
+     principal_axis_dev : [10,10,10]
+     # [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] # stddev of principal axis inertias about nominal [kgm^2]
 
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
@@ -28,13 +27,12 @@ CR : 1.8 # Reflectivity coefficient
 # -----------------------------------------------------------------------------------------------------------
 # Reaction Wheels
 # -----------------------------------------------------------------------------------------------------------
-N_rw : 1                   # number of reaction wheels
-rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
-I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
-m_rw: 0.002                # kg mass of each reaction wheel
-max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
-max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
-nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
+reaction_wheels:
+     N_rw : 1                   # number of reaction wheels
+     m_rw: 0.002                # kg mass of each reaction wheel
+     max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
+     max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
+     nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
 
      rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
      rw_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector [rad]
@@ -61,7 +59,7 @@ magnetorquers:
                         0,0,1] # alignment axis of each magnetorquer in the body frame
      mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
 
-     mtb_resistance : 3.25e-7 # [UNITS: Ω]
+     mtb_resistance : 12.1 # [UNITS: Ω]
      mtb_resistance_dev : 5 # stddev from nominal resistance as a % of nominal resistance [%]
      mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
      
@@ -112,7 +110,7 @@ gyroscope:
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10000 # [s]
+MAX_TIME: 10800 # [s]
 dt: 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
@@ -156,8 +154,11 @@ initialization:
      initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
 
 
-algorithm: "BaseSP" # "Lyapunov" # "BaseNP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
-bcrossgain: 0.028
+# -----------------------------------------------------------------------------------------------------------
+# Controller Parameters
+# -----------------------------------------------------------------------------------------------------------
+algorithm: "Lyapunov" # "Bcross" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
+bcrossgain: 0.0028
 
 mtb_att_feedback_gains: [[1.0, 0.0, 0.0, 1.4, 0.0, 0.0],
                         [0.0, 1.0, 0.0, 0.0, 1.4, 0.0],
