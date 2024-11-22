@@ -20,20 +20,20 @@ Run the following commands:
 
 #### Web Viewer Comparison tool 
 1. `cd argusim/visualization/web_visualizer`
-2. Open a web browser and go to `http://127.0.0.1:5000/`
+2. Open a web browser and go to `http://127.0.0.1:3000/`
 3. `python3 job_comparison_tool.py`
 
 #### Interactive - all trials
 1. `cd argusim/visualization/plotter`
-2. `python3 plot.py <JOB_NAME> -i`
+2. `python3 plot.py <PATH_TO_JOB_DIRECTORY> -i`
 
 #### Interactive - specific trials
 1. `cd argusim/visualization/plotter`
-2. `python3 plot.py <JOB_NAME> -i -t [list of trail numbers to debug]`
+2. `python3 plot.py <PATH_TO_JOB_DIRECTORY> -i -t [list of trial numbers to debug]`
 
 #### Replotting an existing job after changing the plotting scripts
 1. `cd argusim/visualization/plotter`
-2. `python3 plot.py <JOB_NAME>`
+2. `python3 plot.py <PATH_TO_JOB_DIRECTORY>`
 
 ### ModuleNotFoundError: No module named XXXX
 Remember to run in a virtual environment
