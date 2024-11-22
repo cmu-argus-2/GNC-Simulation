@@ -1,11 +1,12 @@
 import configparser
 import numpy as np
-from world.math.quaternions import *
-from FSW.controllers.ControllerAlgorithm import *
-from FSW.controllers.BcrossController import BcrossController
-from FSW.controllers.LyapBasedSunPointingController import LyapBasedSunPointingController
-from FSW.controllers.BaselineSunPointingController import BaselineSunPointingController
-from FSW.controllers.BaselineNadirPointingController import BaselineNadirPointingController
+
+from argusim.world.math.quaternions import *
+from argusim.FSW.controllers.ControllerAlgorithm import *
+from argusim.FSW.controllers.BcrossController import BcrossController
+from argusim.FSW.controllers.LyapBasedSunPointingController import LyapBasedSunPointingController
+from argusim.FSW.controllers.BaselineSunPointingController import BaselineSunPointingController
+from argusim.FSW.controllers.BaselineNadirPointingController import BaselineNadirPointingController
 
 class Controller:
     def __init__(self, 

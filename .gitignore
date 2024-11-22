@@ -1,10 +1,38 @@
-build/
-.cache/
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Distribution / packaging
+.Python
+build/
+*.egg-info/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
-.venv/
-.vscode/
+
+# VSCode
+.vscode/settings.json
+
+# MAC
+.DS_Store
+
+# Project Specific Info
+build/
 data/
 montecarlo/results/
-*.pyc
-venv/
+argusim.egg-info/

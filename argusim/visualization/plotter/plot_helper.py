@@ -1,4 +1,4 @@
-from isolated_trace import itm
+from argusim.visualization.plotter.isolated_trace import itm
 import numpy as np
 import os
 
