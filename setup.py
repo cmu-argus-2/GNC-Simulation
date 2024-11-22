@@ -15,6 +15,6 @@ setup(
     include_package_data = True,
     author               = "Karthik Karumanchi",
     author_email         = "kkaruman@andrew.cmu.edu",
-    description          = "Pybind'ed C++ orbital dynamics simulation for the Argus cibesat",
+    description          = "Pybind'ed C++ orbital dynamics simulation for the Argus cubesat",
     url                  = "https://github.com/cmu-argus-2/GNC-Simulation.git",
 )
