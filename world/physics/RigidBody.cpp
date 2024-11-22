@@ -48,7 +48,7 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
     }
 
     if (useSRP){
-        vdot = vdot + SRP_acceleration(q, t_J2000, CR, A, mass);
+        vdot = vdot + SRP_acceleration(q, r, t_J2000, CR, A, mass);
     }
     
     // Pack acceleration back into the state vector

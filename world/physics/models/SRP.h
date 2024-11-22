@@ -5,6 +5,24 @@
 #include "math/EigenWrapper.h"
 
 /**
+ * Determines if the satellite is in sunlight or shadow based on simple cylindrical shadow model.
+ * Taken from Montenbruck and Gill p. 80-83
+ * @param r_earth position vector of spacecraft with respect to Earth (ECI, meters).
+ * @param r_sun position vector of spacecraft with respect to the sun (meters).
+ * @return 0.0 if in shadow, 1.0 if in sunlight, 0 to 1.0 if in partial shadow
+ */
+double partial_illumination(const Vector3& r, const Vector3& r_Sun);
+
+/**
+ * Determines if the satellite is in sunlight or shadow based on simple cylindrical shadow model.
+ * Taken from Montenbruck and Gill p. 80-83
+ * @param r ECI position vector of spacecraft [m].
+ * @param r_Sun Sun position vector (geocentric) [m].
+ * @return 0.0 if in shadow, 1.0 if in sunlight, 0 to 1.0 if in partial shadow
+ */
+double partial_illumination_rel(const Vector3& r_earth, const Vector3& r_sun);
+
+/**
  * @brief Compute SRP force on satellite in J2000 ECI frame
  * 
  * @param q : quaternion vector representing rotation from body frame to ECI
@@ -14,7 +32,7 @@
  * @param m : satellite mass [kg]
  * @return acceleration due to solar radiation pressure [m/s^2]
  */
-Vector3 SRP_acceleration(const Quaternion q, double t_J2000, double CR, double A, double m);
+Vector3 SRP_acceleration(const Quaternion q, const Vector3 r, double t_J2000, double CR, double A, double m);
 
 /**
  * @brief Computes area perpendicular to the velocity vector as a % of face area
