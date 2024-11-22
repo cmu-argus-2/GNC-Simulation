@@ -67,7 +67,7 @@ if __name__ == "__main__":
         np.random.seed()
         passkey = np.random.randint(100, 1000)
         user_input = input(
-            f'****WARNING****: Found exisitng plot folder for job "{args.job_name}" at "{plot_directory}". Are you sure you want to risk overwriting existing plots? [Type {passkey} to continue] '
+            f'****WARNING****: Found exisitng plot folder for job "{args.job_directory}" at "{plot_directory}". Are you sure you want to risk overwriting existing plots? [Type {passkey} to continue] '
         )
         if user_input != str(passkey):
             print("exiting without plotting")
