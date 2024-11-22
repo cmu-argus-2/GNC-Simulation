@@ -5,7 +5,7 @@ from flask import Flask, render_template, abort, send_file, request
 
 app = Flask(__name__)
 
-RESULTS_FOLDER = "../../montecarlo/results"
+RESULTS_FOLDER = "../../../montecarlo/results"
 
 
 def get_number_of_trials(job_name):
@@ -111,4 +111,4 @@ def get_img(job_dir, file):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=3000)

@@ -98,6 +98,7 @@ if __name__ == "__main__":
                     os.system(f"kill -9 {pid}")
                     process_info["sent_kill_signal"] = True
 
+    trial_env = os.environ.copy()
     while TRIALS_FINISHED < NUM_TRIALS:
         if TRIALS_STARTED < NUM_TRIALS:  # need to run more trials
             number_of_active_trials = TRIALS_STARTED - TRIALS_FINISHED
@@ -105,16 +106,16 @@ if __name__ == "__main__":
                 TRIAL_NUMBER = TRIALS[TRIALS_STARTED]
                 trial_directory_abs = os.path.join(job_directory_abs, "trials", f"trial{TRIAL_NUMBER}")
                 trial_output_file = os.path.join(trial_directory_abs, "output.txt")
+
+                trial_env["TRIAL_DIRECTORY"] = trial_directory_abs
+                trial_env["PARAMETER_FILEPATH"] = parameter_file_abs
+                trial_env["TRIAL_NUMBER"] = str(TRIAL_NUMBER)
+
                 os.system(f"mkdir -p {trial_directory_abs}")
                 with open(trial_output_file, "w") as outfile:
                     process = subprocess.Popen(
                         trial_command.strip("'").split(" "),
-                        env={
-                            "TRIAL_DIRECTORY": trial_directory_abs,
-                            "PARAMETER_FILEPATH": parameter_file_abs,
-                            "TRIAL_NUMBER": str(TRIAL_NUMBER),
-                        },
-                        cwd=trial_command_dir,
+                        env=trial_env,
                         stderr=outfile,
                         stdout=outfile,
                     )

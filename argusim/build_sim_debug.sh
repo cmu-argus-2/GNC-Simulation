@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e # exit when any command fails
 
+# Install Dependencies
+git submodule update --recursive --init
+
+sudo apt-get install python3-tk -y
+sudo apt-get install cmake -y
+sudo apt-get install gfortran -y
+sudo apt-get install libeigen3-dev -y
+
 # "-O" means otuput to a file with the same name
 # "-C -": see https://stackoverflow.com/questions/11856351/how-to-skip-already-existing-files-when-downloading-with-curl
 mkdir -p data

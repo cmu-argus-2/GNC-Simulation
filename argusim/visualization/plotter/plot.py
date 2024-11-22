@@ -2,8 +2,9 @@ import inspect
 import traceback
 import numpy as np
 import os
-from plots import MontecarloPlots
-from plot_menu import get_user_selections
+
+from argusim.visualization.plotter.plots import MontecarloPlots
+from argusim.visualization.plotter.plot_menu import get_user_selections
 from matplotlib import pyplot as plt
 import argparse
 
@@ -22,13 +23,13 @@ if __name__ == "__main__":
         description="This program generates plots from data produced by a montecarlo job",
         epilog="=" * 80,
     )
-    parser.add_argument("job_name", metavar="job_name")
+    parser.add_argument("job_directory", metavar="job_directory")
     parser.add_argument("-t", "--trials", type=int, nargs="+")
     parser.add_argument("-i", "--interactive", action="store_true")
 
     args = parser.parse_args()
 
-    job_directory = os.path.realpath(os.path.join("../../montecarlo/results", args.job_name))
+    job_directory = os.path.realpath(args.job_directory)
     trials_directory = os.path.join(job_directory, "trials")
     plot_directory = os.path.join(job_directory, "plots")
 
@@ -60,7 +61,7 @@ if __name__ == "__main__":
         np.random.seed()
         passkey = np.random.randint(100, 1000)
         user_input = input(
-            f'****WARNING****: Found exisitng plot folder for job "{args.job_name}" at "{plot_directory}". Are you sure you want to risk overwriting existing plots? [Type {passkey} to continue] '
+            f'****WARNING****: Found exisitng plot folder for job "{args.job_directory}" at "{plot_directory}". Are you sure you want to risk overwriting existing plots? [Type {passkey} to continue] '
         )
         if user_input != str(passkey):
             print("exiting without plotting")

@@ -1,5 +1,5 @@
 import numpy as np
-from world.math.quaternions import crossproduct, quatrotation
+from argusim.world.math.quaternions import crossproduct, quatrotation
 
 
 COPPER_RESISTIVITY = 1.724 * 10**-8
