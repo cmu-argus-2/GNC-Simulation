@@ -11,7 +11,10 @@ Run the following commands:
 
 ### Each time
 - Run `source .venv/bin/activate` to activate the venv
-- Run `./run.sh <NUM_TRIALS>`
+- #### RUN MODE
+  - Run `./run.sh <NUM_TRIALS>`
+- #### DEBUG MODE (when making changes to code)
+  - Run `./run_debug.sh <NUM_TRIALS>`
 - Once done with devlopment, run `deactivate` to exit the venv
 
 ## Debugging
