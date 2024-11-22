@@ -558,25 +558,55 @@ class MontecarloPlots:
         # ==========================================================================
         # Attitude error plots
         self.attitude_error_figure = itm.figure()
+        final_attitude_error_norms = []
         for i, trial_number in enumerate(self.trials):
-            multiPlot(
-                data_dicts[i]["Time [s]"],
-                np.rad2deg(np.array([data_dicts[i]["x [rad]"], data_dicts[i]["y [rad]"], data_dicts[i]["z [rad]"]])),
-                seriesLabel=f"_{trial_number}",
+            series = np.rad2deg(
+                np.array([data_dicts[i]["x [rad]"], data_dicts[i]["y [rad]"], data_dicts[i]["z [rad]"]])
             )
+            multiPlot(data_dicts[i]["Time [s]"], series, seriesLabel=f"_{trial_number}")
+            final_attitude_error_norms.append(np.linalg.norm(series[:, -1]))
         annotateMultiPlot(title="Attitude error [deg]", ylabels=["$x$", "$y$", "$z$"])
+
+        itm.figure()
+        plt.hist(
+            final_attitude_error_norms,
+            bins=np.arange(min(final_attitude_error_norms), max(final_attitude_error_norms) + 1, 1),
+            cumulative=True,
+            edgecolor="black",
+        )
+        percentile_95 = np.percentile(final_attitude_error_norms, 95)
+        itm.axvline(x=percentile_95, color='red', linestyle='--', label=f'95th Percentile: {percentile_95:.2f} [deg]')
+        plt.title("RSS Final Attitude Estimate Error - CDF")
+        plt.xlabel("[deg]")
+        plt.ylabel("%-tile")
+        plt.legend()
+        save_figure(itm.gcf(), self.plot_dir, "attitude_estimate_error_hist.png", self.close_after_saving)
         # ==========================================================================
         # Gyro Bias error plots
         self.gyro_bias_error_figure = itm.figure()
+        final_gyro_bias_error_norms = []
         for i, trial_number in enumerate(self.trials):
-            multiPlot(
-                data_dicts[i]["Time [s]"],
-                np.rad2deg(
-                    np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
-                ),
-                seriesLabel=f"_{trial_number}",
+            series = np.rad2deg(
+                np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
             )
+            multiPlot(data_dicts[i]["Time [s]"], series, seriesLabel=f"_{trial_number}")
+            final_gyro_bias_error_norms.append(np.linalg.norm(series[:, -1]))
         annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+
+        itm.figure()
+        plt.hist(
+            final_gyro_bias_error_norms,
+            bins=np.arange(min(final_gyro_bias_error_norms), max(final_gyro_bias_error_norms) + 0.1, 0.1),
+            cumulative=True,
+            edgecolor="black",
+        )
+        percentile_95 = np.percentile(final_gyro_bias_error_norms, 95)
+        itm.axvline(x=percentile_95, color='red', linestyle='--', label=f'95th Percentile: {percentile_95:.2f} [deg/s]')
+        plt.title("RSS Final Gyro Bias Estimate Error - CDF")
+        plt.xlabel("[deg/s]")
+        plt.ylabel("%-tile")
+        plt.legend()
+        save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error_hist.png", self.close_after_saving)
         # --------------------------------------------------------------------------
         self._plot_state_estimate_covariance()  # show 3 sigma bounds
 
