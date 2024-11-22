@@ -191,6 +191,18 @@ std::string TJ2000toUTCString(double t_J2000);
  */
 double UTCStringtoTJ2000 (std::string UTC);
 
+
+/**
+ * @brief Converts a UTC time string to hours.
+ *
+ * This function takes a UTC time string in the format "HH:MM:SS" and converts it to a 
+ * double representing the total number of hours.
+ *
+ * @param UTC A string representing the UTC time in the format "HH:MM:SS".
+ * @return A double representing the total number of hours.
+ */
+double UTCStringtoHours(std::string UTC);
+
 /**
  * @brief Computes the position of the Sun in the MOD (Mean of Date) frame at a given time.
  *

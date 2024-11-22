@@ -68,8 +68,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_rw = I_rw_dist(dev);
 
     // GPS
-    gps_pos_std = gps_pos_dist(dev);
-    gps_vel_std = gps_vel_dist(dev);
+    gps_pos_std = params["gps"]["gps_pos_std"].as<double>(); // gps_pos_dist(dev);
+    gps_vel_std = params["gps"]["gps_vel_std"].as<double>(); // gps_vel_dist(dev);
 
     // Photodiodes
     num_photodiodes = params["photodiodes"]["num_photodiodes"].as<int>();
@@ -77,14 +77,14 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     for (int i=0; i<num_photodiodes; i++) {
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
-    photodiode_std = photodiode_dist(dev);
+    photodiode_std = params["photodiodes"]["photodiode_std"].as<double>(); // photodiode_std = photodiode_dist(dev);
 
     // Magnetometer
-    magnetometer_noise_std =magnetometer_dist(dev);
+    magnetometer_noise_std = params["magnetometer"]["magnetometer_noise_std"].as<double>(); // magnetometer_dist(dev);
 
     // Gyroscope
-    gyro_sigma_w = gyro_bias_dist(dev);
-    gyro_sigma_v = gyro_white_noise_dist(dev);
+    gyro_sigma_w = params["gyroscope"]["gyro_sigma_w"].as<double>(); // gyro_bias_dist(dev);
+    gyro_sigma_v = params["gyroscope"]["gyro_sigma_v"].as<double>(); // gyro_white_noise_dist(dev);
     gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
     gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
 
@@ -98,8 +98,15 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     semimajor_axis = sma_dist(dev);
     eccentricity = eccentricity_dist(dev);
     inclination = inclination_dist(dev);
-    RAAN = RAAN_dist(dev);
+    // RAAN = RAAN_dist(dev);
     AOP = AOP_dist(dev);
+    bool disperse_ltdn = params["initialization"]["disperse_LTDN"].as<bool>();
+    if (disperse_ltdn) {
+        LTDN = LTDN_dist(dev);
+    } else {
+        LTDN = UTCStringtoHours(params["initialization"]["LTDN"].as<std::string>());
+    }
+    std::cout << "LTDN: " << LTDN << std::endl;
 
     bool disperse_true_anomaly = params["initialization"]["disperse_true_anomaly"].as<bool>();
     if (disperse_true_anomaly) {
@@ -126,6 +133,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
+
+    RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
     
     // Populate State Vector
     initial_state = initializeSatellite(sim_start_time);
@@ -168,7 +177,7 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
-    std::cout << "KOE: " << KOE.transpose() << std::endl;
+
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
@@ -223,7 +232,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // GPS
     double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
     double gps_pos_std_std = gps_pos_std_nominal*(params["gps"]["gps_pos_std_dev"].as<double>()/100);
-    gps_pos_dist = std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
+    std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
     
     double gps_vel_std_nominal = params["gps"]["gps_vel_std"].as<double>();
     double gps_vel_std_std = gps_vel_std_nominal*(params["gps"]["gps_vel_std_dev"].as<double>()/100);
@@ -248,7 +257,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
     double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
     gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
-
+    
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
@@ -262,10 +271,10 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
-    //disperse_LTAN : True
-    //LTAN : 10:30:00 # [HH:MM:SS]
-    //LTAN_min : 10:00:00 # [HH:MM:SS]
-    //LTAN_max : 14:00:00 # [HH:MM:SS]
+    double LTDN_min = UTCStringtoHours(params["initialization"]["LTDN_min"].as<std::string>());
+    double LTDN_max = UTCStringtoHours(params["initialization"]["LTDN_max"].as<std::string>());
+    LTDN_dist = std::uniform_real_distribution<double>(LTDN_min, LTDN_max);
+
     double RAAN_nominal = params["initialization"]["RAAN"].as<double>();
     double RAAN_std = RAAN_nominal*(params["initialization"]["RAAN_dev"].as<double>()/100);
     RAAN_dist = std::normal_distribution<double>(RAAN_nominal, RAAN_std);
@@ -353,8 +362,6 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     std::ofstream fout(outpath);
     fout << out.c_str();
-
-
 }
 
 #ifdef USE_PYBIND_TO_COMPILE

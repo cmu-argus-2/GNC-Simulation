@@ -76,6 +76,7 @@ class Simulation_Parameters {
     double RAAN; // [deg]
     double AOP; // [deg]
     double true_anomaly; // [deg]
+    double LTDN; // [hours]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
@@ -115,6 +116,7 @@ class Simulation_Parameters {
     //std::normal_distribution<double> AOP_dist;
     std::normal_distribution<double> initial_angular_rate_dist;
     std::uniform_real_distribution<double> AOP_dist;
+    std::uniform_real_distribution<double> LTDN_dist;
     std::uniform_real_distribution<double> true_anomaly_dist;
     std::uniform_real_distribution<double> initial_attitude_dist;
     //std::uniform_real_distribution<double> initial_angular_rate_dist;

@@ -21,7 +21,6 @@ import yaml
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 
-
 class MontecarloPlots:
     def __init__(
         self,
@@ -83,6 +82,7 @@ class MontecarloPlots:
             m.scatter(lon, lat, s=0.5, c = 'y', marker=".", label=f"_{trial_number}", latlon=True)
             m.scatter(lon[0], lat[0], marker="*", color="green", label="Start")
             m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
+
         itm.figure(XYZt)
         annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["r_x", "r_y", "r_z"])
         save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
@@ -91,6 +91,69 @@ class MontecarloPlots:
         itm.gca().set_aspect("equal")
         itm.title("Ground Track [Green: Start    Red: End]")
         save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)
+        # ==========================================================================
+        # Plot the ECI trajectory in 3D and add a vector of the mean sun direction
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        max_range = 0
+        for i, trial_number in enumerate(self.trials):
+            x_km = data_dicts[i]["r_x ECI [m]"] / 1000
+            y_km = data_dicts[i]["r_y ECI [m]"] / 1000
+            z_km = data_dicts[i]["r_z ECI [m]"] / 1000
+            ax.plot(x_km, y_km, z_km, label=f'Trial {trial_number}', color='red')
+
+            max_range = max(max_range, np.max(np.abs(x_km)), np.max(np.abs(y_km)), np.max(np.abs(z_km)))
+
+            # Mark points where the orbit crosses the xy plane
+            crossings = 0
+            for j in range(1, len(z_km)):
+                if z_km[j-1] * z_km[j] < 0:  # Check for sign change indicating a crossing
+                    # Interpolate to find the crossing point
+                    t = -z_km[j-1] / (z_km[j] - z_km[j-1])
+                    x_cross = x_km[j-1] + t * (x_km[j] - x_km[j-1])
+                    y_cross = y_km[j-1] + t * (y_km[j] - y_km[j-1])
+                    ax.scatter(x_cross, y_cross, 0, color='blue', s=50, label='XY Plane Crossing')
+                    crossings += 1
+                    if crossings >= 2:
+                        break
+
+                    # Calculate the angle to the sun vector
+                    sun_vector = np.array([data_dicts[i]["rSun_x ECI [m]"][j], data_dicts[i]["rSun_y ECI [m]"][j], data_dicts[i]["rSun_z ECI [m]"][j]])
+                    sun_vector /= np.linalg.norm(sun_vector)
+                    orbit_vector = np.array([x_cross, y_cross, 0])
+                    orbit_vector /= np.linalg.norm(orbit_vector)
+                    angle_to_sun = np.rad2deg(np.arccos(np.dot(sun_vector, orbit_vector)))
+                    ax.text(x_cross, y_cross, 0, f'{angle_to_sun:.1f}°', color='blue')
+
+        # Calculate the mean sun direction
+        mean_sun_x = np.mean([data_dicts[i]["rSun_x ECI [m]"] for i in range(len(self.trials))], axis=1)
+        mean_sun_y = np.mean([data_dicts[i]["rSun_y ECI [m]"] for i in range(len(self.trials))], axis=1)
+        mean_sun_z = np.mean([data_dicts[i]["rSun_z ECI [m]"] for i in range(len(self.trials))], axis=1)
+        mean_sun_direction = np.array([mean_sun_x, mean_sun_y, mean_sun_z]).flatten()
+        mean_sun_direction /= np.linalg.norm(mean_sun_direction)
+
+        # Plot the mean sun direction vector
+        earth_radius_km = 6371
+        start_point = mean_sun_direction * earth_radius_km
+        ax.quiver(0, 0, 0, mean_sun_direction[0], mean_sun_direction[1], mean_sun_direction[2], 
+              length=earth_radius_km, color='orange', label='Mean Sun Direction')
+
+        ax.set_xlabel('X [km]')
+        ax.set_ylabel('Y [km]')
+        ax.set_zlabel('Z [km]')
+        ax.legend()
+        ax.text(start_point[0], start_point[1], start_point[2], "Sun Direction", color='orange')
+
+        # Set identical limits for all axes
+        ax.set_xlim([-max_range, max_range])
+        ax.set_ylim([-max_range, max_range])
+        ax.set_zlim([-max_range, max_range])
+        ax.set_box_aspect([1, 1, 1])  # Aspect ratio is 1:1:1
+
+        ax.view_init(elev=90, azim=0)
+        plt.savefig(os.path.join(self.plot_dir, "eci_trajectory_with_mean_sun_direction.png"))
+        plt.close(fig)
         # ==========================================================================
         itm.figure()
         for i, trial_number in enumerate(self.trials):
@@ -296,6 +359,7 @@ class MontecarloPlots:
 
         # ==========================================================================
         # TODO: Video of attitude
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlim([-1, 1])
@@ -346,5 +410,4 @@ class MontecarloPlots:
 
         ani = FuncAnimation(fig, update_quiver, frames=range(0, total_frames, step), fargs=(data_dicts, quiver_nadir, quiver_mag, quiver_sp, quiver_im, sun_quiver), interval=1000/fps, blit=False)
         ani.save(os.path.join(self.plot_dir, 'att_anim_BF_Sun.gif'), writer='pillow', fps=20)
-
-        
+        """

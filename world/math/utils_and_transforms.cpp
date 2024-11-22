@@ -249,6 +249,16 @@ double UTCStringtoTJ2000 (std::string UTC)
     return t_J2000;
 }
 
+double UTCStringtoHours(std::string UTC)
+{
+    int hours, minutes, seconds;
+    char colon;
+    std::istringstream iss(UTC);
+    iss >> hours >> colon >> minutes >> colon >> seconds;
+    double t_h = hours + minutes / 60.0 + seconds / 3600.0;
+    return t_h;
+}
+
 Eigen::Vector3d sun_position_mod(double t_J2000)
 {
     // Number of Julian centuries from J2000 epoch.
@@ -343,7 +353,7 @@ double LTAN_to_RAAN(double ltan, double t_J2000)
         raan += 2 * M_PI;
     }
 
-    return raan;
+    return raan * 180.0 / M_PI;
 }
 
 double LTDN_to_RAAN(double ltdn, double t_J2000) {

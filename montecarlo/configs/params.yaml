@@ -134,10 +134,11 @@ initialization:
 
      RAAN : 171 # [deg]
      RAAN_dev : 20 # [%]
-     # disperse_LTAN : True
-     # LTAN : 10:30:00 # [HH:MM:SS]
-     # LTAN_min : 10:00:00 # [HH:MM:SS]
-     # LTAN_max : 14:00:00 # [HH:MM:SS]
+
+     disperse_LTDN : False
+     LTDN : 10:30:00 # [HH:MM:SS]
+     LTDN_min : 10:00:00 # [HH:MM:SS]
+     LTDN_max : 14:00:00 # [HH:MM:SS]
 
      # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
      disperse_AOP : True 
