@@ -2,8 +2,9 @@ import inspect
 import traceback
 import numpy as np
 import os
-from plots import MontecarloPlots
-from plot_menu import get_user_selections
+
+from argusim.visualization.plotter.plots import MontecarloPlots
+from argusim.visualization.plotter.plot_menu import get_user_selections
 from matplotlib import pyplot as plt
 import argparse
 
