@@ -90,16 +90,6 @@ class Attitude_EKF:
         return len(self.Bfield_ringbuff) == self.Bfield_ringbuff.maxlen
 
     def gyro_update(self, gyro_measurement, t):
-        # self.gyro_ringbuff.append((t, gyro_measurement))
-        # if self.gyro_buff_full():
-        #     norms = [np.linalg.norm(v) for (t, v) in self.gyro_ringbuff]
-        #     std_deviation = np.std(norms)
-        #     self.spinning_at_roughly_constant_rate = std_deviation < np.deg2rad(0.75)
-
-        # if not self.initialized:
-        #     if self.spinning_at_roughly_constant_rate:
-        #         self.attempt_to_initialize(t)
-        #     return
         if self.last_gyro_measurement_time is None:  # first time
             dt = 0
         else:

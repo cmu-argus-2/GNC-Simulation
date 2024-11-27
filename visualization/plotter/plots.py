@@ -22,6 +22,14 @@ from actuators.magnetorquer import Magnetorquer
 import yaml
 
 
+# ANSI escape sequences for colored terminal output  (from ChatGPT)
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+WHITE = "\033[37m"
+RESET = "\033[0m"  # Resets all attributes
+
+
 class MontecarloPlots:
     def __init__(
         self,
@@ -38,13 +46,21 @@ class MontecarloPlots:
         self.close_after_saving = close_after_saving
         self.NUM_TRIALS = len(self.trials)
 
-    def true_state_plots(self):
-        filenames = []
+    def _get_files_across_trials(self, filename):
+        filepaths = []
         for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/state_true.bin"))
+            filepath = os.path.join(self.trials_dir, f"trial{trial_number}/{filename}")
+            if os.path.exists(filepath):
+                filepaths.append((trial_number, filepath))
+            else:
+                print(RED + f"Trial {trial_number} is missing {filename}" + RESET)
+        return filepaths
+
+    def true_state_plots(self):
+        filepaths = self._get_files_across_trials("state_true.bin")
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
@@ -60,7 +76,7 @@ class MontecarloPlots:
         m.drawparallels(np.arange(-90, 90, 15), linewidth=0.2, labels=[1, 1, 0, 0])
         m.drawmeridians(np.arange(-180, 180, 30), linewidth=0.2, labels=[0, 0, 0, 1])
 
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             itm.figure(XYZt)
 
             x_km = data_dicts[i]["r_x ECI [m]"] / 1000
@@ -95,7 +111,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Truth Velocity (ECI)
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.array(
@@ -109,7 +125,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Truth Attitude
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 [data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]],
@@ -120,7 +136,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Truth body angular rate
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.rad2deg(
@@ -137,7 +153,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Truth magnetic field in ECI
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 [data_dicts[i]["xMag ECI [T]"], data_dicts[i]["yMag ECI [T]"], data_dicts[i]["zMag ECI [T]"]],
@@ -148,7 +164,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Truth sun direction in ECI
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 [data_dicts[i]["rSun_x ECI [m]"], data_dicts[i]["rSun_y ECI [m]"], data_dicts[i]["rSun_z ECI [m]"]],
@@ -168,7 +184,7 @@ class MontecarloPlots:
         major_axis = eigenvectors[:, idx[2]]
         if major_axis[np.argmax(np.abs(major_axis))] < 0:
             major_axis = -major_axis
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             bsun_vector = []
             ang_mom_vector = []
             ang_mom_norm_vector = []
@@ -223,7 +239,7 @@ class MontecarloPlots:
 
         # G_rw_b = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             rw_speed = [data_dicts[i]["omega_RW_" + str(j) + " [rad/s]"] for j in range(num_RWs)]
             rw_speed_labels = [f"RW_{j}" for j in range(num_RWs)]
             torque_rw = [data_dicts[i]["T_RW_" + str(j) + " [Nm]"] for j in range(num_RWs)]
@@ -242,7 +258,7 @@ class MontecarloPlots:
         num_MTBs = pyparams["magnetorquers"]["N_mtb"]
         Magnetorquers = [Magnetorquer(pyparams["magnetorquers"], IdMtb) for IdMtb in range(num_MTBs)]
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
             mtb_dipole_moment = np.zeros((num_MTBs, len(data_dicts[i]["Time [s]"])))
             for j in range(len(data_dicts[i]["Time [s]"])):
@@ -264,7 +280,7 @@ class MontecarloPlots:
         G_rw_b = np.array(pyparams["reaction_wheels"]["rw_orientation"]).reshape(3, num_RWs)
         nadir_cam_dir = np.array(pyparams["nadir_cam_dir"])
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             nadir_cam_dir_angle = []
             rw_orb_dir_angle = []
             for j in range(len(data_dicts[i]["Time [s]"])):
@@ -315,7 +331,7 @@ class MontecarloPlots:
         # Total Body frame torque of magnetorquers
 
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
             mag_field = np.array(
                 [data_dicts[i]["xMag ECI [T]"], data_dicts[i]["yMag ECI [T]"], data_dicts[i]["zMag ECI [T]"]]
@@ -342,19 +358,17 @@ class MontecarloPlots:
         )
         save_figure(itm.gcf(), self.plot_dir, "total_mtb_body_frame_torque.png", self.close_after_saving)
         # ========================= True gyro bias plots =========================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_bias_true.bin"))
+        filepaths = self._get_files_across_trials("gyro_bias_true.bin")
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
         # --------------------------------------------------------------------------
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.rad2deg(
@@ -367,19 +381,17 @@ class MontecarloPlots:
 
     def sensor_measurement_plots(self):
         # ======================= Gyro measurement plots =======================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/gyro_measurement.bin"))
+        filepaths = self._get_files_across_trials("gyro_measurement.bin")
 
         START = time.time()
-        args = [(filename, 100) for filename in filenames]
+        args = [(filepath, 100) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
         # --------------------------------------------------------------------------
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.rad2deg(
@@ -390,19 +402,17 @@ class MontecarloPlots:
         annotateMultiPlot(title="Gyro measurement [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_measurement.png", self.close_after_saving)
         # ====================== Sun Sensor measurement plots ======================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/sun_sensor_measurement.bin"))
+        filepaths = self._get_files_across_trials("sun_sensor_measurement.bin")
 
         START = time.time()
-        args = [(filename, 100) for filename in filenames]
+        args = [(filepath, 100) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
         # --------------------------------------------------------------------------
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.array([data_dicts[i]["x [-]"], data_dicts[i]["y [-]"], data_dicts[i]["z [-]"]]),
@@ -410,20 +420,19 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Measured Sun Ray in body frame", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "sun_sensor_body_measurement.png", self.close_after_saving)
+
         # ====================== Magnetometor measurement plots ======================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/magnetometer_measurement.bin"))
+        filepaths = self._get_files_across_trials("magnetometer_measurement.bin")
 
         START = time.time()
-        args = [(filename, 100) for filename in filenames]
+        args = [(filepath, 100) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
         print(f"Elapsed time to read in data: {END-START:.2f} s")
         # --------------------------------------------------------------------------
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.array([data_dicts[i]["x [T]"], data_dicts[i]["y [T]"], data_dicts[i]["z [T]"]]),
@@ -433,12 +442,10 @@ class MontecarloPlots:
         save_figure(itm.gcf(), self.plot_dir, "magnetometer_measurement.png", self.close_after_saving)
 
     def _plot_state_estimate_covariance(self):
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/state_covariance.bin"))
+        filepaths = self._get_files_across_trials("state_covariance.bin")
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
@@ -469,15 +476,15 @@ class MontecarloPlots:
 
         # self.trials might have slightly different lengths; identify length of the
         # longest trial and pad the other time series to match that length
-        num_datapoints = [len(data_dicts[i]["Time [s]"]) for i in range(len(self.trials))]
+        num_datapoints = [len(data_dicts[i]["Time [s]"]) for i in range(len(data_dicts))]
         N_max = max(num_datapoints)
 
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             data_dict = data_dicts[i]
 
         t = None
         # fmt: off
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             data_dict = data_dicts[i]
             N = num_datapoints[i]
             if t is None and N == N_max:
@@ -545,12 +552,10 @@ class MontecarloPlots:
         save_figure(self.gyro_bias_error_figure, self.plot_dir, "gyro_bias_estimate_error.png", self.close_after_saving)
 
     def EKF_error_plots(self):
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/EKF_error.bin"))
+        filepaths = self._get_files_across_trials("EKF_error.bin")
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
@@ -612,12 +617,10 @@ class MontecarloPlots:
 
     def EKF_state_plots(self):
         # ======================= Estimated gyro bias =======================
-        filenames = []
-        for trial_number in self.trials:
-            filenames.append(os.path.join(self.trials_dir, f"trial{trial_number}/EKF_state.bin"))
+        filepaths = self._get_files_across_trials("EKF_state.bin")
 
         START = time.time()
-        args = [(filename, self.PERCENTAGE_OF_DATA_TO_PLOT) for filename in filenames]
+        args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
         with Pool() as pool:
             data_dicts = pool.map(parse_bin_file_wrapper, args)
         END = time.time()
@@ -625,7 +628,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Estimated Attitude
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 [data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]],
@@ -635,7 +638,7 @@ class MontecarloPlots:
         save_figure(itm.gcf(), self.plot_dir, "attitude_estimated.png", self.close_after_saving)
         # ==========================================================================
         itm.figure()
-        for i, trial_number in enumerate(self.trials):
+        for i, (trial_number, _) in enumerate(filepaths):
             multiPlot(
                 data_dicts[i]["Time [s]"],
                 np.rad2deg(
