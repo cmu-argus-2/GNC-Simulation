@@ -15,10 +15,13 @@ area :
 
 inertia : 
      nominal_inertia : [0.00149, 0.0, 0.00014,
-                        0.0, 0.00147, 0.0,
-                        0.00014,   0.0, 0.00154]
+                         0.0, 0.00147, 0.0,
+                         0.00014,   0.0, 0.00154] # 0.002]
+     # [0.00149, 0.0, 0.00014,
+     #  0.0, 0.00147, 0.0,
+     #   0.00014,   0.0, 0.00154]
      # [Ixx, Iyy, Izz, Ixy, Iyz, Ixz] [kgm^2]
-     principal_axis_dev : [10,10,10]
+     principal_axis_dev : [1,1,1]
      # [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] # stddev of principal axis inertias about nominal [kgm^2]
 
 Cd : 2.2 # Drag coefficient
@@ -58,9 +61,9 @@ magnetorquers:
                         0,1,0, 
                         0,0,1] # alignment axis of each magnetorquer in the body frame
      mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
-
-     mtb_resistance : 12.1 # [UNITS: Ω]
-     mtb_resistance_dev : 5 # stddev from nominal resistance as a % of nominal resistance [%]
+     # 25 Ohm: expected resistance from the optimization 40 Ohm: actual resistance
+     mtb_resistance : 40 # [UNITS: Ω]
+     mtb_resistance_dev : 1 # stddev from nominal resistance as a % of nominal resistance [%]
      mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
      
 
@@ -110,8 +113,8 @@ gyroscope:
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10800 # [s]
-dt: 0.1         # [s]
+MAX_TIME: 432000 # [s]
+dt: 1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
@@ -159,13 +162,13 @@ initialization:
      # If False, the nominal_initial_angular_rate is chosen across trials
      disperse_initial_angular_rate : True
      initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_dev : 0.5 # Max initial angular rate about any axis [rad/s]
+     initial_angular_rate_dev : 0.1 # Max initial angular rate about any axis [rad/s]
 
 
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------
-algorithm: "Lyapunov" # "Bcross" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "Lyapunov" # "BaseSP" # "Bcross" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 0.0028
 
 mtb_att_feedback_gains: [[1.0, 0.0, 0.0, 1.4, 0.0, 0.0],
@@ -175,8 +178,8 @@ rw_att_feedback_gains: [0.07071, 0.00028]
 rw_vel_gain: 3.3878e-06 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Nadir" # "Nadir" or "Sun"
-tgt_ss_ang_vel: 3.0 # [deg/s]
-controller_dt: 0.10 # [s]
+tgt_ss_ang_vel: 2.6 # [deg/s]
+controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
 debugFlags:
   bypass_controller: False # Open-loop
