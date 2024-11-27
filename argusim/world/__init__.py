@@ -2,7 +2,10 @@ from .math.quaternions import (
     hamiltonproduct,
     crossproduct,
     rotmat2quat,
-    q_inv,
+    quatnormalize,
     Left,
+    Gquat,
+    quat_from_two_vectors,
+    quatconj,
     quatrotation
 )
