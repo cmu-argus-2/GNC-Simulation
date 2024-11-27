@@ -1,22 +1,19 @@
 from multiprocessing import Pool
 import time
-from plot_helper import (
+import numpy as np
+from mpl_toolkits.basemap import Basemap
+import os
+
+from argusim.visualization.plotter.plot_helper import (
     multiPlot,
     annotateMultiPlot,
     save_figure,
 )
-from isolated_trace import itm
-import numpy as np
-from parse_bin_file import parse_bin_file_wrapper
-from mpl_toolkits.basemap import Basemap
-import os
-
-# TODO : Setup Python setuptools
-import sys
-sys.path.append('../../')
-from build.world.pyphysics import ECI2GEOD
-from world.math.quaternions import quatrotation
-from actuators.magnetorquer import Magnetorquer
+from argusim.visualization.plotter.isolated_trace import itm
+from argusim.visualization.plotter.parse_bin_file import parse_bin_file_wrapper
+from argusim.build.world.pyphysics import ECI2GEOD
+from argusim.world.math.quaternions import quatrotation
+from argusim.actuators import Magnetorquer
 import yaml
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
@@ -85,12 +82,12 @@ class MontecarloPlots:
 
         itm.figure(XYZt)
         annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["r_x", "r_y", "r_z"])
-        save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
+        #save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
 
         itm.figure(ground_track)
         itm.gca().set_aspect("equal")
         itm.title("Ground Track [Green: Start    Red: End]")
-        save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)
+        #save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)
         # ==========================================================================
         # Plot the ECI trajectory in 3D and add a vector of the mean sun direction
         fig = plt.figure()
@@ -210,7 +207,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
-        with open("../../montecarlo/configs/params.yaml", "r") as f:
+        with open(os.path.join(self.trials_dir, '../../../configs/params.yaml'), "r") as f:
             pyparams = yaml.safe_load(f)
         
         J = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))

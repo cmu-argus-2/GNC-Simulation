@@ -1,6 +1,6 @@
 import numpy as np
-from actuators.magnetorquer import Magnetorquer
-from world.math.quaternions import *
+from argusim.actuators import Magnetorquer
+from argusim.world.math.quaternions import *
 
 class ControllerAlgorithm:
     def __init__(self, Magnetorquers: list, ReactionWheels: list, params: dict):
