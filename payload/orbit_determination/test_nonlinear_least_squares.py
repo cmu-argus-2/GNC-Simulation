@@ -147,7 +147,7 @@ def test_od():
         R_body_to_camera=R_body_to_camera,
         t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
     )
-    od = OrbitDetermination(camera, dt=1 / config["solver"]["world_update_rate"])
+    od = OrbitDetermination(R_body_to_camera, dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state
     starting_epoch = Epoch(
