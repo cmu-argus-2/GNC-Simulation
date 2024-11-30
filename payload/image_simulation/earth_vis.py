@@ -37,7 +37,7 @@ utm_exceptions = [
 
 
 class EarthImageSimulator:
-    def __init__(self, geotiff_folder, resolution, hfov):
+    def __init__(self, geotiff_folder=None, resolution=None, hfov=None):
         """
         Initialize the Earth image simulator.
 
@@ -46,6 +46,12 @@ class EarthImageSimulator:
             resolution (tuple): Camera resolution (width, height).
             hfov (float): Horizontal field of view in degrees.
         """
+        if geotiff_folder is None:
+            geotiff_folder = os.path.abspath(os.path.join(__file__, "../../../data/landsat/region_mosaics"))
+        if resolution is None:
+            resolution = np.array([4608, 2592])  # width, height
+        if hfov is None:
+            hfov = 66.1
         self.cache = GeoTIFFCache(geotiff_folder)
         self.resolution = resolution
         self.hfov = hfov
@@ -393,16 +399,10 @@ def query_pixel_colors(latitudes, longitudes, image_data, trans):
 
 
 def main():
-    hfov = 66.1
-    width = 4608
-    height = 2592
-    resolution = np.array([width, height])
-    geotiff_folder = os.path.abspath(os.path.join(__file__, "../../../data/landsat/region_mosaics"))
+    simulator = EarthImageSimulator()
 
     satellite_position = np.array([983017.6742974258, -6109867.766065873, 3098940.646932125])
     orientation = get_nadir_rotation(satellite_position)
-
-    simulator = EarthImageSimulator(geotiff_folder, resolution, hfov)
 
     simulated_image = simulator.simulate_image(satellite_position, orientation)
     simulator.display_image(simulated_image)
