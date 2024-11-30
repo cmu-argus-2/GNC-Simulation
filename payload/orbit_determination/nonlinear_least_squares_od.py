@@ -15,14 +15,12 @@ class OrbitDetermination:
     Note that this class uses its own dynamics model since it needs to be decoupled from the attitude dynamics.
     """
 
-    def __init__(self, R_body_to_camera: np.ndarray, dt: float) -> None:
+    def __init__(self, dt: float) -> None:
         """
         Initialize the OrbitDetermination object.
 
-        :param R_body_to_camera: The rotation matrix from the body frame to the camera frame.
         :param dt: The amount of time between each time step.
         """
-        self.R_body_to_camera = R_body_to_camera
         self.dt = dt
 
     def fit_circular_orbit(self, times: np.ndarray, positions: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
@@ -136,8 +134,7 @@ class OrbitDetermination:
             N = times[-1] + 1  # number of time steps
         assert N > times[-1], "N must be greater than the maximum value in times"
 
-        eci_to_body_rotations = self.R_body_to_camera[np.newaxis, ...] @ \
-                                np.swapaxes(Rs_body_to_eci, 1, 2)  # transpose
+        eci_to_body_rotations = np.swapaxes(Rs_body_to_eci, 1, 2)  # transpose
 
         def residuals(X: np.ndarray) -> np.ndarray:
             """
