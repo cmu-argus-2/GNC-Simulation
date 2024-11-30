@@ -12,7 +12,7 @@ Date: [Creation or Last Update Date]
 
 import cv2
 import numpy as np
-from flight import Logger
+from payload.vision.logger import Logger
 
 # Define error messages
 error_messages = {

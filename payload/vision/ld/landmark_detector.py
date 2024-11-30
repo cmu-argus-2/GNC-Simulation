@@ -22,7 +22,7 @@ import csv
 import cv2
 import time
 from PIL import Image
-from flight import Logger
+from payload.vision.logger import Logger
 
 LD_MODEL_SUF = "_nadir.pt"
 
@@ -45,11 +45,14 @@ info_messages = {
 
 class LandmarkDetector:
 
-    def __init__(self, region_id, model_path="models/ld"):
+    def __init__(self, region_id, model_path=None):
         """
         Initialize the LandmarkDetector with a specific region ID and model path
         The YOLO object is created with the path to a specific pretrained model
         """
+        if model_path is None:
+            model_path = os.path.abspath(os.path.join(__file__, "../../models/ld"))
+
         Logger.log("INFO", f"Initializing LandmarkDetector for region {region_id}.")
 
         self.region_id = region_id

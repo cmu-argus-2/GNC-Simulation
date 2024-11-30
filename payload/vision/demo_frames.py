@@ -2,7 +2,7 @@ import os
 import cv2
 import datetime
 from itertools import cycle
-from flight.vision.camera import Frame
+from payload.vision.camera import Frame
 
 
 class DemoFrames:

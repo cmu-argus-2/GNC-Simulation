@@ -22,7 +22,7 @@ import torch.nn as nn
 from torchvision import models, transforms
 from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
 from PIL import Image
-from flight import Logger
+from payload.vision.logger import Logger
 
 LD_MODEL_SUF = ".pth"
 NUM_CLASS = 16
@@ -92,8 +92,9 @@ class RegionClassifier:
         self.region_ids = self.load_region_ids(config_path)
 
     def construct_paths(self):
-        model_path = os.path.join("models", "rc")
-        config_path = os.path.join("configuration", "inference_config.yml")
+        root = os.path.abspath(os.path.join(__file__, "../../"))
+        model_path = os.path.join(root, "models", "rc")
+        config_path = os.path.join(root, "configuration", "inference_config.yml")
         return model_path, config_path
 
     def load_region_ids(self, config_path):

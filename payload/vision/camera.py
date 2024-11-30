@@ -11,7 +11,7 @@ import threading
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from logger import Logger
+from payload.vision.logger import Logger
 
 
 class CameraErrorCodes:

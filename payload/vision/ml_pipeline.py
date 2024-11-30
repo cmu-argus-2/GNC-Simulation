@@ -13,9 +13,9 @@ Date: [Creation or Last Update Date]
 # import necessary modules
 from PIL import Image
 import cv2
-from flight.vision.rc import RegionClassifier
-from flight.vision.ld import LandmarkDetector
-from flight import Logger
+from payload.vision.rc import RegionClassifier
+from payload.vision.ld import LandmarkDetector
+from payload.vision.logger import Logger
 import os
 
 
