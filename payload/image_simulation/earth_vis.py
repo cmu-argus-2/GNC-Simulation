@@ -313,6 +313,68 @@ def convert_to_lat_lon(intersection_points, a=6378137.0, b=6356752.314245):
     return lat_lon_flat.reshape(H, W, 2)
 
 
+def lat_lon_to_ecef(lat_lon, a=6378137.0, b=6356752.314245):
+    """
+    Convert latitude and longitude to ECEF (Earth-Centered, Earth-Fixed) coordinates.
+
+    Parameters:
+        lat_lon (np.ndarray): Array of latitude and longitude (HxWx2).
+
+    Returns:
+        np.ndarray: Array of ECEF coordinates (HxWx3).
+    """
+    H, W, _ = lat_lon.shape
+    lat_lon_flat = lat_lon.reshape(-1, 2)
+
+    lat = lat_lon_flat[:, 0]
+    lon = lat_lon_flat[:, 1]
+
+    # Convert degrees to radians
+    lat_rad = np.radians(lat)
+    lon_rad = np.radians(lon)
+
+    # First eccentricity squared
+    e2 = (a ** 2 - b ** 2) / a ** 2
+
+    # Prime vertical radius of curvature
+    N = a / np.sqrt(1 - e2 * np.sin(lat_rad) ** 2)
+
+    # Assume height h = 0 (on the ellipsoid)
+    x = N * np.cos(lat_rad) * np.cos(lon_rad)
+    y = N * np.cos(lat_rad) * np.sin(lon_rad)
+    z = (N * (1 - e2)) * np.sin(lat_rad)
+
+    ecef_flat = np.column_stack((x, y, z))
+    ecef = ecef_flat.reshape(H, W, 3)
+
+    return ecef
+
+
+def test_geodetic_conversion():
+    # convert_to_ecef was ChatGPT generated, it also produced this test
+
+    # Generate a grid of latitude and longitude values
+    latitudes = np.linspace(-90, 90, num=10)
+    longitudes = np.linspace(-180, 180, num=10)
+    lon_grid, lat_grid = np.meshgrid(longitudes, latitudes)
+    H, W = lat_grid.shape
+    lat_lon = np.stack((lat_grid, lon_grid), axis=2)  # Shape (H, W, 2)
+
+    # Convert lat/lon to ECEF using the inverse function
+    ecef_points = lat_lon_to_ecef(lat_lon)
+
+    # Convert ECEF back to lat/lon using the original function
+    lat_lon_reconstructed = convert_to_lat_lon(ecef_points)
+
+    # Compute differences
+    lat_diff = lat_lon[:, :, 0] - lat_lon_reconstructed[:, :, 0]
+    lon_diff = lat_lon[:, :, 1] - lat_lon_reconstructed[:, :, 1]
+
+    # Print maximum differences
+    print("Maximum latitude difference (degrees):", np.max(np.abs(lat_diff)))
+    print("Maximum longitude difference (degrees):", np.max(np.abs(lon_diff)))
+
+
 def calculate_mgrs_zones(latitudes, longitudes):
     """
     Vectorized computation of MGRS regions for given latitude and longitude arrays.
@@ -409,4 +471,5 @@ def main():
 
 
 if __name__ == "__main__":
+    test_geodetic_conversion()
     main()
