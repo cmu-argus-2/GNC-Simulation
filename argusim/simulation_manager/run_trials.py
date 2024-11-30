@@ -106,7 +106,6 @@ if __name__ == "__main__":
                 TRIAL_NUMBER = TRIALS[TRIALS_STARTED]
                 trial_directory_abs = os.path.join(job_directory_abs, "trials", f"trial{TRIAL_NUMBER}")
                 trial_output_file = os.path.join(trial_directory_abs, "output.txt")
-
                 trial_env["TRIAL_DIRECTORY"] = trial_directory_abs
                 trial_env["PARAMETER_FILEPATH"] = parameter_file_abs
                 trial_env["TRIAL_NUMBER"] = str(TRIAL_NUMBER)

@@ -45,7 +45,6 @@ class Simulator:
         # Datapaths
         self.config_path = config_path
         self.log_directory = log_directory
-
         # Spacecraft Config
         self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
         self.num_RWs = self.params.num_RWs
@@ -360,14 +359,12 @@ class Simulator:
             self.step(sim_delta_time, self.params.dt)
 
             sim_delta_time += self.params.dt
-
         # Report the sim speed-up
         elapsed_seconds_wall_clock = time() - WALL_START_TIME
         speed_up = self.params.MAX_TIME / elapsed_seconds_wall_clock
         print(
             f'Sim ran {speed_up:.4g}x faster than realtime. Took {elapsed_seconds_wall_clock:.1f} [s] "wall-clock" to simulate {self.params.MAX_TIME} [s]'
         )
-
 
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
 RED = "\033[31m"
