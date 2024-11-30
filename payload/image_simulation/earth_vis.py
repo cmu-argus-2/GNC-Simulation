@@ -392,16 +392,21 @@ def query_pixel_colors(latitudes, longitudes, image_data, trans):
     return pixel_values
 
 
-hfov = 66.1
-width = 4608
-height = 2592
-resolution = np.array([width, height])
-geotiff_folder = 'region_mosaics'
+def main():
+    hfov = 66.1
+    width = 4608
+    height = 2592
+    resolution = np.array([width, height])
+    geotiff_folder = 'region_mosaics'
 
-satellite_position = np.array([983017.6742974258, -6109867.766065873, 3098940.646932125])
-orientation = get_nadir_rotation(satellite_position)
+    satellite_position = np.array([983017.6742974258, -6109867.766065873, 3098940.646932125])
+    orientation = get_nadir_rotation(satellite_position)
 
-simulator = EarthImageSimulator(geotiff_folder, resolution, hfov)
+    simulator = EarthImageSimulator(geotiff_folder, resolution, hfov)
 
-simulated_image = simulator.simulate_image(satellite_position, orientation)
-simulator.display_image(simulated_image)
+    simulated_image = simulator.simulate_image(satellite_position, orientation)
+    simulator.display_image(simulated_image)
+
+
+if __name__ == "__main__":
+    main()
