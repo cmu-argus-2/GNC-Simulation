@@ -97,12 +97,12 @@ class MontecarloPlots:
             m.scatter(lon[-1], lat[-1], marker="*", color="red", label="End")
         itm.figure(XYZt)
         annotateMultiPlot(title="True Position (ECI) [km]", ylabels=["r_x", "r_y", "r_z"])
-        #save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
+        save_figure(XYZt, self.plot_dir, "position_ECI_true.png", self.close_after_saving)
 
         itm.figure(ground_track)
         itm.gca().set_aspect("equal")
         itm.title("Ground Track [Green: Start    Red: End]")
-        #save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)
+        save_figure(ground_track, self.plot_dir, "ground_track.png", self.close_after_saving)
         # ==========================================================================
         # Truth Velocity (ECI)
         itm.figure()
@@ -170,7 +170,7 @@ class MontecarloPlots:
         # ==========================================================================
         # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
-        with open(os.path.join(self.trials_dir, '../../../configs/params.yaml'), "r") as f:
+        with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
             pyparams = yaml.safe_load(f)
 
         J = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3, 3))
@@ -568,18 +568,18 @@ class MontecarloPlots:
         annotateMultiPlot(title="Attitude error [deg]", ylabels=["$x$", "$y$", "$z$"])
 
         itm.figure()
-        plt.hist(
+        itm.hist(
             final_attitude_error_norms,
             bins=np.arange(min(final_attitude_error_norms), max(final_attitude_error_norms) + 1, 1),
             cumulative=True,
             edgecolor="black",
         )
         percentile_95 = np.percentile(final_attitude_error_norms, 95)
-        itm.axvline(x=percentile_95, color='red', linestyle='--', label=f'95th Percentile: {percentile_95:.2f} [deg]')
-        plt.title("RSS Final Attitude Estimate Error - CDF")
-        plt.xlabel("[deg]")
-        plt.ylabel("%-tile")
-        plt.legend()
+        itm.axvline(x=percentile_95, color="red", linestyle="--", label=f"95th Percentile: {percentile_95:.2f} [deg]")
+        itm.title("RSS Final Attitude Estimate Error - CDF")
+        itm.xlabel("[deg]")
+        itm.ylabel("%-tile")
+        itm.legend()
         save_figure(itm.gcf(), self.plot_dir, "attitude_estimate_error_hist.png", self.close_after_saving)
         # ==========================================================================
         # Gyro Bias error plots
@@ -594,18 +594,18 @@ class MontecarloPlots:
         annotateMultiPlot(title="Gyro Bias error [deg/s]", ylabels=["$x$", "$y$", "$z$"])
 
         itm.figure()
-        plt.hist(
+        itm.hist(
             final_gyro_bias_error_norms,
             bins=np.arange(min(final_gyro_bias_error_norms), max(final_gyro_bias_error_norms) + 0.1, 0.1),
             cumulative=True,
             edgecolor="black",
         )
         percentile_95 = np.percentile(final_gyro_bias_error_norms, 95)
-        itm.axvline(x=percentile_95, color='red', linestyle='--', label=f'95th Percentile: {percentile_95:.2f} [deg/s]')
-        plt.title("RSS Final Gyro Bias Estimate Error - CDF")
-        plt.xlabel("[deg/s]")
-        plt.ylabel("%-tile")
-        plt.legend()
+        itm.axvline(x=percentile_95, color="red", linestyle="--", label=f"95th Percentile: {percentile_95:.2f} [deg/s]")
+        itm.title("RSS Final Gyro Bias Estimate Error - CDF")
+        itm.xlabel("[deg/s]")
+        itm.ylabel("%-tile")
+        itm.legend()
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error_hist.png", self.close_after_saving)
         # --------------------------------------------------------------------------
         self._plot_state_estimate_covariance()  # show 3 sigma bounds

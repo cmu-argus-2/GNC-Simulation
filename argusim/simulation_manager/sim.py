@@ -9,17 +9,17 @@ from argusim.build.sensors.pysensors import readSensors
 # Python Imports
 from argusim.simulation_manager import MultiFileLogger
 from argusim.FSW.controllers.controller import Controller
+from argusim.FSW.estimators.AttitudeEKF import Attitude_EKF
 from argusim.actuators import Magnetorquer
 from argusim.actuators import ReactionWheel
+from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
+from argusim.sensors.SunSensor import SunSensor
+from argusim.sensors.Bias import BiasParams
 
-from time import time
-import numpy as np
 import os
-from sensors.Sensor import SensorNoiseParams, TriAxisSensor
-from sensors.SunSensor import SunSensor
-from sensors.Bias import BiasParams
-from algs.Estimators import Attitude_EKF
 import yaml
+import numpy as np
+from time import time
 from scipy.spatial.transform import Rotation as R
 
 
@@ -88,7 +88,7 @@ class Simulator:
         )
 
         # Logging
-        self.logr = logger.MultiFileLogger(log_directory)
+        self.logr = MultiFileLogger(log_directory)
         self.state_labels = [
             "r_x ECI [m]",
             "r_y ECI [m]",
