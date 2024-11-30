@@ -56,7 +56,7 @@ def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 
     :param camera: The camera object.
     :param N: The number of landmark bearing measurements to attempt to generate.
     :return: A tuple containing a numpy array of shape (M, 3, 3) containing the rotation matrices from the body frame to the ECI frame,
-             a numpy array of shape (M, 2) containing the pixel coordinates of the landmarks,
+             a numpy array of shape (M, 3) containing the bearing unit vectors in the body frame,
              and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
     """
     # define nadir cubesat attitude
