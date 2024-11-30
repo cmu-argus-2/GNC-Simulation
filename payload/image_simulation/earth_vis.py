@@ -54,7 +54,7 @@ class EarthImageSimulator:
             hfov = 66.1
         self.cache = GeoTIFFCache(geotiff_folder)
         self.resolution = resolution
-        self.hfov = hfov
+        self.camera = Camera(self.resolution, hfov)
 
     def simulate_image(self, position, orientation):
         """
@@ -67,11 +67,8 @@ class EarthImageSimulator:
         Returns:
             np.ndarray: Simulated RGB image.
         """
-        # Initialize the camera
-        camera = Camera(self.resolution, self.hfov, position, orientation)
-
         # Generate ray directions in ECEF frame
-        ray_directions_ecef = camera.rays_in_ecef()
+        ray_directions_ecef = self.camera.rays_in_ecef(orientation)
 
         # Intersect rays with the Earth
         intersection_points = intersect_ellipsoid(ray_directions_ecef, position)
@@ -162,20 +159,16 @@ class GeoTIFFCache:
 
 
 class Camera:
-    def __init__(self, resolution, fov, position, orientation):
+    def __init__(self, resolution, fov):
         """
         Initialize the camera parameters.
 
         Parameters:
             resolution (tuple): Resolution of the camera (width, height).
             fov (float): Field of view in degrees (assumes square FOV).
-            position (np.ndarray): Camera position in ECEF (3,).
-            orientation (np.ndarray): 3x3 rotation matrix for orientation.
         """
         self.resolution = resolution
         self.fov = np.radians(fov)  # Convert FOV to radians
-        self.position = np.array(position)
-        self.orientation = np.array(orientation)
 
     def ray_directions(self):
         """
@@ -198,14 +191,17 @@ class Camera:
         ray_directions /= np.linalg.norm(ray_directions, axis=-1, keepdims=True)
         return ray_directions
 
-    def rays_in_ecef(self):
+    def rays_in_ecef(self, orientation):
         """
         Transform ray directions from the camera frame to the ECEF frame.
+
+        Parameters:
+            orientation (np.ndarray): 3x3 rotation matrix for orientation.
 
         Returns:
             np.ndarray: Array of ray directions (HxWx3) in the ECEF frame.
         """
-        return self.ray_directions() @ self.orientation.T
+        return self.ray_directions() @ orientation.T
 
 
 def get_nadir_rotation(satellite_position):
