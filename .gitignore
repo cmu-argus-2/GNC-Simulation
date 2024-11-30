@@ -8,3 +8,4 @@ data/de440.bsp
 *.pyc
 venv/
 data/earth_latest_high_prec.bpc
+data/landsat/*

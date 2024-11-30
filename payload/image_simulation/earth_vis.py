@@ -397,7 +397,7 @@ def main():
     width = 4608
     height = 2592
     resolution = np.array([width, height])
-    geotiff_folder = 'region_mosaics'
+    geotiff_folder = os.path.abspath(os.path.join(__file__, "../../../data/landsat/region_mosaics"))
 
     satellite_position = np.array([983017.6742974258, -6109867.766065873, 3098940.646932125])
     orientation = get_nadir_rotation(satellite_position)
