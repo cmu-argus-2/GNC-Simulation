@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
+from typing import Any, Tuple
 from time import perf_counter
 from datetime import datetime
 import yaml
+import os
+
 import numpy as np
 from scipy.spatial.transform import Rotation
 from matplotlib import pyplot as plt
 from matplotlib import use
-from typing import Any, Tuple
+from PIL import Image
 
 import brahe
 from brahe.epoch import Epoch
@@ -123,8 +126,19 @@ class SimulatedMLLandmarkBearingSensor:
 
         print(f"Taking measurement at {epoch=}, {cubesat_position=}, {R_body_to_eci=}")
 
-        # simulate image and run vision model
+        # simulate image
         image = self.earth_image_simulator.simulate_image(position_ecef, R_body_to_ecef)
+
+        # save the simulated image
+        epoch_str = str(epoch) \
+            .replace(':', '_') \
+            .replace(' ', '_') \
+            .replace('.', '_')
+        file_path = os.path.abspath(
+            os.path.join(__file__, f"../../../data/simulated_images/seed_69420_epoch_{epoch_str}.png"))
+        Image.fromarray(image).save(file_path)
+
+        # run the ML pipeline on the image
         frame = Frame(image, 0, datetime.now())
         # TODO: queue requests to the model and send them in batches as the sim runs
         regions_and_landmarks = self.ml_pipeline.run_ml_pipeline_on_single(frame)
