@@ -83,7 +83,7 @@ class EarthImageSimulator:
 
         # Calculate present MGRS regions
         mgrs_regions = calculate_mgrs_zones(latitudes, longitudes)
-        present_regions = np.unique(mgrs_regions)
+        present_regions = np.unique([region for region in mgrs_regions if region is not None])
 
         # Initialize full image with zeros
         width, height = self.resolution
