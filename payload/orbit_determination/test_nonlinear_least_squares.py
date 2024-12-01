@@ -292,6 +292,8 @@ def test_od():
                                         axis=0)
         bearing_unit_vectors = np.concatenate((bearing_unit_vectors, measurement_bearing_unit_vectors), axis=0)
         landmarks = np.concatenate((landmarks, measurement_landmarks), axis=0)
+        print(f"Total measurements so far: {len(times)}")
+        print(f"Completion: {100 * t_idx / N:.2f}%")
 
     for t in range(0, N - 1):
         states[t + 1, :] = f(states[t, :], od.dt)
