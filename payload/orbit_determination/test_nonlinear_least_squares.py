@@ -1,10 +1,11 @@
+from abc import ABC, abstractmethod
 from time import perf_counter
 import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
 from matplotlib import pyplot as plt
 from matplotlib import use
-from typing import Any
+from typing import Any, Tuple
 
 import brahe
 from brahe.epoch import Epoch
@@ -28,6 +29,55 @@ Need from Ibra
 - How to run the vision model
 - Walkthrough of Kyle's landsat projection code
 """
+
+
+class LandmarkBearingSensor(ABC):
+    """
+    Abstract class for a landmark bearing sensor, which inputs the satellite pose and outputs landmark bearing measurements.
+    """
+
+    @abstractmethod
+    def take_measurement(self, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Take a landmark bearing measurement using the sensor.
+
+        :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
+        :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame as a numpy array of shape (3, 3).
+        :return: A tuple containing a numpy array of shape (N, 3) containing the bearing unit vectors in the body frame
+                 and a numpy array of shape (N, 3) containing the landmark positions in ECI coordinates.
+        """
+        pass
+
+
+class RandomLandmarkBearingSensor(LandmarkBearingSensor):
+    """
+    A sensor that randomly generates landmark bearing measurements within a cone centered about the camera's boresight.
+    """
+
+    def __init__(self, camera, max_measurements: int = 10):
+        """
+        :param camera: The camera object.
+        :param max_measurements: The number of measurements to attempt to take at once. The actual number may be less.
+        """
+        self.camera = camera
+        self.max_measurements = max_measurements
+
+    def take_measurement(self, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Take a set of landmark bearing measurements.
+        The number of measurements, N, will be some number less than or equal to self.max_measurements.
+
+        :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
+        :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame as a numpy array of shape (3, 3).
+        :return: A tuple containing a numpy array of shape (N, 3) containing the bearing unit vectors in the body frame
+                 and a numpy array of shape (N, 3) containing the landmark positions in ECI coordinates.
+        """
+        bearing_unit_vectors = self.camera.sample_bearing_unit_vectors(self.max_measurements)
+        valid_intersections, landmark_positions_eci = self.camera.get_earth_intersections(bearing_unit_vectors,
+                                                                                          cubesat_position,
+                                                                                          R_body_to_eci)
+        bearing_unit_vectors = bearing_unit_vectors[valid_intersections, :]
+        return bearing_unit_vectors, landmark_positions_eci
 
 
 def load_config() -> dict[str, Any]:
@@ -60,27 +110,21 @@ def get_nadir_rotation(cubesat_position: np.ndarray) -> np.ndarray:
     return R_body_to_eci
 
 
-def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 1) \
+def get_measurement_info(cubesat_position: np.ndarray, landmark_bearing_sensor: LandmarkBearingSensor) \
         -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Get all the information needed to represent several landmark bearing measurements.
     The number of landmark bearing measurements, M, will be some number less than or equal to N.
 
     :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
-    :param camera: The camera object.
-    :param N: The number of landmark bearing measurements to attempt to generate.
+    :param landmark_bearing_sensor: The landmark bearing sensor object.
     :return: A tuple containing a numpy array of shape (M, 3, 3) containing the rotation matrices from the body frame to the ECI frame,
              a numpy array of shape (M, 3) containing the bearing unit vectors in the body frame,
              and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
     """
     R_body_to_eci = get_nadir_rotation(cubesat_position)
 
-    # run vision model
-    bearing_unit_vectors = camera.sample_bearing_unit_vectors(N)
-    valid_intersections, landmark_positions_eci = camera.get_earth_intersections(bearing_unit_vectors, cubesat_position,
-                                                                                 R_body_to_eci)
-    bearing_unit_vectors = bearing_unit_vectors[valid_intersections, :]
-
+    bearing_unit_vectors, landmark_positions_eci = landmark_bearing_sensor.take_measurement(cubesat_position, R_body_to_eci)
     return np.tile(R_body_to_eci, (bearing_unit_vectors.shape[0], 1, 1)), bearing_unit_vectors, landmark_positions_eci
 
 
@@ -157,6 +201,7 @@ def test_od():
         R_body_to_camera=R_body_to_camera,
         t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
     )
+    landmark_bearing_sensor = RandomLandmarkBearingSensor(camera)
     od = OrbitDetermination(dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state
@@ -179,14 +224,14 @@ def test_od():
     def take_measurement(t_idx: int) -> None:
         """
         Take a set of measurements at the given time index.
-        Reads from the states, epoch, and mock_vision_model variables in the outer scope.
-        Appends to the times, Rs_body_to_eci, pixel_coordinates, and landmarks arrays in the outer scope.
+        Reads from the states and landmark_bearing_sensor variables in the outer scope.
+        Appends to the times, Rs_body_to_eci, bearing_unit_vectors, and landmarks arrays in the outer scope.
 
         :param t_idx: The time index at which to take the measurements.
         """
         nonlocal times, Rs_body_to_eci, bearing_unit_vectors, landmarks
         measurement_cubesat_attitudes, measurement_bearing_unit_vectors, measurement_landmarks = \
-            get_measurement_info(states[t_idx, :3], camera)
+            get_measurement_info(states[t_idx, :3], landmark_bearing_sensor)
         times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
         Rs_body_to_eci = np.concatenate((Rs_body_to_eci, measurement_cubesat_attitudes), axis=0)
         bearing_unit_vectors = np.concatenate((bearing_unit_vectors, measurement_bearing_unit_vectors), axis=0)
