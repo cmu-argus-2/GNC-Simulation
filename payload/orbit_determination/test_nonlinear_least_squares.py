@@ -46,6 +46,20 @@ def load_config() -> dict[str, Any]:
     return config
 
 
+def get_nadir_rotation(cubesat_position: np.ndarray) -> np.ndarray:
+    """
+    Get the rotation matrix from the body frame to the ECI frame for a satellite with an orbital angular momentum in the -y direction.
+
+    :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
+    :return: A numpy array of shape (3, 3) containing the rotation matrix from the body frame to the ECI frame.
+    """
+    y_axis = [0, -1, 0]  # along orbital angular momentum
+    z_axis = -cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
+    x_axis = np.cross(y_axis, z_axis)
+    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
+    return R_body_to_eci
+
+
 def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 1) \
         -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -59,11 +73,7 @@ def get_measurement_info(cubesat_position: np.ndarray, camera: Camera, N: int = 
              a numpy array of shape (M, 3) containing the bearing unit vectors in the body frame,
              and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
     """
-    # define nadir cubesat attitude
-    y_axis = [0, -1, 0]  # along orbital angular momentum
-    z_axis = -cubesat_position / np.linalg.norm(cubesat_position)  # along radial vector
-    x_axis = np.cross(y_axis, z_axis)
-    R_body_to_eci = np.column_stack([x_axis, y_axis, z_axis])
+    R_body_to_eci = get_nadir_rotation(cubesat_position)
 
     # run vision model
     bearing_unit_vectors = camera.sample_bearing_unit_vectors(N)
