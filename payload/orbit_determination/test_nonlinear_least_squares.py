@@ -110,24 +110,6 @@ def get_nadir_rotation(cubesat_position: np.ndarray) -> np.ndarray:
     return R_body_to_eci
 
 
-def get_measurement_info(cubesat_position: np.ndarray, landmark_bearing_sensor: LandmarkBearingSensor) \
-        -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Get all the information needed to represent several landmark bearing measurements.
-    The number of landmark bearing measurements, M, will be some number less than or equal to N.
-
-    :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
-    :param landmark_bearing_sensor: The landmark bearing sensor object.
-    :return: A tuple containing a numpy array of shape (M, 3, 3) containing the rotation matrices from the body frame to the ECI frame,
-             a numpy array of shape (M, 3) containing the bearing unit vectors in the body frame,
-             and a numpy array of shape (M, 3) containing the landmark positions in ECI coordinates.
-    """
-    R_body_to_eci = get_nadir_rotation(cubesat_position)
-
-    bearing_unit_vectors, landmark_positions_eci = landmark_bearing_sensor.take_measurement(cubesat_position, R_body_to_eci)
-    return np.tile(R_body_to_eci, (bearing_unit_vectors.shape[0], 1, 1)), bearing_unit_vectors, landmark_positions_eci
-
-
 def is_over_daytime(epoch: Epoch, cubesat_position: np.ndarray) -> bool:
     """
     Determine if the satellite is above a portion of the Earth that is in daylight.
@@ -229,11 +211,18 @@ def test_od():
 
         :param t_idx: The time index at which to take the measurements.
         """
+        position = states[t_idx, :3]
+        R_body_to_eci = get_nadir_rotation(position)
+
+        measurement_bearing_unit_vectors, measurement_landmarks = landmark_bearing_sensor.take_measurement(position, R_body_to_eci)
+        measurement_count = measurement_bearing_unit_vectors.shape[0]
+        assert measurement_landmarks.shape[0] == measurement_count
+
         nonlocal times, Rs_body_to_eci, bearing_unit_vectors, landmarks
-        measurement_cubesat_attitudes, measurement_bearing_unit_vectors, measurement_landmarks = \
-            get_measurement_info(states[t_idx, :3], landmark_bearing_sensor)
-        times = np.concatenate((times, np.repeat(t_idx, measurement_cubesat_attitudes.shape[0])))
-        Rs_body_to_eci = np.concatenate((Rs_body_to_eci, measurement_cubesat_attitudes), axis=0)
+        times = np.concatenate((times, np.repeat(t_idx, measurement_count)))
+        Rs_body_to_eci = np.concatenate((Rs_body_to_eci,
+                                         np.tile(R_body_to_eci, (measurement_count, 1, 1))),
+                                        axis=0)
         bearing_unit_vectors = np.concatenate((bearing_unit_vectors, measurement_bearing_unit_vectors), axis=0)
         landmarks = np.concatenate((landmarks, measurement_landmarks), axis=0)
 
