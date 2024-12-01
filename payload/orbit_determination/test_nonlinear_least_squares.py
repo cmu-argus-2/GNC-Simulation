@@ -37,10 +37,11 @@ class LandmarkBearingSensor(ABC):
     """
 
     @abstractmethod
-    def take_measurement(self, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def take_measurement(self, epoch: Epoch, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Take a landmark bearing measurement using the sensor.
 
+        :param epoch: The epoch as an instance of brahe's Epoch class.
         :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
         :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame as a numpy array of shape (3, 3).
         :return: A tuple containing a numpy array of shape (N, 3) containing the bearing unit vectors in the body frame
@@ -69,11 +70,12 @@ class RandomLandmarkBearingSensor(LandmarkBearingSensor):
         )
         self.max_measurements = max_measurements
 
-    def take_measurement(self, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def take_measurement(self, _: Epoch, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         Take a set of landmark bearing measurements.
         The number of measurements, N, will be some number less than or equal to self.max_measurements.
 
+        :param _: The epoch as an instance of brahe's Epoch class. Not used.
         :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
         :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame as a numpy array of shape (3, 3).
         :return: A tuple containing a numpy array of shape (N, 3) containing the bearing unit vectors in the body frame
@@ -213,7 +215,7 @@ def test_od():
         position = states[t_idx, :3]
         R_body_to_eci = get_nadir_rotation(position)
 
-        measurement_bearing_unit_vectors, measurement_landmarks = landmark_bearing_sensor.take_measurement(position, R_body_to_eci)
+        measurement_bearing_unit_vectors, measurement_landmarks = landmark_bearing_sensor.take_measurement(epoch, position, R_body_to_eci)
         measurement_count = measurement_bearing_unit_vectors.shape[0]
         assert measurement_landmarks.shape[0] == measurement_count
 
