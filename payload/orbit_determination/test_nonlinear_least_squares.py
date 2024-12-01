@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from time import perf_counter
+from datetime import datetime
 import yaml
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -15,6 +16,9 @@ from world.math.time import increment_epoch
 from world.math.transforms import update_brahe_data_files
 from world.physics.orbital_dynamics import f
 from sensors.mock_vision_model2 import Camera
+from payload.image_simulation.earth_vis import EarthImageSimulator, lat_lon_to_ecef
+from payload.vision.ml_pipeline import MLPipeline
+from payload.vision.camera import Frame
 from nonlinear_least_squares_od import OrbitDetermination
 
 
@@ -86,6 +90,62 @@ class RandomLandmarkBearingSensor(LandmarkBearingSensor):
                                                                                           cubesat_position,
                                                                                           R_body_to_eci)
         bearing_unit_vectors = bearing_unit_vectors[valid_intersections, :]
+        return bearing_unit_vectors, landmark_positions_eci
+
+
+class SimulatedMLLandmarkBearingSensor:
+    """
+    A sensor that simulates an image of the Earth from the camera's pose and runs the ML pipeline to generate landmark bearing measurements.
+    """
+
+    def __init__(self, config):
+        """
+        :param config: The configuration dictionary.
+        """
+        quat_body_to_camera = np.asarray(config["satellite"]["camera"]["orientation_in_cubesat_frame"])
+        self.R_camera_to_body = Rotation.from_quat(quat_body_to_camera, scalar_first=True).inv().as_matrix()
+        self.ml_pipeline = MLPipeline()
+        self.earth_image_simulator = EarthImageSimulator()
+
+    def take_measurement(self, epoch: Epoch, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Take a set of landmark bearing measurements.
+
+        :param epoch: The epoch as an instance of brahe's Epoch class.
+        :param cubesat_position: The position of the satellite in ECI as a numpy array of shape (3,).
+        :param R_body_to_eci: The rotation matrix from the body frame to the ECI frame as a numpy array of shape (3, 3).
+        :return: A tuple containing a numpy array of shape (N, 3) containing the bearing unit vectors in the body frame
+                 and a numpy array of shape (N, 3) containing the landmark positions in ECI coordinates.
+        """
+        R_eci_to_ecef = brahe.frames.rECItoECEF(epoch)
+        position_ecef = R_eci_to_ecef @ cubesat_position
+        R_body_to_ecef = R_eci_to_ecef @ R_body_to_eci
+
+        # simulate image and run vision model
+        image = self.earth_image_simulator.simulate_image(position_ecef, R_body_to_ecef)
+        frame = Frame(image, 0, datetime.now())
+        # TODO: queue requests to the model and send them in batches as the sim runs
+        regions_and_landmarks = self.ml_pipeline.run_ml_pipeline_on_single(frame)
+
+        landmark_positions_ecef = np.zeros(shape=(0, 3))
+        pixel_coordinates = np.zeros(shape=(0, 2))
+        confidence_scores = np.zeros(shape=(0,))
+
+        for region, landmarks in regions_and_landmarks:
+            centroids_ecef = lat_lon_to_ecef(landmarks.centroid_latlons[np.newaxis, ...]).reshape(-1, 3)
+
+            landmark_positions_ecef = np.concatenate((landmark_positions_ecef, centroids_ecef), axis=0)
+            pixel_coordinates = np.concatenate((pixel_coordinates, landmarks.centroid_xy), axis=0)
+            confidence_scores = np.concatenate((confidence_scores, landmarks.confidence_scores), axis=0)
+
+        if len(confidence_scores) == 0:
+            return np.zeros(shape=(0, 2)), np.zeros(shape=(0, 3))
+
+        landmark_positions_eci = (R_eci_to_ecef.T @ landmark_positions_ecef.T).T
+        bearing_unit_vectors_cf = self.earth_image_simulator.camera.pixel_to_bearing_unit_vector(pixel_coordinates)
+        bearing_unit_vectors = (self.R_camera_to_body @ bearing_unit_vectors_cf.T).T
+
+        # TODO: output confidence_scores too
         return bearing_unit_vectors, landmark_positions_eci
 
 
@@ -185,6 +245,7 @@ def test_od():
 
     # set up landmark bearing sensor and orbit determination objects
     landmark_bearing_sensor = RandomLandmarkBearingSensor(config)
+    # landmark_bearing_sensor = SimulatedMLLandmarkBearingSensor(config)
     od = OrbitDetermination(dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state

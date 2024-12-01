@@ -203,6 +203,35 @@ class Camera:
         """
         return self.ray_directions() @ orientation.T
 
+    def pixel_to_bearing_unit_vector(self, pixel_coords):
+        """
+        Converts pixel coordinates to bearing unit vectors in the camera frame.
+
+        Parameters:
+            pixel_coords (np.ndarray): An array of shape (N, 2) with pixel coordinates.
+
+        Returns:
+            np.ndarray: An array of shape (N, 3) with bearing unit vectors in the camera frame.
+        """
+        width, height = self.resolution
+
+        half_width = np.tan(self.fov / 2)
+        half_height = half_width * (height / width)
+
+        u = pixel_coords[:, 0]  # Pixel x-coordinates
+        v = pixel_coords[:, 1]  # Pixel y-coordinates
+
+        # Normalize pixel coordinates to range [-half_width, half_width] and [half_height, -half_height]
+        # Assuming pixel (0,0) is at the top-left corner
+        x = -half_width + (2 * half_width) * (u / (width - 1))
+        y = half_height - (2 * half_height) * (v / (height - 1))  # Invert y-axis for image coordinates
+        z = np.ones_like(x)
+
+        # Stack and normalize direction vectors
+        bearing_unit_vectors = np.stack([x, y, z], axis=-1)
+        bearing_unit_vectors /= np.linalg.norm(bearing_unit_vectors, axis=1, keepdims=True)
+        return bearing_unit_vectors
+
 
 def get_nadir_rotation(satellite_position):
     # pointing nadir in world coordinates
