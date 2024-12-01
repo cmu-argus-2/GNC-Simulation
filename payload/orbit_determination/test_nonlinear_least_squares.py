@@ -121,6 +121,8 @@ class SimulatedMLLandmarkBearingSensor:
         position_ecef = R_eci_to_ecef @ cubesat_position
         R_body_to_ecef = R_eci_to_ecef @ R_body_to_eci
 
+        print(f"Taking measurement at {epoch=}, {cubesat_position=}, {R_body_to_eci=}")
+
         # simulate image and run vision model
         image = self.earth_image_simulator.simulate_image(position_ecef, R_body_to_ecef)
         frame = Frame(image, 0, datetime.now())
@@ -139,11 +141,14 @@ class SimulatedMLLandmarkBearingSensor:
             confidence_scores = np.concatenate((confidence_scores, landmarks.confidence_scores), axis=0)
 
         if len(confidence_scores) == 0:
+            print("No landmarks detected")
             return np.zeros(shape=(0, 2)), np.zeros(shape=(0, 3))
 
         landmark_positions_eci = (R_eci_to_ecef.T @ landmark_positions_ecef.T).T
         bearing_unit_vectors_cf = self.earth_image_simulator.camera.pixel_to_bearing_unit_vector(pixel_coordinates)
         bearing_unit_vectors = (self.R_camera_to_body @ bearing_unit_vectors_cf.T).T
+
+        print(f"Detected {len(landmark_positions_eci)} landmarks")
 
         # TODO: output confidence_scores too
         return bearing_unit_vectors, landmark_positions_eci
