@@ -54,12 +54,19 @@ class RandomLandmarkBearingSensor(LandmarkBearingSensor):
     A sensor that randomly generates landmark bearing measurements within a cone centered about the camera's boresight.
     """
 
-    def __init__(self, camera, max_measurements: int = 10):
+    def __init__(self, config, max_measurements: int = 10):
         """
-        :param camera: The camera object.
+        :param config: The configuration dictionary.
         :param max_measurements: The number of measurements to attempt to take at once. The actual number may be less.
         """
-        self.camera = camera
+        camera_params = config["satellite"]["camera"]
+        R_body_to_camera = Rotation.from_quat(np.asarray(camera_params["orientation_in_cubesat_frame"]),
+                                              scalar_first=True).as_matrix()
+        self.camera = Camera(
+            fov=np.deg2rad(120),
+            R_body_to_camera=R_body_to_camera,
+            t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
+        )
         self.max_measurements = max_measurements
 
     def take_measurement(self, cubesat_position: np.ndarray, R_body_to_eci: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -174,16 +181,8 @@ def test_od():
     # update_brahe_data_files()
     config = load_config()
 
-    # set up camera, vision model, and orbit determination objects
-    camera_params = config["satellite"]["camera"]
-    R_body_to_camera = Rotation.from_quat(np.asarray(camera_params["orientation_in_cubesat_frame"]),
-                                          scalar_first=True).as_matrix()
-    camera = Camera(
-        fov=np.deg2rad(120),
-        R_body_to_camera=R_body_to_camera,
-        t_body_to_camera=np.asarray(camera_params["position_in_cubesat_frame"])
-    )
-    landmark_bearing_sensor = RandomLandmarkBearingSensor(camera)
+    # set up landmark bearing sensor and orbit determination objects
+    landmark_bearing_sensor = RandomLandmarkBearingSensor(config)
     od = OrbitDetermination(dt=1 / config["solver"]["world_update_rate"])
 
     # set up initial state
