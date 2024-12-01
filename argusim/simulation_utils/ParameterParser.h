@@ -54,7 +54,7 @@ class Simulation_Parameters {
     double photodiode_std;
 
     // Magnetometer
-    double magnetometer_noise_std;
+    double magnetometer_direction_noise_std;
 
     // Gyroscope
     double gyro_sigma_w;
@@ -78,7 +78,7 @@ class Simulation_Parameters {
     double true_anomaly; // [deg]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
-    VectorXd initial_state;
+    VectorXd initial_true_state;
 
     double controller_dt; // [s]
     double estimator_dt;  // [s]

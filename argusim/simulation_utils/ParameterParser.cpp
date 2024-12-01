@@ -80,7 +80,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     photodiode_std = photodiode_dist(dev);
 
     // Magnetometer
-    magnetometer_noise_std =magnetometer_dist(dev);
+    magnetometer_direction_noise_std =magnetometer_dist(dev);
 
     // Gyroscope
     gyro_sigma_w = gyro_bias_dist(dev);
@@ -128,7 +128,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     sim_start_time = sim_start_time_dist(dev);
     
     // Populate State Vector
-    initial_state = initializeSatellite(sim_start_time);
+    initial_true_state = initializeSatellite(sim_start_time);
 
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
@@ -234,9 +234,9 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     photodiode_dist = std::normal_distribution<double>(photodiode_std_nominal, photodiode_std_std);
 
     // Magnetometer
-    double magnetometer_noise_std_nominal = params["magnetometer"]["magnetometer_noise_std"].as<double>();
-    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer"]["magnetometer_std_dev"].as<double>()/100);
-    magnetometer_dist = std::normal_distribution<double>(magnetometer_noise_std_nominal, magnetometer_noise_std_std);
+    double magnetometer_direction_noise_std_nominal = params["magnetometer"]["magnetometer_direction_noise_std"].as<double>();
+    double magnetometer_direction_noise_std_std = magnetometer_direction_noise_std_nominal*(params["magnetometer"]["magnetometer_direction_std_dev"].as<double>()/100);
+    magnetometer_dist = std::normal_distribution<double>(magnetometer_direction_noise_std_nominal, magnetometer_direction_noise_std_std);
 
     // Gyroscope
     double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
@@ -317,7 +317,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     vec.assign(G_pd_b.data(), G_pd_b.data() + G_pd_b.rows()*G_pd_b.cols());
     out<<YAML::Key << "photodiode_orientation" << YAML::Flow << vec;
 
-    out<<YAML::Key << "magnetometer_std" << magnetometer_noise_std;
+    out<<YAML::Key << "magnetometer_std" << magnetometer_direction_noise_std;
 
     out<<YAML::Key << "gyro_sigma_w" <<gyro_sigma_w;
     out<< YAML::Key << "gyro_sigma_v" << gyro_sigma_v;
@@ -370,7 +370,9 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         //
-        .def_readonly("initial_state", &Simulation_Parameters::initial_state);
+        .def_readonly("magnetometer_direction_noise_std", &Simulation_Parameters::magnetometer_direction_noise_std)
+        //
+        .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }
 
 #endif
