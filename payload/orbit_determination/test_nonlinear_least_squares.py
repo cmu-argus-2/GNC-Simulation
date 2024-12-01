@@ -129,6 +129,10 @@ class SimulatedMLLandmarkBearingSensor:
         # simulate image
         image = self.earth_image_simulator.simulate_image(position_ecef, R_body_to_ecef)
 
+        if np.all(image == 0):
+            print("No image detected")
+            return np.zeros(shape=(0, 3)), np.zeros(shape=(0, 3))
+
         # save the simulated image
         epoch_str = str(epoch) \
             .replace(':', '_') \
