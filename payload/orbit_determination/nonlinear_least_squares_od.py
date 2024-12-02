@@ -4,7 +4,6 @@ from scipy.optimize import least_squares
 from scipy.stats import circmean, circvar
 
 from world.physics.orbital_dynamics import f, f_jac
-from sensors.mock_vision_model2 import Camera
 
 from brahe.constants import R_EARTH, GM_EARTH
 

@@ -65,7 +65,7 @@ class Camera:
         """
         phi = 2 * np.pi * np.random.random(N)
         # uniformly sample cos(theta) to get a uniform distribution on the unit sphere
-        theta = np.arccos(np.random.uniform(self.cos_fov, 1))
+        theta = np.arccos(np.random.uniform(self.cos_fov, 1, N))
         return Rotation.from_euler("ZX", np.column_stack((phi, theta))).apply(np.array([0, 0, 1]))
 
     def get_earth_intersections(self,

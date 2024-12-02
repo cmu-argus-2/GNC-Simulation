@@ -35,9 +35,12 @@ def state_derivative_jac(x: np.ndarray, u: None) -> np.ndarray:
     """
     r = x[:3]
     r_norm = np.linalg.norm(r)
+    dv_dr = np.zeros((3, 3))
     da_dr = (-GM_EARTH / r_norm ** 3) * np.eye(3) + (3 * GM_EARTH / r_norm ** 5) * np.outer(r, r)
-    return np.block([[np.zeros((3, 3)), np.eye(3)],
-                     [da_dr, np.zeros((3, 3))]])
+    dv_dv = np.eye(3)
+    da_dv = np.zeros((3, 3))
+    return np.block([[dv_dr, dv_dv],
+                     [da_dr, da_dv]])
 
 
 def f(x: np.ndarray, dt: float) -> np.ndarray:
