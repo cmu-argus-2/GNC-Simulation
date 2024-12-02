@@ -133,7 +133,7 @@ class OrbitDetermination:
             N = times[-1] + 1  # number of time steps
         assert N > times[-1], "N must be greater than the maximum value in times"
 
-        eci_to_body_rotations = np.swapaxes(Rs_body_to_eci, 1, 2)  # transpose
+        bearing_unit_vectors_wf = np.einsum("ijk,ik->ij", Rs_body_to_eci, bearing_unit_vectors)
 
         def residuals(X: np.ndarray) -> np.ndarray:
             """
@@ -152,12 +152,12 @@ class OrbitDetermination:
                 idx += 6
 
             # measurement residuals
-            for i, (time, landmark, eci_to_body_rotation) in enumerate(zip(times, landmarks, eci_to_body_rotations)):
+            for i, (time, landmark) in enumerate(zip(times, landmarks)):
                 cubesat_position = states[time, :3]
-                predicted_bearing = eci_to_body_rotation @ (landmark - cubesat_position)
+                predicted_bearing = landmark - cubesat_position
                 predicted_bearing_unit_vector = predicted_bearing / np.linalg.norm(predicted_bearing)
 
-                res[idx:idx + 3] = bearing_unit_vectors[i] - predicted_bearing_unit_vector
+                res[idx:idx + 3] = predicted_bearing_unit_vector - bearing_unit_vectors_wf[i]
                 idx += 3
 
             assert idx == len(res)
@@ -182,16 +182,14 @@ class OrbitDetermination:
                 row_idx += 6
 
             # measurement Jacobian
-            for i, (time, landmark, eci_to_body_rotation) in enumerate(
-                    zip(times, landmarks, eci_to_body_rotations)):
+            for i, (time, landmark) in enumerate(zip(times, landmarks)):
                 cubesat_position = states[time, :3]
-                predicted_bearing = eci_to_body_rotation @ (landmark - cubesat_position)
+                predicted_bearing = landmark - cubesat_position
                 predicted_bearing_norm = np.linalg.norm(predicted_bearing)
                 predicted_bearing_unit_vector = predicted_bearing / predicted_bearing_norm
 
                 jac[row_idx:row_idx + 3, 6 * time:6 * time + 3] = \
-                    (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) @ \
-                    eci_to_body_rotation / predicted_bearing_norm
+                    (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) / predicted_bearing_norm
                 row_idx += 3
 
             assert row_idx == jac.shape[0]
