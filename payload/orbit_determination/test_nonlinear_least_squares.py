@@ -360,24 +360,22 @@ def test_od():
 
 def fake_plots():
     plt.figure()
-    plt.xlabel("Bearing Unit Vector SO(3) Noise Variance (deg)")
-    plt.ylabel("RMS Position Error (m)")
-    plt.title("Effect of Bearing Unit Vector Noise on Orbit Determination")
-    plt.plot(np.exp(np.arange(10)))
-    plt.show()
-
-    plt.figure()
-    plt.xlabel("Attitude SO(3) Noise Variance (deg)")
-    plt.ylabel("RMS Position Error (m)")
+    plt.xlabel("Attitude SO(3) Noise Variance [deg]")
+    plt.ylabel("OD RMS Position Error [km]")
     plt.title("Effect of Attitude Noise on Orbit Determination")
-    plt.plot(np.exp(np.arange(10)))
+    xs = np.linspace(0, 10, 50)
+    ys = np.abs(3 * xs + 5 + np.random.normal(scale=3, size=xs.shape))
+    plt.scatter(xs, ys)
+    plt.plot([0, 10], [50, 50], linestyle="--", color="r")
     plt.show()
 
     plt.figure()
-    plt.xlabel("RMS Position Error")
-    plt.ylabel("Relative Frequency")
+    plt.xlabel("OD RMS Position Error [km]")
+    plt.ylabel("Frequency")
     plt.title("Histogram of RMS Position Error")
-    plt.hist(np.random.normal(loc=100, size=1000), bins=30)
+    ys = np.sort(np.random.normal(loc=35, scale=5, size=100))
+    plt.hist(ys, bins=10)
+    plt.plot([50, 50], [0, 20], linestyle="--", color="r")
     plt.show()
 
 
