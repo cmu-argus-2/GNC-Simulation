@@ -13,7 +13,7 @@ class Camera:
         :param R_body_to_camera: The rotation matrix from the body frame to the camera frame, as a numpy array of shape (3, 3).
         :param t_body_to_camera: The translation vector from the body frame to the camera frame, as a numpy array of shape (3,).
         """
-        self.fov = np.deg2rad(fov)
+        self.fov = fov
         self.cos_fov = np.cos(self.fov)
         self.R_body_to_camera = R_body_to_camera
         self.t_body_to_camera = t_body_to_camera
