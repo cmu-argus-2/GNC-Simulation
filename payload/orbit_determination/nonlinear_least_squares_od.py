@@ -161,6 +161,7 @@ class OrbitDetermination:
                 idx += 3
 
             assert idx == len(res)
+            print(np.sum(res ** 2))
             return res
 
         def residual_jac(X: np.ndarray):
