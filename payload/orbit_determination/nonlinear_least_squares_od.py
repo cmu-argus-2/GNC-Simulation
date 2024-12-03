@@ -105,7 +105,7 @@ class OrbitDetermination:
 
     def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, bearing_unit_vectors: np.ndarray,
                   Rs_body_to_eci: np.ndarray, N: int = None,
-                  semi_major_axis_guess: float = R_EARTH + 550e3) -> np.ndarray:
+                  semi_major_axis_guess: float = R_EARTH + 600e3) -> np.ndarray:
         """
         Solve the orbit determination problem using non-linear least squares.
 
