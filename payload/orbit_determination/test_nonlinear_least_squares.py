@@ -330,32 +330,49 @@ def test_od():
     if len(times) == 0:
         raise ValueError("No measurements taken")
 
-    # so3_noise_matrices = get_SO3_noise_matrices(len(times), np.deg2rad(0.001))
-    # bearing_unit_vectors = np.einsum("ijk,ik->ij", so3_noise_matrices, bearing_unit_vectors)
+    attitude_noises = np.deg2rad(np.linspace(0, 20, 20))
+    rms_position_errors = np.zeros_like(attitude_noises)
 
-    start_time = perf_counter()
-    estimated_states = od.fit_orbit(times, landmarks, bearing_unit_vectors, Rs_body_to_eci, N)
-    print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
+    for i, attitude_noise in enumerate(attitude_noises):
+        so3_noise_matrices = get_SO3_noise_matrices(len(times), np.deg2rad(attitude_noise))
+        bearing_unit_vectors = np.einsum("ijk,ik->ij", so3_noise_matrices, bearing_unit_vectors)
 
-    position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
-    rms_position_error = np.sqrt(np.mean(position_errors ** 2))
-    print(f"RMS position error: {rms_position_error}")
+        start_time = perf_counter()
+        estimated_states = od.fit_orbit(times, landmarks, bearing_unit_vectors, Rs_body_to_eci, N)
+        print(f"Elapsed time: {perf_counter() - start_time:.2f} s")
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
-    ax.set_ylim(-1.5 * R_EARTH, 1.5 * R_EARTH)
-    ax.set_zlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+        position_errors = np.linalg.norm(states[:, :3] - estimated_states[:, :3], axis=1)
+        rms_position_error = np.sqrt(np.mean(position_errors ** 2))
+        print(f"Attitude SO(3) Noise Variance: {attitude_noise}")
+        print(f"RMS position error: {rms_position_error}")
+        print(f"Completion Percentage: {100 * (i + 1) / len(attitude_noises):.2f}%")
 
-    ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
-    ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
-    ax.scatter(landmarks[:, 0], landmarks[:, 1], landmarks[:, 2], label="Landmarks")
+        rms_position_errors[i] = rms_position_error
 
-    ax.set_xlabel("X (m)")
-    ax.set_ylabel("Y (m)")
-    ax.set_zlabel("Z (m)")
-    ax.legend()
+    print(f"{rms_position_errors=}")
+    plt.figure()
+    plt.xlabel("Attitude SO(3) Noise Variance [deg]")
+    plt.ylabel("OD RMS Position Error [km]")
+    plt.title("Effect of Attitude Noise on Orbit Determination")
+    plt.scatter(np.rad2deg(attitude_noises), rms_position_errors / 1e3)
+    plt.plot([0, 10], [50, 50], linestyle="--", color="r")
     plt.show()
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.set_xlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+    # ax.set_ylim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+    # ax.set_zlim(-1.5 * R_EARTH, 1.5 * R_EARTH)
+    #
+    # ax.plot(states[:, 0], states[:, 1], states[:, 2], label="True orbit")
+    # ax.plot(estimated_states[:, 0], estimated_states[:, 1], estimated_states[:, 2], label="Estimated orbit")
+    # ax.scatter(landmarks[:, 0], landmarks[:, 1], landmarks[:, 2], label="Landmarks")
+    #
+    # ax.set_xlabel("X (m)")
+    # ax.set_ylabel("Y (m)")
+    # ax.set_zlabel("Z (m)")
+    # ax.legend()
+    # plt.show()
 
 
 def fake_plots():
