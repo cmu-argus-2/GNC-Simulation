@@ -4,4 +4,5 @@ scipy
 matplotlib
 git+https://github.com/duncaneddy/brahe.git@master  # brahe, not updated on pypi
 pyigrf
-Pillow
+pillow
+opencv-python

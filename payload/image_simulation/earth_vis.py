@@ -132,6 +132,12 @@ class GeoTIFFCache:
         self.geotiff_folder = geotiff_folder
         self.cache = {}
 
+        for region in ["10S", "10T", "11R", "12R", "16T", "17R", "17T", "18S",
+                       "32S", "32T", "33S", "33T", "52S", "53S", "54S", "54T"]:
+            region_folder = os.path.join(self.geotiff_folder, region)
+            if not os.path.exists(region_folder):
+                print(f"WARNING: Region folder '{region_folder}' not found.")
+
     def load_geotiff_data(self, region):
         if region in self.cache:
             return self.cache[region]
