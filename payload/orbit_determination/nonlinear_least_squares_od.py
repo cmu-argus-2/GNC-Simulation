@@ -198,6 +198,6 @@ class OrbitDetermination:
         altitude_normalized_landmarks = landmarks / np.linalg.norm(landmarks, axis=1, keepdims=True)
         model = self.fit_circular_orbit(times, semi_major_axis_guess * altitude_normalized_landmarks)
         initial_guess = model(np.arange(N)).flatten()
-        return initial_guess.reshape(N, 6)
-        # result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
-        # return result.x.reshape(N, 6)
+
+        result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
+        return result.x.reshape(N, 6)
