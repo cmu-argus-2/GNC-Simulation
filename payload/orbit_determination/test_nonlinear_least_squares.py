@@ -9,7 +9,6 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 from matplotlib import pyplot as plt
 from matplotlib import use
-from PIL import Image
 
 import brahe
 from brahe.epoch import Epoch
@@ -140,19 +139,19 @@ class SimulatedMLLandmarkBearingSensor:
             print("No image detected")
             return np.zeros(shape=(0, 3)), np.zeros(shape=(0, 3))
 
-        # save the simulated image
-        epoch_str = str(epoch) \
-            .replace(':', '_') \
-            .replace(' ', '_') \
-            .replace('.', '_')
-        file_path = os.path.abspath(
-            os.path.join(__file__, f"../../../data/simulated_images/seed_69420_epoch_{epoch_str}.png"))
-        Image.fromarray(image).save(file_path)
-
         # run the ML pipeline on the image
         frame = Frame(image, 0, datetime.now())
         # TODO: queue requests to the model and send them in batches as the sim runs
         regions_and_landmarks = self.ml_pipeline.run_ml_pipeline_on_single(frame)
+
+        # save the image with the detected landmarks
+        epoch_str = str(epoch) \
+            .replace(':', '_') \
+            .replace(' ', '_') \
+            .replace('.', '_')
+        output_dir = os.path.abspath(
+            os.path.join(__file__, f"../log/simulated_images/seed_69420_epoch_{epoch_str}/"))
+        self.ml_pipeline.visualize_landmarks(frame, regions_and_landmarks, output_dir)
 
         landmark_positions_ecef = np.zeros(shape=(0, 3))
         pixel_coordinates = np.zeros(shape=(0, 2))
