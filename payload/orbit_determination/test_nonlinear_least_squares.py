@@ -93,6 +93,13 @@ class RandomLandmarkBearingSensor(LandmarkBearingSensor):
                                                                                           cubesat_position,
                                                                                           R_body_to_eci)
         bearing_unit_vectors = bearing_unit_vectors[valid_intersections, :]
+
+         # sanity check
+        for bearing_unit_vector, landmark_position_eci in zip(bearing_unit_vectors, landmark_positions_eci):
+            true_bearing_unit_vector = landmark_position_eci - cubesat_position
+            true_bearing_unit_vector /= np.linalg.norm(true_bearing_unit_vector)
+            assert np.allclose(true_bearing_unit_vector, R_body_to_eci @ bearing_unit_vector)
+
         return bearing_unit_vectors, landmark_positions_eci
 
 
