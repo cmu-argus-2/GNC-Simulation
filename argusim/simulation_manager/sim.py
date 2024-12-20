@@ -79,7 +79,6 @@ class Simulator:
         sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
 
-        # TODO bootstrap with triad
         self.attitude_ekf = Attitude_EKF(
             sigma_initial_attitude,
             sigma_gyro_white,
@@ -206,7 +205,7 @@ class Simulator:
         control_input = self.control_input
 
         # Step through the simulation
-        self.true_state = rk4(self.true_state, 0 * control_input, self.params, current_time, dt)
+        self.true_state = rk4(self.true_state, control_input, self.params, current_time, dt)
 
         # Mask state through sensors
         measurement = self.sensors(current_time, self.true_state)
@@ -223,7 +222,6 @@ class Simulator:
             true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             sunSensor = SunSensor(sigma_sunsensor)
-            # TODO use measurement variable
             measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
             self.attitude_ekf.sun_sensor_update(
                 measured_sun_ray_in_body, true_sun_ray_ECI, current_time, sigma_sunsensor
@@ -238,7 +236,6 @@ class Simulator:
 
         got_B = False
         if current_time >= self.last_magnetometer_measurement_time + MAGNETOMETER_DT:
-            # TODO get b field using estiamted position not true position
             true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
             true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
             measured_Bfield_in_body = measurement[9:12]
@@ -366,6 +363,7 @@ class Simulator:
             f'Sim ran {speed_up:.4g}x faster than realtime. Took {elapsed_seconds_wall_clock:.1f} [s] "wall-clock" to simulate {self.params.MAX_TIME} [s]'
         )
 
+
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
 RED = "\033[31m"
 GREEN = "\033[32m"
@@ -377,7 +375,6 @@ if __name__ == "__main__":
     TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
     TRIAL_DIRECTORY = os.environ["TRIAL_DIRECTORY"]
     PARAMETER_FILEPATH = os.environ["PARAMETER_FILEPATH"]
-    TRIAL_NUMBER = int(os.environ["TRIAL_NUMBER"])
     sim = Simulator(TRIAL_NUMBER, TRIAL_DIRECTORY, PARAMETER_FILEPATH)
     print("Initialized")
     sim.run()

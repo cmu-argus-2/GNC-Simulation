@@ -22,4 +22,4 @@ curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/nai
 mkdir -p build
 cd build/
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j$(nproc)
+make -j$(nproc) # build with all processors on machine (machine may freeze; to be expected)

@@ -107,7 +107,7 @@ class Attitude_EKF:
             Fill in the A matrix according to the Van Loan Algorithm (for computing
             integrals involving matrix exponential):
             https://www.cs.cornell.edu/cv/ResearchPDF/computing.integrals.involving.Matrix.Exp.pdf
-            Inspired by Farrell, pg.143 (equations 4.113, 4.114)
+            Inspired by Farrell, "AIDED NAVIGATION GPS with High Rate Sensors", pg.143 (equations 4.113, 4.114)
         """
         A = np.zeros((12, 12))
         A[0:6, 0:6] = -F
@@ -115,8 +115,9 @@ class Attitude_EKF:
         A[6:12, 6:12] = F.transpose()
         A = A * dt
 
-        # Approximate the Matrix exponential using horner's method to evaluate the 4th order taylor series approx
-        # AExp = expm(A)
+        # Approximate the Matrix exponential using Taylor's series.A
+        # If you need more terms, use horner's method
+        # AExp = expm(A) # FOR DEBUGGING WITH TRUE MATRIX EXPONENTIAL
         I = np.eye(12)
         AExp = I + A
         Phi = AExp[6:12, 6:12].T

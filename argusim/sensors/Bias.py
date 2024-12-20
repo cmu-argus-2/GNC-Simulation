@@ -4,7 +4,7 @@ import numpy as np
 
 class BiasParams:
     def __init__(self, initial_bias, sigma_w):
-        """Parameters for a time-varying bias modeled as a first order Gauss-Markov random process
+        """Parameters for a time-varying bias modeled as a random walk
 
         Args:
             initial_bias (float): [units]
@@ -19,7 +19,7 @@ class BiasParams:
 
 class Bias:
     def __init__(self, dt, bias_params):
-        """Initialize a time-varying bias modeled as a first order Gauss-Markov random process
+        """Initialize a time-varying bias modeled as a random walk
 
         Args:
             dt (float): delta time [s]
@@ -32,7 +32,7 @@ class Bias:
         self.sigma_random_walk_ = bias_params.sigma_w / sqrt(dt)
 
     def update(self):
-        noise = self.sigma_random_walk_ * np.random.standard_normal()  # TODO is sampling one at a time slow?
+        noise = self.sigma_random_walk_ * np.random.standard_normal()
         self.bias += self.dt * noise
         return self.bias
 

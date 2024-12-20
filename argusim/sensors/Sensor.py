@@ -5,7 +5,7 @@ from .Bias import Bias
 
 class SensorNoiseParams:
     def __init__(self, biasParams, sigma_v, scale_factor_error):
-        """Parameters for a time-varying bias modeled as a first order Gauss-Markov random process
+        """Parameters for a time-varying bias modeled as a random walk
 
         Args:
             biasParams (BiasParams): bias parameters
@@ -33,7 +33,7 @@ class Sensor:
 
     def update(self, clean_signal):
         self.bias.update()
-        noise = self.white_noise * np.random.standard_normal()  # TODO is sampling one at a time slow?
+        noise = self.white_noise * np.random.standard_normal()
         return (1 + self.scale_factor_error) * clean_signal + self.bias.get_bias() + noise
 
     def get_bias(self):
