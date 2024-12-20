@@ -532,6 +532,9 @@ class MontecarloPlots:
         multiPlot(t, [-3 * min_sigma_attitude_x, -3 * min_sigma_attitude_y, -3 * min_sigma_attitude_z], linestyle="-.", linewidth=1, color='g')
         multiPlot(t, [-3 * mean_sigma_attitude_x, -3 * mean_sigma_attitude_y, -3 * mean_sigma_attitude_z], linestyle="-.", linewidth=1, color='k')
         multiPlot(t, [-3 * max_sigma_attitude_x, -3 * max_sigma_attitude_y, -3 * max_sigma_attitude_z], linestyle="-.", linewidth=1, color='r')
+        for i in range(3):
+            itm.subplot(3, 1, i + 1)
+            itm.legend(loc = 'upper right')
 
         itm.figure(self.gyro_bias_error_figure)
         multiPlot(t, [3 * min_sigma_gyro_bias_x, 3 * min_sigma_gyro_bias_y, 3 * min_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='g', seriesLabel=r"3$\sigma$ (min)")
@@ -540,6 +543,9 @@ class MontecarloPlots:
         multiPlot(t, [-3 * min_sigma_gyro_bias_x, -3 * min_sigma_gyro_bias_y, -3 * min_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='g')
         multiPlot(t, [-3 * mean_sigma_gyro_bias_x, -3 * mean_sigma_gyro_bias_y, -3 * mean_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='k')
         multiPlot(t, [-3 * max_sigma_gyro_bias_x, -3 * max_sigma_gyro_bias_y, -3 * max_sigma_gyro_bias_z], linestyle="-.", linewidth=1, color='r')
+        for i in range(3):
+            itm.subplot(3, 1, i + 1)
+            itm.legend(loc = 'upper right')
 
         # fmt: on
 
@@ -571,15 +577,16 @@ class MontecarloPlots:
         itm.hist(
             final_attitude_error_norms,
             bins=np.arange(min(final_attitude_error_norms), max(final_attitude_error_norms) + 1, 1),
-            cumulative=True,
+            density=True,
+            # cumulative=True,
             edgecolor="black",
         )
         percentile_95 = np.percentile(final_attitude_error_norms, 95)
         itm.axvline(x=percentile_95, color="red", linestyle="--", label=f"95th Percentile: {percentile_95:.2f} [deg]")
-        itm.title("RSS Final Attitude Estimate Error - CDF")
+        itm.title("RSS Final Attitude Estimate Error - PDF")
         itm.xlabel("[deg]")
-        itm.ylabel("%-tile")
-        itm.legend()
+        # itm.ylabel("%-tile")
+        itm.legend(fontsize=20)
         save_figure(itm.gcf(), self.plot_dir, "attitude_estimate_error_hist.png", self.close_after_saving)
         # ==========================================================================
         # Gyro Bias error plots
@@ -597,15 +604,16 @@ class MontecarloPlots:
         itm.hist(
             final_gyro_bias_error_norms,
             bins=np.arange(min(final_gyro_bias_error_norms), max(final_gyro_bias_error_norms) + 0.1, 0.1),
-            cumulative=True,
+            density=True,
+            # cumulative=True,
             edgecolor="black",
         )
         percentile_95 = np.percentile(final_gyro_bias_error_norms, 95)
         itm.axvline(x=percentile_95, color="red", linestyle="--", label=f"95th Percentile: {percentile_95:.2f} [deg/s]")
-        itm.title("RSS Final Gyro Bias Estimate Error - CDF")
+        itm.title("RSS Final Gyro Bias Estimate Error - PDF")
         itm.xlabel("[deg/s]")
-        itm.ylabel("%-tile")
-        itm.legend()
+        # itm.ylabel("%-tile")
+        itm.legend(fontsize=20)
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimate_error_hist.png", self.close_after_saving)
         # --------------------------------------------------------------------------
         self._plot_state_estimate_covariance()  # show 3 sigma bounds
