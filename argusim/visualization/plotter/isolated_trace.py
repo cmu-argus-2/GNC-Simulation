@@ -15,6 +15,9 @@ np.random.seed(1234)
 PICKER_RADIUS = 5
 
 matplotlib.rcParams.update({"axes.grid": True})
+font = {"size": 20}
+matplotlib.rc("font", **font)
+plt.rc("legend", fontsize=10)  # using a size in points
 
 
 class IsolatableTraceFigure:

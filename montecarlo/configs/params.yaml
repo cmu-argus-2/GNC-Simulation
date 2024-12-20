@@ -1,5 +1,51 @@
 ---
 # -----------------------------------------------------------------------------------------------------------
+# Sim settings
+# -----------------------------------------------------------------------------------------------------------
+MAX_TIME: 100 # [s]
+dt: 0.01         # [s]
+earliest_sim_start_time_UTC: 2024-10-01 12:00:00
+latest_sim_start_time_UTC: 2024-10-28 23:59:59
+useDrag : False
+useSRP : False
+
+# -----------------------------------------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------------------------------------
+# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+initialization:
+     semimajor_axis : 6908000 # [m]
+     semimajor_axis_dev : 1 #  [%]
+
+     eccentricity : 0.007 
+     eccentricity_dev : 20 # [%]
+
+     inclination : 97.75 # [deg]
+     inclination_dev : 1 # [%]
+
+     RAAN : 171 # [deg]
+     RAAN_dev : 20 # [%]
+
+     AOP : 63 # [deg]
+     AOP_dev : 20 # [%]
+
+     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
+     # If False, the nominal_true_anomaly is chosen across trials
+     disperse_true_anomaly : True
+     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
+
+     # If disperse_initial_attitude is True, initial attitude is randomly sampled
+     # If False, the nominal_initial_attitude is chosen across trials
+     disperse_initial_attitude : True
+     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
+
+     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
+     # If False, the nominal_initial_angular_rate is chosen across trials
+     disperse_initial_angular_rate : True
+     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
+
+# -----------------------------------------------------------------------------------------------------------
 # physical properties
 # -----------------------------------------------------------------------------------------------------------
 mass : 
@@ -91,8 +137,8 @@ photodiodes:
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
-     magnetometer_noise_std : 0.005 # [UNITS: T]
-     magnetometer_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+     magnetometer_direction_noise_std : 0.2 # [UNITS: rad]
+     magnetometer_direction_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
 
 gyroscope:
      gyro_correlation_time : 500000.0 # [UNITS: s]
@@ -104,53 +150,6 @@ gyroscope:
      gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
      gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
      
-
-# -----------------------------------------------------------------------------------------------------------
-# Sim settings
-# -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10800 # [s]
-dt: 0.01         # [s]
-earliest_sim_start_time_UTC: 2024-10-01 12:00:00
-latest_sim_start_time_UTC: 2024-10-28 23:59:59
-useDrag : False
-useSRP : False
-
-# -----------------------------------------------------------------------------------------------------------
-# Initialization
-# -----------------------------------------------------------------------------------------------------------
-# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
-initialization:
-     semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 1 #  [%]
-
-     eccentricity : 0.007 
-     eccentricity_dev : 20 # [%]
-
-     inclination : 97.75 # [deg]
-     inclination_dev : 1 # [%]
-
-     RAAN : 171 # [deg]
-     RAAN_dev : 20 # [%]
-
-     AOP : 63 # [deg]
-     AOP_dev : 20 # [%]
-
-     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
-     # If False, the nominal_true_anomaly is chosen across trials
-     disperse_true_anomaly : True
-     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
-
-     # If disperse_initial_attitude is True, initial attitude is randomly sampled
-     # If False, the nominal_initial_attitude is chosen across trials
-     disperse_initial_attitude : True
-     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
-
-     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
-     # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : True
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
-
 
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
