@@ -15,8 +15,6 @@ def skew_symmetric(v):
 
 # TODO convert to sqrt form if fixed precision math ends up being an issue
 
-# STATES: WAIT_FOR_CONSTANT_OMEGA, INITIALIZING, INITIALIZED
-
 
 class Attitude_EKF:
     def __init__(
