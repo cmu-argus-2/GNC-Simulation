@@ -491,6 +491,37 @@ def query_pixel_colors(latitudes, longitudes, image_data, trans):
     return pixel_values
 
 
+def sweep_lat_lon_test():
+    simulator = EarthImageSimulator()
+
+    latitudes = np.linspace(-90, 90, 90)
+    longitudes = np.linspace(-180, 180, 90)
+
+    lat_lon = np.stack(np.meshgrid(latitudes, longitudes), axis=-1)
+    ecef_positions = lat_lon_to_ecef(lat_lon).reshape(-1, 3)
+
+    # scale to 600km altitude
+    R_earth = 6371.0088e3
+    ecef_positions *= (R_earth + 600e3) / R_earth
+
+    empty_indices = []
+    for i, ecef_position in enumerate(ecef_positions):
+        orientation = get_nadir_rotation(ecef_position)
+        simulated_image = simulator.simulate_image(ecef_position, orientation)
+
+        print(f"{i}/{lat_lon.shape[0] * lat_lon.shape[1]}")
+        if np.all(simulated_image == 0):
+            empty_indices.append(i)
+        else:
+            print(f"Nonempty image at index {i}, lat/lon: {lat_lon[0, i, :]}")
+
+    print(f"{len(empty_indices)}/{lat_lon.shape[1]} images are empty")
+    print(f"Empty images at indices: {empty_indices}")
+
+    with open("empty_images.txt", "w") as f:
+        f.write(str(empty_indices))
+
+
 def main():
     simulator = EarthImageSimulator()
 
