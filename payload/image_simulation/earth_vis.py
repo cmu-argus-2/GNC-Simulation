@@ -85,6 +85,8 @@ class EarthImageSimulator:
         mgrs_regions = calculate_mgrs_zones(latitudes, longitudes)
         present_regions = np.unique([region for region in mgrs_regions if region is not None])
 
+        assert len(present_regions) > 0
+
         # Initialize full image with zeros
         width, height = self.resolution
         pixel_colors_full = np.zeros((height, width, 3), dtype=np.uint8)
@@ -431,6 +433,8 @@ def calculate_mgrs_zones(latitudes, longitudes):
         mask = (lat_flat >= min_lat) & (lat_flat < max_lat)
         lat_bands[mask] = latitude_band_names[i]
 
+    assert len(lat_bands) > 0
+
     # Determine UTM zones (default calculation)
     utm_zones = ((lon_flat + 180) // 6 + 1).astype(int)
 
@@ -494,7 +498,7 @@ def query_pixel_colors(latitudes, longitudes, image_data, trans):
 def sweep_lat_lon_test():
     simulator = EarthImageSimulator()
 
-    latitudes = np.linspace(-90, 90, 90)
+    latitudes = np.linspace(-80, 84, 82)
     longitudes = np.linspace(-180, 180, 90)
 
     lat_lon = np.stack(np.meshgrid(latitudes, longitudes), axis=-1)
@@ -511,6 +515,7 @@ def sweep_lat_lon_test():
 
         print(f"{i}/{lat_lon.shape[0] * lat_lon.shape[1]}")
         if np.all(simulated_image == 0):
+            print(f"Empty image at index {i}, lat/lon: {lat_lon[0, i, :]}")
             empty_indices.append(i)
         else:
             print(f"Nonempty image at index {i}, lat/lon: {lat_lon[0, i, :]}")
