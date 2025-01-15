@@ -134,15 +134,18 @@ class GeoTIFFCache:
 
         for region in ["10S", "10T", "11R", "12R", "16T", "17R", "17T", "18S",
                        "32S", "32T", "33S", "33T", "52S", "53S", "54S", "54T"]:
-            region_folder = os.path.join(self.geotiff_folder, region)
+            region_folder = os.path.join(self.geotiff_folder, region, "sentinel_gsd_185")
             if not os.path.exists(region_folder):
                 print(f"WARNING: Region folder '{region_folder}' not found.")
+                break
+        else:
+            print("All region folders found!")
 
     def load_geotiff_data(self, region):
         if region in self.cache:
             return self.cache[region]
 
-        region_folder = os.path.join(self.geotiff_folder, region)
+        region_folder = os.path.join(self.geotiff_folder, region, "sentinel_gsd_185")
         if not os.path.exists(region_folder):
             self.cache[region] = (None, None)
             return self.cache[region]
@@ -529,9 +532,10 @@ def main():
     orientation = get_nadir_rotation(satellite_position)
 
     simulated_image = simulator.simulate_image(satellite_position, orientation)
-    simulator.display_image(simulated_image)
+    print(np.all(simulated_image == 0))
 
 
 if __name__ == "__main__":
     test_geodetic_conversion()
+    sweep_lat_lon_test()
     main()
