@@ -13,6 +13,7 @@ from actuators.reaction_wheels import ReactionWheel
 from world.math.integrators import RK4
 from world.math.quaternions import quatrotation, crossproduct, hamiltonproduct
 from world.math.time import increment_epoch
+from world.math.transforms import update_brahe_data_files
 
 """
     CLASS DYNAMICS
@@ -30,10 +31,7 @@ class Dynamics:
         self.config = config
 
         # Update all brahe data files
-        try:
-            brahe.utils.download_iers_bulletin_ab(outdir=brahe.constants.DATA_PATH)
-        except Exception:
-            pass
+        update_brahe_data_files()
 
         # Physics Models
         self.gravity = Gravity()

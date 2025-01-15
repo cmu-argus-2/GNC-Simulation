@@ -1,15 +1,11 @@
-from functools import partial
-
+from collections.abc import Callable
 import numpy as np
-from scipy.spatial.transform import Rotation
 from scipy.optimize import least_squares
-from brahe.epoch import Epoch
+from scipy.stats import circmean, circvar
 
-from world.physics.models.gravity import Gravity
-from world.math.integrators import RK4
-from world.math.quaternions import q_inv
-from world.math.time import increment_epoch
-from sensors.mock_vision_model import Camera
+from world.physics.orbital_dynamics import f, f_jac
+
+from brahe.constants import R_EARTH, GM_EARTH
 
 
 class OrbitDetermination:
@@ -18,94 +14,191 @@ class OrbitDetermination:
     Note that this class uses its own dynamics model since it needs to be decoupled from the attitude dynamics.
     """
 
-    def __init__(self, camera: Camera, dt: float) -> None:
+    def __init__(self, dt: float) -> None:
         """
         Initialize the OrbitDetermination object.
 
-        :param camera: An instance of the Camera class.
         :param dt: The amount of time between each time step.
         """
-        self.camera = camera
         self.dt = dt
-        self.gravity = Gravity()
 
-    def state_derivative(self, x: np.ndarray, u: None, epoch: Epoch) -> np.ndarray:
+    def fit_circular_orbit(self, times: np.ndarray, positions: np.ndarray) -> Callable[[np.ndarray], np.ndarray]:
         """
-        The state derivative function xdot = f(x, u).
+        Fits a circular orbit model to a set of timestamped ECI position estimates.
+        This is used for creating an initial guess for the non-linear least squares problem.
 
-        :param x: A numpy array of shape (6,) containing the current state (position and velocity).
-        :param u: The current control input (not used, but needed for RK4).
-        :param epoch: The current epoch as an instance of brahe's Epoch class.
-        :return: A numpy array of shape (6,) containing the state derivative.
+        :param times: The timestamps as a numpy array of shape (n,).
+        :param positions: The position estimates in ECI as a numpy array of shape (n, 3).
+        :return: A function that maps timestamps to position estimates based on the resulting circular orbit model.
         """
-        r = x[:3]
-        v = x[3:]
-        a = self.gravity.acceleration(r, epc=epoch)
-        return np.concatenate([v, a])
+        assert len(positions.shape) == 2, "positions must be a 2D array"
+        assert positions.shape[1] == 3, "positions must have 3 columns"
+        assert positions.shape[0] >= 3, "There must be at least 3 points"
+        assert len(times.shape) == 1, "times must be a 1D array"
+        assert len(times) == positions.shape[0], "times and positions must have the same length"
 
-    def f(self, x: np.ndarray, epoch: Epoch) -> np.ndarray:
         """
-        The state transition function x_{t+1} = f(x_t).
-
-        :param x: A numpy array of shape (6,) containing the current state (position and velocity).
-        :param epoch: The current epoch as an instance of brahe's Epoch class.
-        :return: A numpy array of shape (6,) containing the next state (position and velocity).
+        We want to solve for the unit normal vector of the best fit plane that passes through the origin. 
+        This means we want to minimize np.linalg.norm(positions @ normal) subject to np.linalg.norm(normal) == 1.
+        This is solved by computing the right singular vector corresponding to the smallest singular value of positions.
         """
-        return RK4(x, None, partial(self.state_derivative, epoch=epoch), self.dt)
+        *_, Vt = np.linalg.svd(positions)
+        normal = Vt[-1, :]
 
-    def fit_orbit(self, starting_epoch: Epoch, times: np.ndarray, landmarks: np.ndarray, pixel_coordinates: np.ndarray,
-                  cubesat_attitudes: np.ndarray) -> np.ndarray:
+        projected_positions = positions - np.outer(positions @ normal, normal)
+        orbital_radius = np.mean(np.linalg.norm(projected_positions, axis=1))
+        speed = np.sqrt(GM_EARTH / orbital_radius)
+        angular_speed = speed / orbital_radius
+
+        # choose basis vectors for the orbital plane
+        # there are 2 cases to avoid scenarios where the cross product is close to zero
+        if abs(normal[0]) <= abs(normal[1]):
+            # normal is closer to the y-axis, so we will use the x-axis in the cross product
+            y_axis = np.cross(normal, np.array([1, 0, 0]))
+            y_axis = y_axis / np.linalg.norm(y_axis)
+            if y_axis[1] < 0:
+                y_axis = -y_axis
+            x_axis = np.cross(y_axis, normal)
+        else:
+            # normal is closer to the x-axis, so we will use the y-axis in the cross product
+            x_axis = np.cross(np.array([0, 1, 0]), normal)
+            x_axis = x_axis / np.linalg.norm(x_axis)
+            if x_axis[0] < 0:
+                x_axis = -x_axis
+            y_axis = np.cross(normal, x_axis)
+
+        positions_2d = projected_positions @ np.column_stack((x_axis, y_axis))
+        angles = np.arctan2(positions_2d[:, 1], positions_2d[:, 0])
+
+        # case 1: the orbit is counter-clockwise in the chosen basis
+        phases_ccw = angles - angular_speed * times * self.dt
+
+        # case 2: the orbit is clockwise in the chosen basis
+        phases_cw = angles + angular_speed * times * self.dt
+
+        # choose the case with the smaller variance
+        if circvar(phases_ccw) < circvar(phases_cw):
+            angular_velocity = angular_speed
+            angle_0 = circmean(phases_ccw)
+        else:
+            angular_velocity = -angular_speed
+            angle_0 = circmean(phases_cw)
+
+        def model(ts: np.ndarray) -> np.ndarray:
+            """
+            Maps timestamps to state estimates.
+
+            :param ts: The timestamps to map to state estimates as a numpy array of shape (m,).
+            :return: The resulting state estimates as a numpy array of shape (m, 6).
+            """
+            angles_ = angular_velocity * ts * self.dt + angle_0
+            positions_2d_ = orbital_radius * np.column_stack((np.cos(angles_), np.sin(angles_)))
+            positions_ = positions_2d_ @ np.row_stack((x_axis, y_axis))
+
+            velocity_directions_ = np.sign(angular_velocity) * np.cross(normal, positions_)
+            velocity_directions_ = velocity_directions_ / np.linalg.norm(velocity_directions_, axis=1, keepdims=True)
+            velocities_ = speed * velocity_directions_
+
+            return np.column_stack((positions_, velocities_))
+
+        return model
+
+    def fit_orbit(self, times: np.ndarray, landmarks: np.ndarray, bearing_unit_vectors: np.ndarray,
+                  Rs_body_to_eci: np.ndarray, N: int = None,
+                  semi_major_axis_guess: float = R_EARTH + 600e3) -> np.ndarray:
         """
         Solve the orbit determination problem using non-linear least squares.
 
-        :param starting_epoch: The starting epoch as an instance of brahe's Epoch class.
-        :param times: A numpy array of shape (n,) containing the indices of time steps at which landmarks were observed.
-                      Must be sorted in ascending order.
-        :param landmarks: A numpy array of shape (n, 3) containing the ECI coordinates of the landmarks.
-        :param pixel_coordinates: A numpy array of shape (n, 2) containing the pixel coordinates of the landmarks.
-        :param cubesat_attitudes: A numpy array of shape (n, 4) containing the quaternions representing the attitude of the satellite.
-        :return: A numpy array of shape (max(times) + 1, 6) containing the ECI position and velocity of the satellite at each time step.
+        :param times: A numpy array of shape (m,) and dtype of int containing the indices of time steps at which
+                      landmarks were observed. Must be sorted in non-strictly ascending order.
+        :param landmarks: A numpy array of shape (m, 3) containing the ECI coordinates of the landmarks.
+        :param bearing_unit_vectors: A numpy array of shape (m, 3) containing the bearing unit vectors in the body frame.
+        :param Rs_body_to_eci: A numpy array of shape (m, 3, 3) containing the rotation matrices from the body frame to the ECI frame.
+        :param N: The number of time steps. If None, it will be set to the maximum value in times plus one.
+        :param semi_major_axis_guess: An initial guess for the semi-major axis of the satellite's orbit.
+        :return: A numpy array of shape (N, 6) containing the ECI position and velocity of the satellite at each time step.
         """
         assert len(times.shape) == 1, "times must be a 1D array"
-        assert all(times[i] < times[i + 1] for i in range(len(times) - 1)), "times must be sorted in ascending order"
+        assert all(times[i] <= times[i + 1] for i in range(len(times) - 1)), \
+            "times must be sorted in non-strictly ascending order"
         assert len(landmarks.shape) == 2, "landmarks must be a 2D array"
         assert landmarks.shape[1] == 3, "landmarks must have 3 columns"
-        assert len(pixel_coordinates.shape) == 2, "pixel_coordinates must be a 2D array"
-        assert pixel_coordinates.shape[1] == 2, "pixel_coordinates must have 2 columns"
-        assert len(times) == len(landmarks) == len(pixel_coordinates), \
-            "times, landmarks, and pixel_coordinates must have the same length"
+        assert len(bearing_unit_vectors.shape) == 2, "bearing_unit_vectors must be a 2D array"
+        assert bearing_unit_vectors.shape[1] == 3, "bearing_unit_vectors must have 3 columns"
+        assert len(Rs_body_to_eci.shape) == 3, "cubesat_attitudes must be a 3D array"
+        assert Rs_body_to_eci.shape[1:] == (3, 3), "cubesat_attitudes must have shape (m, 3, 3)"
+        assert len(times) == len(landmarks) == len(bearing_unit_vectors) == len(Rs_body_to_eci), \
+            "times, landmarks, pixel_coordinates, and cubesat_attitudes must have the same length"
+        if N is None:
+            N = times[-1] + 1  # number of time steps
+        assert N > times[-1], "N must be greater than the maximum value in times"
 
-        bearing_unit_vectors = np.zeros((len(times), 3))
-        for i in range(len(times)):
-            bearing_vector = self.camera.convert_pixel_coordinates_to_camera_ray_directions(pixel_coordinates[i, :])
-            bearing_unit_vectors[i] = bearing_vector / np.linalg.norm(bearing_vector)
+        bearing_unit_vectors_wf = np.einsum("ijk,ik->ij", Rs_body_to_eci, bearing_unit_vectors)
 
-        eci_to_camera_rotations = np.zeros((len(times), 3, 3))
-        for i in range(len(times)):
-            eci_to_camera_rotations[i, ...] = self.camera.R_sat_cam @ Rotation.from_quat(q_inv(cubesat_attitudes[i, :]), scalar_first=True).as_matrix()
+        def residuals(X: np.ndarray) -> np.ndarray:
+            """
+            Compute the residuals of the non-linear least squares problem.
 
-        N = times[-1] + 1  # number of time steps
-
-        def residuals(X):
-            states = X.reshape(-1, 6)
-            positions = states[:, :3]
-
-            res = np.zeros(3 * (N - 1) + 3 * len(times))
+            :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
+            :return: A numpy array of shape (6 * (N - 1) + 3 * len(times),) containing the residuals.
+            """
+            states = X.reshape(N, 6)
+            res = np.zeros(6 * (N - 1) + 3 * len(times))
+            idx = 0  # index into res
 
             # dynamics residuals
-            epoch = starting_epoch
             for i in range(N - 1):
-                res[3 * i:3 * (i + 1)] = positions[i + 1] - self.f(states[i, :], epoch)[:3]
-                epoch = increment_epoch(epoch, self.dt)
+                res[idx:idx + 6] = states[i + 1, :] - f(states[i, :], self.dt)
+                idx += 6
 
             # measurement residuals
-            for i, (time, landmark, eci_to_camera_rotation) in enumerate(zip(times, landmarks, eci_to_camera_rotations)):
-                cubesat_position = positions[time]
-                predicted_bearing = eci_to_camera_rotation @ (landmark - cubesat_position)  # in camera frame
-                res[3 * (N - 1) + 3 * i:3 * (N - 1) + 3 * (i + 1)] = bearing_unit_vectors[i] - predicted_bearing / np.linalg.norm(predicted_bearing)
+            for i, (time, landmark) in enumerate(zip(times, landmarks)):
+                cubesat_position = states[time, :3]
+                predicted_bearing = landmark - cubesat_position
+                predicted_bearing_unit_vector = predicted_bearing / np.linalg.norm(predicted_bearing)
 
+                res[idx:idx + 3] = predicted_bearing_unit_vector - bearing_unit_vectors_wf[i]
+                idx += 3
+
+            assert idx == len(res)
+            print(np.sum(res ** 2))
             return res
 
-        initial_guess = np.zeros(6 * N)  # TODO: improve initial guess
-        result = least_squares(residuals, initial_guess, method="lm")
-        return result.x.reshape(-1, 6)
+        def residual_jac(X: np.ndarray):
+            """
+            Compute the Jacobian of the residuals of the non-linear least squares problem.
+
+            :param X: A flattened numpy array of shape (6 * N,) containing the ECI positions and velocities of the satellite at each time step.
+            :return: A numpy array of shape (6 * (N - 1) + 3 * len(times), 6 * N) containing the Jacobian of the residuals.
+            """
+            states = X.reshape(N, 6)
+            jac = np.zeros((6 * (N - 1) + 3 * len(times), 6 * N), dtype=X.dtype)
+            row_idx = 0  # row index into jac
+            # Note that indices into the columns of jac are 6 * i : 6 * (i + 1) for the ith state
+
+            # dynamics Jacobian
+            for i in range(N - 1):
+                jac[row_idx:row_idx + 6, row_idx:row_idx + 6] = -f_jac(states[i, :], self.dt)
+                jac[row_idx:row_idx + 6, row_idx + 6:row_idx + 12] = np.eye(6)
+                row_idx += 6
+
+            # measurement Jacobian
+            for i, (time, landmark) in enumerate(zip(times, landmarks)):
+                cubesat_position = states[time, :3]
+                predicted_bearing = landmark - cubesat_position
+                predicted_bearing_norm = np.linalg.norm(predicted_bearing)
+                predicted_bearing_unit_vector = predicted_bearing / predicted_bearing_norm
+
+                jac[row_idx:row_idx + 3, 6 * time:6 * time + 3] = \
+                    (np.outer(predicted_bearing_unit_vector, predicted_bearing_unit_vector) - np.eye(3)) / predicted_bearing_norm
+                row_idx += 3
+
+            assert row_idx == jac.shape[0]
+            return jac
+
+        altitude_normalized_landmarks = landmarks / np.linalg.norm(landmarks, axis=1, keepdims=True)
+        model = self.fit_circular_orbit(times, semi_major_axis_guess * altitude_normalized_landmarks)
+        initial_guess = model(np.arange(N)).flatten()
+
+        result = least_squares(residuals, initial_guess, method="lm", jac=residual_jac)
+        return result.x.reshape(N, 6)
