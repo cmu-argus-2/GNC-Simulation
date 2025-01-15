@@ -49,7 +49,7 @@ class EarthImageSimulator:
         if geotiff_folder is None:
             geotiff_folder = os.path.abspath(os.path.join(__file__, "../../../data/landsat/region_mosaics"))
         if resolution is None:
-            resolution = np.array([4608, 2592])  # width, height
+            resolution = np.array([4608//4, 2592//4])  # width, height
         if hfov is None:
             hfov = 66.1
         self.cache = GeoTIFFCache(geotiff_folder)
@@ -146,14 +146,17 @@ class GeoTIFFCache:
 
         region_folder = os.path.join(self.geotiff_folder, region)
         if not os.path.exists(region_folder):
+            print(f"Couldn't find folder for region '{region}'; '{region_folder}' does not exist") 
             self.cache[region] = (None, None)
             return self.cache[region]
         region_files = os.listdir(region_folder)
         if not region_files:
+            print(f"Region folder '{region_folder}' is empty") 
             self.cache[region] = (None, None)
             return self.cache[region]
 
-        selected_file = np.random.choice(region_files)
+        #selected_file = np.random.choice(region_files)
+        selected_file = "sentinel_gsd_185"
         file_path = os.path.join(region_folder, selected_file)
         with rasterio.open(file_path) as src:
             data = src.read()
