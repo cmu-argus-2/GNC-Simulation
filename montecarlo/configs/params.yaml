@@ -162,7 +162,7 @@ initialization:
      # If False, the nominal_initial_angular_rate is chosen across trials
      disperse_initial_angular_rate : True
      initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_dev : 0.5 # Max initial angular rate about any axis [rad/s]
+     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
 
 
 # -----------------------------------------------------------------------------------------------------------
