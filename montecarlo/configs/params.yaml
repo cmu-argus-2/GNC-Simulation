@@ -124,6 +124,7 @@ gps:
      gps_vel_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
 
 photodiodes:
+     photodiodes_dt : 1 # [s]
      num_photodiodes : 6
      photodiode_normals : [1,0,0, 
                            0,1,0, 
@@ -137,10 +138,12 @@ photodiodes:
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
+     magnetometer_dt : 1 # [UNITS: s]
      magnetometer_direction_noise_std : 0.2 # [UNITS: rad]
      magnetometer_direction_std_dev : 20 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
 
 gyroscope:
+     gyro_dt : 0.1 # [UNITS: s]
      gyro_correlation_time : 500000.0 # [UNITS: s]
      gyro_scale_factor_err : 1.0e-5
 

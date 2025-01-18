@@ -24,6 +24,7 @@ class SensorNoiseParams:
 
 class Sensor:
     def __init__(self, dt, sensor_noise_params):
+        self.dt   = dt
         self.bias = Bias(dt, sensor_noise_params.bias_params)
 
         # discrete version of sensor_noise_params.sigma_v causing the bias to random walk when integrated
@@ -42,9 +43,10 @@ class Sensor:
 
 class TriAxisSensor:
     def __init__(self, dt, axes_params):
-        self.x = Sensor(dt, axes_params[0])
-        self.y = Sensor(dt, axes_params[1])
-        self.z = Sensor(dt, axes_params[2])
+        self.dt = dt
+        self.x  = Sensor(dt, axes_params[0])
+        self.y  = Sensor(dt, axes_params[1])
+        self.z  = Sensor(dt, axes_params[2])
 
     def get_bias(self):
         return np.array([self.x.get_bias(), self.y.get_bias(), self.z.get_bias()])

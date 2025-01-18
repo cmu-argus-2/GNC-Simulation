@@ -78,16 +78,19 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
     photodiode_std = photodiode_dist(dev);
+    photodiode_dt = params["photodiodes"]["photodiodes_dt"].as<double>();
 
     // Magnetometer
     magnetometer_direction_noise_std =magnetometer_dist(dev);
+    magnetometer_dt = params["magnetometer"]["magnetometer_dt"].as<double>();
 
     // Gyroscope
     gyro_sigma_w = gyro_bias_dist(dev);
     gyro_sigma_v = gyro_white_noise_dist(dev);
     gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
     gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
-
+    gyro_dt = params["gyroscope"]["gyro_dt"].as<double>();
+    
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
@@ -359,18 +362,22 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia_RW", &Simulation_Parameters::I_rw)
         //
+        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
+        .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
+        //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
+        .def_readonly("magnetometer_dt", &Simulation_Parameters::magnetometer_dt)
         //
-        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
+        .def_readonly("magnetometer_direction_noise_std", &Simulation_Parameters::magnetometer_direction_noise_std)
+        //
+        .def_readonly("gyro_dt", &Simulation_Parameters::gyro_dt)
         //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)
         .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
-        //
-        .def_readonly("magnetometer_direction_noise_std", &Simulation_Parameters::magnetometer_direction_noise_std)
         //
         .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }

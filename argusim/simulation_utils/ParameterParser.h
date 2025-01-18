@@ -52,15 +52,18 @@ class Simulation_Parameters {
     int num_photodiodes;
     MatrixXd G_pd_b; // orientation matrix for photodiodes
     double photodiode_std;
+    double photodiode_dt; // sampling period of the photodiodes
 
     // Magnetometer
     double magnetometer_direction_noise_std;
+    double magnetometer_dt; // sampling period of the magnetometer
 
     // Gyroscope
     double gyro_sigma_w;
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
+    double gyro_dt; // sampling period of the gyrometer
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]

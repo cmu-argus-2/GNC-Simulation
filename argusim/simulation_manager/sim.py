@@ -23,10 +23,6 @@ from time import time
 from scipy.spatial.transform import Rotation as R
 
 
-GYRO_DT = 0.1
-MAGNETOMETER_DT = 1  # [s]
-SUN_SENSOR_DT = 1  # [s]
-
 attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
 gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
 true_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
@@ -67,17 +63,31 @@ class Simulator:
         sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
         sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
         scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
+        gyro_dt = self.params.gyro_dt
 
         gyro_params = []
         for i in range(3):
             biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
             gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
-        self.gyro = TriAxisSensor(GYRO_DT, gyro_params)
+        self.gyro = TriAxisSensor(gyro_dt, gyro_params)
 
-        # Attitde Estimator Config
+        # Sun Sensor config
+        sigma_sunsensor = np.deg2rad(3)  # [rad]
+        photodiodes_dt  = self.params.photodiodes_dt
+        self.sunSensor  = SunSensor(photodiodes_dt, sigma_sunsensor)
+
+        # Magnetometer config
+        mag_params = []
+        for i in range(3):
+            biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
+            mag_params.append(SensorNoiseParams.get_random_params(biasParams, 0.0*sigma_v_range, 0.0*scale_factor_error_range))
+        magnetometer_dt   = self.params.magnetometer_dt
+        self.magnetometer = TriAxisSensor(magnetometer_dt, mag_params)
+
+        # Attitude Estimator Config
         sigma_initial_attitude = np.deg2rad(5)  # [rad]
-        sigma_gyro_white = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
-        sigma_gyro_bias_deriv = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
+        sigma_gyro_white       = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
+        sigma_gyro_bias_deriv  = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
 
         self.attitude_ekf = Attitude_EKF(
             sigma_initial_attitude,
@@ -215,16 +225,16 @@ class Simulator:
         # Sun Sensor update
         got_sun = False
         SUN_IN_VIEW = True  # TODO actually check if sun is in view
-        if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + SUN_SENSOR_DT):
-            sigma_sunsensor = np.deg2rad(3)  # [rad]
+        if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + self.sunSensor.dt):
+            
             # TODO simulate RTC and use its drifting time
             true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
             true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
-            sunSensor = SunSensor(sigma_sunsensor)
-            measured_sun_ray_in_body = sunSensor.get_measurement(true_sun_ray_body)
+            
+            measured_sun_ray_in_body = self.sunSensor.get_measurement(true_sun_ray_body)
             self.attitude_ekf.sun_sensor_update(
-                measured_sun_ray_in_body, true_sun_ray_ECI, current_time, sigma_sunsensor
+                measured_sun_ray_in_body, true_sun_ray_ECI, current_time, self.sunSensor.sigma_angular_error
             )
             self.last_sun_sensor_measurement_time = current_time
             self.logr.log_v(
@@ -235,10 +245,11 @@ class Simulator:
             got_sun = True
 
         got_B = False
-        if current_time >= self.last_magnetometer_measurement_time + MAGNETOMETER_DT:
+        if current_time >= self.last_magnetometer_measurement_time + self.magnetometer.dt:
             true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
             true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
             measured_Bfield_in_body = measurement[9:12]
+
             self.attitude_ekf.Bfield_update(
                 measured_Bfield_in_body, true_Bfield_ECI, current_time, self.params.magnetometer_direction_noise_std
             )
@@ -260,8 +271,8 @@ class Simulator:
                 self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
                 self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
 
-        # Propogate on Gyro
-        if current_time >= self.last_gyro_measurement_time + GYRO_DT:
+        # Propagate on Gyro
+        if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
             true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
             gyro_measurement = self.gyro.update(true_omega_body_wrt_ECI_in_body)
             self.attitude_ekf.gyro_update(gyro_measurement, current_time)
