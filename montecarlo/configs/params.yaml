@@ -133,7 +133,7 @@ photodiodes:
                            0,-1,0, 
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
-
+     sigma_sunsensor: 0.0524 # [rad] [Assuming direct vector instead of lux]
      photodiode_std : 1000 # [UNITS: lux]
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
@@ -145,15 +145,19 @@ magnetometer:
 gyroscope:
      gyro_dt : 0.1 # [UNITS: s]
      gyro_correlation_time : 500000.0 # [UNITS: s] [UNUSED]
-     gyro_scale_factor_err : 1.0e-5
+
+     gyro_scale_factor_err : 0.005 # Scale factor error [UNITS: x]
+     gyro_scale_factor_err_range : [-0.01, 0.01]
 
      gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
-     gyro_sigma_w_dev : 20 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
+     gyro_sigma_w_dev : 20 # stddev of uncertainity in gyroscope error estimation as a % of nominal error stddev [%]
+     gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
 
      gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
-     gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+     gyro_sigma_v_dev : 20 # stddev of uncertainity in gyroscope error estimation as a % of nominal error stddev [%]
+     gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
+     initial_bias_range : [-0.0873, 0.0873]  # [(rad/s)/sqrt(s))]
      
-
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------

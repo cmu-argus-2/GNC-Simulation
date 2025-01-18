@@ -58,11 +58,10 @@ class Simulator:
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs))
 
         # Gyro config
-        # TODO read these in from parameter file; don't hardcode
-        initial_bias_range = np.deg2rad([-5.0, 5.0])  # [rad/s]
-        sigma_v_range = np.deg2rad([0.5 / np.sqrt(60), 5.0 / np.sqrt(60)])  # [rad/sqrt(s)]
-        sigma_w_range = np.deg2rad([0.05 / np.sqrt(60), 0.5 / np.sqrt(60)])  # [(rad/s)/sqrt(s))]
-        scale_factor_error_range = np.array([-0.01, 0.01])  # [-]
+        initial_bias_range = np.array(self.obsw_params["gyroscope"]["initial_bias_range"])  # [rad/s]
+        sigma_v_range = np.array(self.obsw_params["gyroscope"]["gyro_sigma_v_range"]) # [rad/sqrt(s)]
+        sigma_w_range = np.array(self.obsw_params["gyroscope"]["gyro_sigma_w_range"]) # [(rad/s)/sqrt(s))]
+        scale_factor_error_range = np.array(self.obsw_params["gyroscope"]["gyro_scale_factor_err_range"])  # [-]
         gyro_dt = self.params.gyro_dt
 
         gyro_params = []
@@ -72,7 +71,7 @@ class Simulator:
         self.gyro = TriAxisSensor(gyro_dt, gyro_params)
 
         # Sun Sensor config
-        sigma_sunsensor = np.deg2rad(3)  # [rad]
+        sigma_sunsensor = self.obsw_params["photodiodes"]["sigma_sunsensor"]
         photodiodes_dt  = self.params.photodiodes_dt
         self.sunSensor  = SunSensor(photodiodes_dt, sigma_sunsensor)
 
@@ -134,12 +133,24 @@ class Simulator:
             "T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)
         ]
 
+    def define_estimator(self):
+        """
+        Defines the attitude estimator related parameters
+        """
+        self.Idx["NY"] = 12+self.num_photodiodes+self.num_RWs
+        self.Idx["Y"] = dict()
+        self.Idx["Y"]["GPS_POS"] = slice(0, 3)
+        self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
+        self.Idx["Y"]["GYRO"] = slice(6, 9)
+        self.Idx["Y"]["MAG"] = slice(9, 12)
+        self.Idx["Y"]["SUN"] = slice(12, 12+self.num_photodiodes)
+        self.Idx["Y"]["RW_OMEGA"] = slice(12+self.num_photodiodes, 12+self.num_photodiodes+self.num_RWs)
+
     def define_controller(self):
         """
         Defines the world for the controller objects
         """
         self.Idx = {}
-        # Intialize the dynamics class as the "world"
         self.Idx["NX"] = 19
         self.Idx["X"] = dict()
         self.Idx["X"]["ECI_POS"] = slice(0, 3)
