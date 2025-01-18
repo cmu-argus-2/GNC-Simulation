@@ -49,7 +49,7 @@ class Simulator:
 
         # Controller Config
         with open(config_path, "r") as f:
-            self.controller_params = yaml.safe_load(f)
+            self.obsw_params = yaml.safe_load(f)
         self.define_controller()
 
         # Initialization
@@ -85,14 +85,10 @@ class Simulator:
         self.magnetometer = TriAxisSensor(magnetometer_dt, mag_params)
 
         # Attitude Estimator Config
-        sigma_initial_attitude = np.deg2rad(5)  # [rad]
-        sigma_gyro_white       = np.deg2rad(1.5 / np.sqrt(60))  # [rad/sqrt(s)]
-        sigma_gyro_bias_deriv  = np.deg2rad(0.15) / np.sqrt(60)  # [(rad/s)/sqrt(s))]
-
         self.attitude_ekf = Attitude_EKF(
-            sigma_initial_attitude,
-            sigma_gyro_white,
-            sigma_gyro_bias_deriv,
+            np.array(self.obsw_params["MEKF"]["sigma_initial_attitude"]),
+            np.array(self.obsw_params["MEKF"]["sigma_gyro_white"]),
+            np.array(self.obsw_params["MEKF"]["sigma_gyro_bias_deriv"]),
         )
 
         # Logging
@@ -159,8 +155,8 @@ class Simulator:
         # self.ReactionWheels = [ReactionWheel(self.config, IdRw) for IdRw in range(self.config["satellite"]["N_rw"])]
 
         # Actuator Indexing
-        self.num_RWs = self.controller_params["reaction_wheels"]["N_rw"]
-        self.num_MTBs = self.controller_params["magnetorquers"]["N_mtb"]
+        self.num_RWs = self.obsw_params["reaction_wheels"]["N_rw"]
+        self.num_MTBs = self.obsw_params["magnetorquers"]["N_mtb"]
         self.Idx["NU"] = self.num_RWs + self.num_MTBs
         self.Idx["N_rw"] = self.num_RWs
         self.Idx["N_mtb"] = self.num_MTBs
@@ -171,14 +167,14 @@ class Simulator:
         self.Idx["NX"] = self.Idx["NX"] + self.num_RWs
         self.Idx["X"]["RW_SPEED"] = slice(19, 19 + self.num_RWs)
 
-        Magnetorquers = [Magnetorquer(self.controller_params["magnetorquers"], IdMtb) for IdMtb in range(self.num_MTBs)]
+        Magnetorquers = [Magnetorquer(self.obsw_params["magnetorquers"], IdMtb) for IdMtb in range(self.num_MTBs)]
         ReactionWheels = [
-            ReactionWheel(self.controller_params["reaction_wheels"], IdRw) for IdRw in range(self.num_RWs)
+            ReactionWheel(self.obsw_params["reaction_wheels"], IdRw) for IdRw in range(self.num_RWs)
         ]
-        self.controller = Controller(self.controller_params, Magnetorquers, ReactionWheels, self.Idx)
+        self.controller = Controller(self.obsw_params, Magnetorquers, ReactionWheels, self.Idx)
 
         # Controller Frequency
-        self.controller_dt = self.controller_params["controller_dt"]
+        self.controller_dt = self.obsw_params["controller_dt"]
 
         # sensor sampling frequency
         self.last_sun_sensor_measurement_time = 0.0

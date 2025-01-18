@@ -144,7 +144,7 @@ magnetometer:
 
 gyroscope:
      gyro_dt : 0.1 # [UNITS: s]
-     gyro_correlation_time : 500000.0 # [UNITS: s]
+     gyro_correlation_time : 500000.0 # [UNITS: s] [UNUSED]
      gyro_scale_factor_err : 1.0e-5
 
      gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
@@ -170,3 +170,10 @@ pointing_target: "Nadir" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 10 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
+# -----------------------------------------------------------------------------------------------------------
+# Attitude Estimation Parameters
+# -----------------------------------------------------------------------------------------------------------
+MEKF:
+     sigma_initial_attitude: 0.087  # [rad]
+     sigma_gyro_white: 0.0034  # [rad/sqrt(s)]
+     sigma_gyro_bias_deriv: 0.00034  # [(rad/s)/sqrt(s))]

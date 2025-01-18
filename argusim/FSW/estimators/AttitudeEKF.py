@@ -99,7 +99,7 @@ class Attitude_EKF:
         ECI_R_b_prev = self.get_ECI_R_b()
         ECI_R_b_curr = ECI_R_b_prev * delta_rotation
         self.set_ECI_R_b(ECI_R_b_curr)
-        # TODO propogate error state covariance
+        # TODO propagate error state covariance
         F = self.get_F()
         G = self.get_G()
 
