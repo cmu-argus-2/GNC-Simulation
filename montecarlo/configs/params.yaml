@@ -174,4 +174,4 @@ MEKF:
      sigma_gyro_white: 0.0034  # [rad/sqrt(s)]
      sigma_gyro_bias_deriv: 0.00034  # [(rad/s)/sqrt(s))]
      sigma_sunsensor_direction: 0.0524  # [rad]
-     sigma_magnetometer_direction: 0.0524  # [rad]
+     sigma_magnetometer_direction: 0.1  # [rad]
