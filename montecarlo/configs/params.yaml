@@ -1,5 +1,59 @@
 ---
 # -----------------------------------------------------------------------------------------------------------
+# Sim settings
+# -----------------------------------------------------------------------------------------------------------
+MAX_TIME: 18000 # [s]
+dt: 0.1         # [s]
+earliest_sim_start_time_UTC: 2024-10-01 12:00:00
+latest_sim_start_time_UTC: 2024-10-28 23:59:59
+useDrag : False
+useSRP : False
+
+# -----------------------------------------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------------------------------------
+# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
+initialization:
+     semimajor_axis : 6908000 # [m]
+     semimajor_axis_dev : 20000 #  [m]
+
+     eccentricity : 0.007 
+     eccentricity_dev : 0.0040 # [-] 
+
+     inclination : 97.75 # [deg]
+     inclination_dev : 0.1 # [deg]
+
+     RAAN : 171 # [deg]
+     RAAN_dev : 20 # [%]
+
+     disperse_LTDN : False
+     LTDN : 10:30:00 # [HH:MM:SS]
+     LTDN_min : 10:00:00 # [HH:MM:SS]
+     LTDN_max : 14:00:00 # [HH:MM:SS]
+
+     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
+     disperse_AOP : True 
+     AOP : 63 # [deg]
+     AOP_dev : 20 # [%]
+
+     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
+     # If False, the nominal_true_anomaly is chosen across trials
+     disperse_true_anomaly : True
+     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
+
+     # If disperse_initial_attitude is True, initial attitude is randomly sampled
+     # If False, the nominal_initial_attitude is chosen across trials
+     disperse_initial_attitude : True
+     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
+
+     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
+     # If False, the nominal_initial_angular_rate is chosen across trials
+     disperse_initial_angular_rate : True
+     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
+
+# -----------------------------------------------------------------------------------------------------------
 # physical properties
 # -----------------------------------------------------------------------------------------------------------
 mass : 
@@ -83,6 +137,7 @@ gps:
      gps_vel_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
 
 photodiodes:
+     photodiodes_dt : 1 # [s]
      num_photodiodes : 6
      photodiode_normals : [1,0,0, 
                            0,1,0, 
@@ -91,80 +146,23 @@ photodiodes:
                            0,-1,0, 
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
-
+     min_sigma_sunsensor: 0.0349 # [rad] [Modeling angular error in sun direction, instead of lux]
+     max_sigma_sunsensor: 0.0872 # [rad] [Modeling angular error in sun direction, instead of lux]
      photodiode_std : 1000 # [UNITS: lux]
      photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
-     magnetometer_noise_std : 0.005 # [UNITS: T]
-     magnetometer_std_dev : 0 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+     magnetometer_dt : 1 # [UNITS: s]
+     min_sigma_magnetometer: 0.0523 # [rad] [Angular error in Bfield direction]
+     max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
 
 gyroscope:
-     gyro_correlation_time : 500000.0 # [UNITS: s]
-     gyro_scale_factor_err : 1.0e-5
-
-     gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
-     gyro_sigma_w_dev : 0 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
-
-     gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
-     gyro_sigma_v_dev : 0 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+     gyro_dt : 0.1 # [UNITS: s]
+     gyro_scale_factor_err_range : [-0.01, 0.01]
+     gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
+     gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
+     initial_bias_range : [-0.0873, 0.0873]  # [(rad/s)/sqrt(s))]
      
-
-# -----------------------------------------------------------------------------------------------------------
-# Sim settings
-# -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 18000 # 432000 # [s]
-dt: 1         # [s]
-earliest_sim_start_time_UTC: 2024-10-01 12:00:00
-latest_sim_start_time_UTC: 2024-10-28 23:59:59
-useDrag : False
-useSRP : False
-
-# -----------------------------------------------------------------------------------------------------------
-# Initialization
-# -----------------------------------------------------------------------------------------------------------
-# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
-# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
-initialization:
-     semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 20000 #  [m]
-
-     eccentricity : 0.007 
-     eccentricity_dev : 0.0040 # [-] 
-
-     inclination : 97.75 # [deg]
-     inclination_dev : 0.1 # [deg]
-
-     RAAN : 171 # [deg]
-     RAAN_dev : 20 # [%]
-
-     disperse_LTDN : False
-     LTDN : 10:30:00 # [HH:MM:SS]
-     LTDN_min : 10:00:00 # [HH:MM:SS]
-     LTDN_max : 14:00:00 # [HH:MM:SS]
-
-     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
-     disperse_AOP : True 
-     AOP : 63 # [deg]
-     # AOP_dev : 20 # [%]
-
-     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
-     # If False, the nominal_true_anomaly is chosen across trials
-     disperse_true_anomaly : True
-     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
-
-     # If disperse_initial_attitude is True, initial attitude is randomly sampled
-     # If False, the nominal_initial_attitude is chosen across trials
-     disperse_initial_attitude : True
-     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
-
-     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
-     # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : True
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
-
-
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------
@@ -184,3 +182,12 @@ estimator_dt: 1    # [s]
 debugFlags:
   bypass_controller: False # Open-loop
   bypass_estimator: True  # Perfect state knowledge
+# -----------------------------------------------------------------------------------------------------------
+# Attitude Estimation Parameters
+# -----------------------------------------------------------------------------------------------------------
+MEKF:
+     sigma_initial_attitude: 0.087  # [rad]
+     sigma_gyro_white: 0.0034  # [rad/sqrt(s)]
+     sigma_gyro_bias_deriv: 0.00034  # [(rad/s)/sqrt(s))]
+     sigma_sunsensor_direction: 0.0524  # [rad]
+     sigma_magnetometer_direction: 0.1  # [rad]

@@ -77,17 +77,16 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     for (int i=0; i<num_photodiodes; i++) {
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
-    photodiode_std = params["photodiodes"]["photodiode_std"].as<double>(); // photodiode_std = photodiode_dist(dev);
+    photodiode_std = photodiode_dist(dev);
+    sigma_sunsensor = sigma_sunsensor_dist(dev);
+    photodiode_dt = params["photodiodes"]["photodiodes_dt"].as<double>();
+
 
     // Magnetometer
-    magnetometer_noise_std = params["magnetometer"]["magnetometer_noise_std"].as<double>(); // magnetometer_dist(dev);
-
-    // Gyroscope
-    gyro_sigma_w = params["gyroscope"]["gyro_sigma_w"].as<double>(); // gyro_bias_dist(dev);
-    gyro_sigma_v = params["gyroscope"]["gyro_sigma_v"].as<double>(); // gyro_white_noise_dist(dev);
-    gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
-    gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
-
+    sigma_magnetometer = sigma_magnetometer_dist(dev);
+    magnetometer_dt = params["magnetometer"]["magnetometer_dt"].as<double>();
+    gyro_dt = params["gyroscope"]["gyro_dt"].as<double>();
+    
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
@@ -137,7 +136,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
     
     // Populate State Vector
-    initial_state = initializeSatellite(sim_start_time);
+    initial_true_state = initializeSatellite(sim_start_time);
 
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
@@ -242,22 +241,16 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     photodiode_orientation_dist = std::normal_distribution<double>(0, params["photodiodes"]["photodiode_orientation_dev"].as<double>());
     double photodiode_std_nominal = params["photodiodes"]["photodiode_std"].as<double>();
     double photodiode_std_std = photodiode_std_nominal*(params["photodiodes"]["photodiode_std_dev"].as<double>()/100);
+    double min_sigma_sunsensor = params["photodiodes"]["min_sigma_sunsensor"].as<double>();
+    double max_sigma_sunsensor = params["photodiodes"]["max_sigma_sunsensor"].as<double>();
+    sigma_sunsensor_dist = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
     photodiode_dist = std::normal_distribution<double>(photodiode_std_nominal, photodiode_std_std);
 
     // Magnetometer
-    double magnetometer_noise_std_nominal = params["magnetometer"]["magnetometer_noise_std"].as<double>();
-    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer"]["magnetometer_std_dev"].as<double>()/100);
-    magnetometer_dist = std::normal_distribution<double>(magnetometer_noise_std_nominal, magnetometer_noise_std_std);
+    double min_sigma_magnetometer = params["magnetometer"]["min_sigma_magnetometer"].as<double>();
+    double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
+    sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
-    // Gyroscope
-    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
-    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
-    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
-
-    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
-    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
-    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
-    
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
@@ -339,7 +332,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     vec.assign(G_pd_b.data(), G_pd_b.data() + G_pd_b.rows()*G_pd_b.cols());
     out<<YAML::Key << "photodiode_orientation" << YAML::Flow << vec;
 
-    out<<YAML::Key << "magnetometer_std" << magnetometer_noise_std;
+    out<<YAML::Key << "magnetometer_std" << sigma_magnetometer;
 
     out<<YAML::Key << "gyro_sigma_w" <<gyro_sigma_w;
     out<< YAML::Key << "gyro_sigma_v" << gyro_sigma_v;
@@ -379,10 +372,17 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia_RW", &Simulation_Parameters::I_rw)
         //
+        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
+        .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
+        .def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
+        //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
         //
-        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
+        .def_readonly("magnetometer_dt", &Simulation_Parameters::magnetometer_dt)
+        .def_readonly("sigma_magnetometer", &Simulation_Parameters::sigma_magnetometer)
+        //
+        .def_readonly("gyro_dt", &Simulation_Parameters::gyro_dt)
         //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)
@@ -390,7 +390,7 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         //
-        .def_readonly("initial_state", &Simulation_Parameters::initial_state);
+        .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }
 
 #endif

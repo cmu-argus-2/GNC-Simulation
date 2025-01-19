@@ -40,8 +40,7 @@ if __name__ == "__main__":
         [
             int(name.strip("trial"))
             for name in os.listdir(trials_directory)
-            if os.path.isdir(os.path.join(trials_directory, name))
-            and name.startswith("trial")
+            if os.path.isdir(os.path.join(trials_directory, name)) and name.startswith("trial")
         ]
     )
 
@@ -49,9 +48,7 @@ if __name__ == "__main__":
         for trial in args.trials:
             assert 1 <= trial
         trials = sorted(args.trials)
-        plot_directory = os.path.join(
-            job_directory + "_" + "_".join([str(x) for x in trials]), "plots"
-        )
+        plot_directory = os.path.join(job_directory + "_" + "_".join([str(x) for x in trials]), "plots")
 
     plotting_task_names = all_plotting_task_names
     if args.interactive:
@@ -60,11 +57,7 @@ if __name__ == "__main__":
     os.system(f"mkdir -p {plot_directory}")
     assert os.path.exists(plot_directory), plot_directory
 
-    if (
-        not args.trials
-        and os.path.exists(plot_directory)
-        and os.listdir(plot_directory) != []
-    ):
+    if not args.trials and os.path.exists(plot_directory) and os.listdir(plot_directory) != []:
         np.random.seed()
         passkey = np.random.randint(100, 1000)
         user_input = input(
