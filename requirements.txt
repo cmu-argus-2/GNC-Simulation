@@ -4,3 +4,5 @@ basemap
 psutil
 pyigrf
 flask
+scipy
+pyyaml
