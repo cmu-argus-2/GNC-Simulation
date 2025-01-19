@@ -59,11 +59,9 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
         # omega_b gyro bias
         # I_max - direction of axis of greatest inertia
         
-        Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
-        magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+        magnetic_field   = est_ctrl_states[Idx["X"]["MAG_FIELD"]]
         angular_velocity = est_ctrl_states[Idx["X"]["ANG_VEL"]]
-        sun_vector       = Re2b @ est_ctrl_states[Idx["X"]["SUN_POS"]]
-        sun_vector       = sun_vector / np.linalg.norm(sun_vector)
+        sun_vector       = est_ctrl_states[Idx["X"]["SUN_POS"]]
 
         h = self.J @ angular_velocity 
         h_norm = np.linalg.norm(h)

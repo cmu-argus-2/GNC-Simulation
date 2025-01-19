@@ -16,6 +16,7 @@ from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
 from argusim.sensors.SunSensor import SunSensor
 from argusim.sensors.Magnetometer import Magnetometer
 from argusim.sensors.Bias import BiasParams
+from argusim.world.math.quaternions import *
 
 import os
 import yaml
@@ -42,6 +43,7 @@ class Simulator:
         # Datapaths
         self.config_path = config_path
         self.log_directory = log_directory
+        
         # Spacecraft Config
         self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
         self.num_RWs = self.params.num_RWs
@@ -52,6 +54,11 @@ class Simulator:
         with open(config_path, "r") as f:
             self.obsw_params = yaml.safe_load(f)
         self.define_controller()
+        self.define_estimator()
+
+        # Debug flags
+        self.bypass_controller = self.obsw_params["debugFlags"]["bypass_controller"]
+        self.bypass_estimator  = self.obsw_params["debugFlags"]["bypass_estimator"]
 
         # Initialization
         self.true_state = np.array(self.params.initial_true_state)
@@ -75,6 +82,10 @@ class Simulator:
 
         # Magnetometer config
         self.magnetometer = Magnetometer(self.params.magnetometer_dt, self.params.sigma_magnetometer)
+
+        self.measurements = np.zeros((self.Idx["NY"],))
+
+        self.obsw_states = np.zeros((self.Idx["NX"],))
 
         # Attitude Estimator Config
         self.attitude_ekf = Attitude_EKF(
@@ -132,14 +143,16 @@ class Simulator:
         """
         Defines the attitude estimator related parameters
         """
-        self.Idx["NY"] = 12+self.num_photodiodes+self.num_RWs
+        # 12+self.num_photodiodes+self.num_RWs
+        self.Idx["NY"] = 15+self.num_RWs 
         self.Idx["Y"] = dict()
         self.Idx["Y"]["GPS_POS"] = slice(0, 3)
         self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
         self.Idx["Y"]["GYRO"] = slice(6, 9)
         self.Idx["Y"]["MAG"] = slice(9, 12)
-        self.Idx["Y"]["SUN"] = slice(12, 12+self.num_photodiodes)
-        self.Idx["Y"]["RW_OMEGA"] = slice(12+self.num_photodiodes, 12+self.num_photodiodes+self.num_RWs)
+        self.Idx["Y"]["SUN"] = slice(12, 15) # 12+self.num_photodiodes)
+        self.Idx["Y"]["RW_OMEGA"] = slice(15, 15+self.num_RWs)
+        # slice(12+self.num_photodiodes, 12+self.num_photodiodes+self.num_RWs)
 
     def define_controller(self):
         """
@@ -234,14 +247,15 @@ class Simulator:
             true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             
-            measured_sun_ray_in_body = self.sunSensor.get_measurement(true_sun_ray_body)
+            self.measurements[self.Idx["Y"]["SUN"]] = self.sunSensor.get_measurement(true_sun_ray_body)
+            
             self.attitude_ekf.sun_sensor_update(
-                measured_sun_ray_in_body, true_sun_ray_ECI, current_time 
+                self.measurements[self.Idx["Y"]["SUN"]], true_sun_ray_ECI, current_time 
             )
             self.last_sun_sensor_measurement_time = current_time
             self.logr.log_v(
                 "sun_sensor_measurement.bin",
-                [current_time - self.J2000_start_time] + measured_sun_ray_in_body.tolist(),
+                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["SUN"]].tolist(),
                 ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
             )
             got_sun = True
@@ -250,15 +264,15 @@ class Simulator:
         if current_time >= self.last_magnetometer_measurement_time + self.magnetometer.dt:
             true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
             true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
-            measured_Bfield_in_body = measurement[9:12]
+            self.measurements[self.Idx["Y"]["MAG"]] = measurement[9:12]
 
             self.attitude_ekf.Bfield_update(
-                measured_Bfield_in_body, true_Bfield_ECI, current_time
+                self.measurements[self.Idx["Y"]["MAG"]], true_Bfield_ECI, current_time
             )
             self.last_magnetometer_measurement_time = current_time
             self.logr.log_v(
                 "magnetometer_measurement.bin",
-                [current_time - self.J2000_start_time] + measured_Bfield_in_body.tolist(),
+                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["MAG"]].tolist(),
                 ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
             )
             got_B = True
@@ -266,7 +280,7 @@ class Simulator:
         if got_B and got_sun:
             if not self.attitude_ekf.initialized:
                 attitude_estimate = self.attitude_ekf.triad(
-                    true_sun_ray_ECI, measured_sun_ray_in_body, true_Bfield_ECI, measured_Bfield_in_body
+                    true_sun_ray_ECI, self.measurements[self.Idx["Y"]["SUN"]], true_Bfield_ECI, self.measurements[self.Idx["Y"]["MAG"]]
                 )
                 self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
                 self.attitude_ekf.initialized = True
@@ -276,13 +290,13 @@ class Simulator:
         # Propagate on Gyro
         if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
             true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
-            gyro_measurement = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            self.attitude_ekf.gyro_update(gyro_measurement, current_time)
+            self.measurements[self.Idx["Y"]["GYRO"]] = self.gyro.update(true_omega_body_wrt_ECI_in_body)
+            self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
             self.last_gyro_measurement_time = current_time
 
             self.logr.log_v(
                 "gyro_measurement.bin",
-                [current_time - self.J2000_start_time] + gyro_measurement.tolist(),
+                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["GYRO"]].tolist(),
                 ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
             )
 
@@ -351,14 +365,38 @@ class Simulator:
 
         # Run iterations
         while sim_delta_time <= self.params.MAX_TIME:
+            if self.bypass_controller:
+                self.control_input = np.zeros(self.Idx["NU"])
+            else:
+                # Update the controller
+                if sim_delta_time >= last_controller_update + self.controller_dt:
+                    if self.bypass_estimator:
+                        self.obsw_states = self.true_state
+                        Re2b       = quatrotation(self.obsw_states[self.Idx["X"]["QUAT"]]).T
+                        magfield   = Re2b @ self.obsw_states[self.Idx["X"]["MAG_FIELD"]]
+                        sun_vector = Re2b @ self.true_state[self.Idx["X"]["SUN_POS"]]
+                        self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
+                        self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = magfield
+                    else:
+                        controller_state = np.zeros(self.Idx["NX"])
+                        att_ekf = self.attitude_ekf.get_state()
+                        Re2b = self.attitude_ekf.get_ECI_R_b().as_matrix().T
+                        self.obsw_states[self.Idx["X"]["QUAT"]]    = att_ekf[:4]
+                        gyro_meas = self.measurements[self.Idx["Y"]["GYRO"]]
+                        self.obsw_states[self.Idx["X"]["ANG_VEL"]] = gyro_meas - att_ekf[4:]
+                        self.measurements[self.Idx["Y"]["SUN"]] 
+                        # TODO: use ECI Sun (RTC error) + att or sun sensor directly
+                        # opt 1 robust to eclipse
+                        # opt 2 robust to MEKF failure
+                        sun_vector = Re2b @ self.true_state[self.Idx["X"]["SUN_POS"]]
+                        self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
+                        self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = self.measurements[self.Idx["Y"]["MAG"]]
 
-            # Update the controller
-            if sim_delta_time >= last_controller_update + self.controller_dt:
-                self.control_input = self.controller.run(
-                    self.true_state, self.Idx
-                )  # TODO : Replace this with a state estimate
-                assert len(self.control_input) == (self.num_RWs + self.num_MTBs)
-                last_controller_update = sim_delta_time
+                    self.control_input = self.controller.run(
+                        self.obsw_states, self.Idx
+                    )  
+                    assert len(self.control_input) == (self.num_RWs + self.num_MTBs)
+                    last_controller_update = sim_delta_time
 
             # Echo the Heartbeat once every 1000s
             if sim_delta_time - last_print_time >= 1000:
