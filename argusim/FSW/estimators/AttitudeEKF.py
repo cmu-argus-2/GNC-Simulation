@@ -22,6 +22,8 @@ class Attitude_EKF:
         sigma_initial_attitude,  # [rad]
         sigma_gyro_white,  # [rad/sqrt(s)]
         sigma_gyro_bias_deriv,  # [(rad/s)/sqrt(s))]
+        sigma_sunsensor_direction,  # [rad]
+        sigma_magnetometer_direction,  # [rad]
     ):
         self.state_vector = np.zeros(7)
 
@@ -39,6 +41,9 @@ class Attitude_EKF:
         self.gyro_ringbuff = collections.deque(maxlen=100)
         self.sun_ray_ringbuff = collections.deque(maxlen=40)
         self.Bfield_ringbuff = collections.deque(maxlen=40)
+
+        self.sigma_sunsensor_direction = sigma_sunsensor_direction
+        self.sigma_magnetometer_direction = sigma_magnetometer_direction
 
         # State variable pertaining to initialization
         self.initialized = False
@@ -151,8 +156,7 @@ class Attitude_EKF:
         H[:3, :3] = -skew_symmetric(true_B_field_ECI)
         return H
 
-    def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t, sigma_sunsensor):
-        # sigma_sunsensor [rad]
+    def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t):
         measured_sun_ray_in_body /= np.linalg.norm(measured_sun_ray_in_body)
         true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
         if not self.initialized:
@@ -164,13 +168,12 @@ class Attitude_EKF:
         innovation = true_sun_ray_ECI - predicted_sun_ray_ECI
 
         s_cross = skew_symmetric(true_sun_ray_ECI)
-        Cov_sunsensor = sigma_sunsensor**2 * s_cross @ np.eye(3) @ s_cross.T
+        Cov_sunsensor = self.sigma_sunsensor_direction**2 * s_cross @ np.eye(3) @ s_cross.T
 
         H = self.get_sun_sensor_measurement_jacobian(true_sun_ray_ECI)
         self.EKF_update(H, innovation, Cov_sunsensor)
 
-    def Bfield_update(self, measured_Bfield_in_body, true_Bfield_ECI, t, sigma_Bfield):
-        # sigma_Bfield [rad]
+    def Bfield_update(self, measured_Bfield_in_body, true_Bfield_ECI, t):
         measured_Bfield_in_body /= np.linalg.norm(measured_Bfield_in_body)
         true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
         if not self.initialized:
@@ -182,7 +185,7 @@ class Attitude_EKF:
         innovation = true_Bfield_ECI - predicted_Bfield_ECI
 
         s_cross = skew_symmetric(true_Bfield_ECI)
-        Cov_Bfield = sigma_Bfield**2 * s_cross @ np.eye(3) @ s_cross.T
+        Cov_Bfield = self.sigma_magnetometer_direction**2 * s_cross @ np.eye(3) @ s_cross.T
 
         H = self.get_Bfield_measurement_jacobian(true_Bfield_ECI)
         self.EKF_update(H, innovation, Cov_Bfield)

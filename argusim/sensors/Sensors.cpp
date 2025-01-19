@@ -73,7 +73,7 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 {
     // Magnetometer Direction Noise Distribution
-    static std::normal_distribution<double> mag_dir_noise_dist(0, sc.magnetometer_direction_noise_std);
+    static std::normal_distribution<double> mag_dir_noise_dist(0, sc.sigma_magnetometer);
 
     Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
 

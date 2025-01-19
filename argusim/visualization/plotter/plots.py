@@ -416,7 +416,7 @@ class MontecarloPlots:
         annotateMultiPlot(title="Measured Sun Ray in body frame", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "sun_sensor_body_measurement.png", self.close_after_saving)
 
-        # ====================== Magnetometor measurement plots ======================
+        # ====================== Magnetometer measurement plots ======================
         filepaths = self._get_files_across_trials("magnetometer_measurement.bin")
 
         START = time.time()

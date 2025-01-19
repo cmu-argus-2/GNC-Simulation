@@ -14,6 +14,7 @@ from argusim.actuators import Magnetorquer
 from argusim.actuators import ReactionWheel
 from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
 from argusim.sensors.SunSensor import SunSensor
+from argusim.sensors.Magnetometer import Magnetometer
 from argusim.sensors.Bias import BiasParams
 
 import os
@@ -63,7 +64,6 @@ class Simulator:
         sigma_w_range = np.array(self.obsw_params["gyroscope"]["gyro_sigma_w_range"]) # [(rad/s)/sqrt(s))]
         scale_factor_error_range = np.array(self.obsw_params["gyroscope"]["gyro_scale_factor_err_range"])  # [-]
         gyro_dt = self.params.gyro_dt
-
         gyro_params = []
         for i in range(3):
             biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
@@ -71,23 +71,18 @@ class Simulator:
         self.gyro = TriAxisSensor(gyro_dt, gyro_params)
 
         # Sun Sensor config
-        sigma_sunsensor = self.obsw_params["photodiodes"]["sigma_sunsensor"]
-        photodiodes_dt  = self.params.photodiodes_dt
-        self.sunSensor  = SunSensor(photodiodes_dt, sigma_sunsensor)
+        self.sunSensor  = SunSensor(self.params.photodiodes_dt, self.params.sigma_sunsensor)
 
         # Magnetometer config
-        mag_params = []
-        for i in range(3):
-            biasParams = BiasParams.get_random_params(initial_bias_range, sigma_w_range)
-            mag_params.append(SensorNoiseParams.get_random_params(biasParams, 0.0*sigma_v_range, 0.0*scale_factor_error_range))
-        magnetometer_dt   = self.params.magnetometer_dt
-        self.magnetometer = TriAxisSensor(magnetometer_dt, mag_params)
+        self.magnetometer = Magnetometer(self.params.magnetometer_dt, self.params.sigma_magnetometer)
 
         # Attitude Estimator Config
         self.attitude_ekf = Attitude_EKF(
             np.array(self.obsw_params["MEKF"]["sigma_initial_attitude"]),
             np.array(self.obsw_params["MEKF"]["sigma_gyro_white"]),
             np.array(self.obsw_params["MEKF"]["sigma_gyro_bias_deriv"]),
+            np.array(self.obsw_params["MEKF"]["sigma_sunsensor_direction"]),
+            np.array(self.obsw_params["MEKF"]["sigma_magnetometer_direction"]),
         )
 
         # Logging
@@ -241,7 +236,7 @@ class Simulator:
             
             measured_sun_ray_in_body = self.sunSensor.get_measurement(true_sun_ray_body)
             self.attitude_ekf.sun_sensor_update(
-                measured_sun_ray_in_body, true_sun_ray_ECI, current_time, self.sunSensor.sigma_angular_error
+                measured_sun_ray_in_body, true_sun_ray_ECI, current_time 
             )
             self.last_sun_sensor_measurement_time = current_time
             self.logr.log_v(
@@ -258,7 +253,7 @@ class Simulator:
             measured_Bfield_in_body = measurement[9:12]
 
             self.attitude_ekf.Bfield_update(
-                measured_Bfield_in_body, true_Bfield_ECI, current_time, self.params.magnetometer_direction_noise_std
+                measured_Bfield_in_body, true_Bfield_ECI, current_time
             )
             self.last_magnetometer_measurement_time = current_time
             self.logr.log_v(
