@@ -45,7 +45,6 @@ class Attitude_EKF:
         self.attitude_initialized = False
         self.gyro_bias_initialized = False
         self.spinning_at_roughly_constant_rate = False
-        self.min_degress_changed_to_init_from_sun_rays = 30  # [deg]  # TODO put me in param file
 
     def set_ECI_R_b(self, ECI_R_b):
         q = ECI_R_b.as_quat()  # [x, y, z, w]
