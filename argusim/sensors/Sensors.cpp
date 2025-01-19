@@ -5,6 +5,7 @@
 #include "SRP.h"
 #include "MagneticField.h"
 #include <cmath>
+#include <functional>
 #include <random>
 #include <iostream>
 
@@ -17,6 +18,7 @@
 
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
+    gen.seed(std::hash<double>{}(t_J2000)); // set seed for determinism
     int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyro + Mag Field + Light Sensors
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -70,8 +72,8 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 
 Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 {
-    // Magnetometer Noise Distribution
-    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
+    // Magnetometer Direction Noise Distribution
+    static std::normal_distribution<double> mag_dir_noise_dist(0, sc.sigma_magnetometer);
 
     Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
 
@@ -79,7 +81,7 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
     Vector3 B_eci = state(Eigen::seqN(16,3));
 
     // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
+    Vector3 B_body = random_SO3_rotation(mag_dir_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
 
     return B_body;
 }

@@ -36,3 +36,4 @@ build/
 data/
 montecarlo/results/
 argusim.egg-info/
+argusim/.cache/

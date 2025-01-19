@@ -1,5 +1,5 @@
 # Starts up trials and manages them to ensure no more than a specified number run concurrently.
-'''
+"""
 
     A single trial involves sampling the initial parameters once, fixing the RNG seed, and invoking sim.py.
 
@@ -15,7 +15,7 @@
 
     Step 4 involves run_trials.py. This file's sole job is to ensure multiple trials ( sim.py instances) run in parallel and then start up new trials when previous ones have finished. Basically, we want to keep the computer busy with running our trials.
 
-'''
+"""
 
 import os
 import sys
@@ -106,7 +106,6 @@ if __name__ == "__main__":
                 TRIAL_NUMBER = TRIALS[TRIALS_STARTED]
                 trial_directory_abs = os.path.join(job_directory_abs, "trials", f"trial{TRIAL_NUMBER}")
                 trial_output_file = os.path.join(trial_directory_abs, "output.txt")
-                
                 trial_env["TRIAL_DIRECTORY"] = trial_directory_abs
                 trial_env["PARAMETER_FILEPATH"] = parameter_file_abs
                 trial_env["TRIAL_NUMBER"] = str(TRIAL_NUMBER)
@@ -133,4 +132,4 @@ if __name__ == "__main__":
                 TRIALS_STARTED += 1
         updated_process_list()
         time.sleep(0.01)
-    print(GREEN + f"All trials finished for job: {job_name}" + RESET)#
+    print(GREEN + f"All trials finished for job: {job_name}" + RESET)  #

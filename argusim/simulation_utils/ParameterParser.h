@@ -52,15 +52,19 @@ class Simulation_Parameters {
     int num_photodiodes;
     MatrixXd G_pd_b; // orientation matrix for photodiodes
     double photodiode_std;
+    double sigma_sunsensor;
+    double photodiode_dt; // sampling period of the photodiodes
 
     // Magnetometer
-    double magnetometer_noise_std;
+    double sigma_magnetometer;
+    double magnetometer_dt; // sampling period of the magnetometer
 
     // Gyroscope
     double gyro_sigma_w;
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
+    double gyro_dt; // sampling period of the gyrometer
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
@@ -78,7 +82,7 @@ class Simulation_Parameters {
     double true_anomaly; // [deg]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
-    VectorXd initial_state;
+    VectorXd initial_true_state;
 
     double controller_dt; // [s]
     double estimator_dt;  // [s]
@@ -103,9 +107,8 @@ class Simulation_Parameters {
     std::normal_distribution<double> gps_vel_dist;
     std::normal_distribution<double> photodiode_orientation_dist;
     std::normal_distribution<double> photodiode_dist;
-    std::normal_distribution<double> magnetometer_dist;
-    std::normal_distribution<double> gyro_bias_dist;
-    std::normal_distribution<double> gyro_white_noise_dist;
+    std::uniform_real_distribution<> sigma_sunsensor_dist;
+    std::uniform_real_distribution<> sigma_magnetometer_dist;
 
     // Initialization
     std::normal_distribution<double> sma_dist;
