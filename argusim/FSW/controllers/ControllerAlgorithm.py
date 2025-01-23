@@ -17,7 +17,7 @@ class ControllerAlgorithm:
         self.ubtrw = np.array([rw.max_torque for rw in ReactionWheels])
         self.lbtrw = -self.ubtrw
         self.ubwrw = np.array([rw.max_speed for rw in ReactionWheels])
-        self.lbwrw = np.array([0.0 for rw in ReactionWheels])
+        self.lbwrw = np.array([-rw.max_speed for rw in ReactionWheels])
         self.G_rw_b  = np.array([rw.G_rw_b for rw in ReactionWheels]).reshape(3, -1)
         self.J_rw   = np.array([rw.I_rw for rw in ReactionWheels])
 
