@@ -140,8 +140,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     initial_true_state = initializeSatellite(sim_start_time);
     
     bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
-    //bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
-    //auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
+    bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
+    auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
     
     // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
     if (start_spin_stabilized) {
@@ -149,10 +149,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
         initial_true_state(Eigen::seqN(10,3)) = initial_angular_rate;
     }
-    /*
+
     if (start_ss_pointed) {
         if (start_ss_pointing == "Nadir") {
-            initial_attitude = nadirPointingAttitude(initial_true_state, I_sat);
+            initial_attitude = nadirPointingAttitude(initial_true_state, dev);
         } else if (start_ss_pointing == "Sun") {
             initial_attitude = sunPointingAttitude(initial_true_state, sim_start_time);
         } else {
@@ -160,7 +160,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         }
         initial_true_state(Eigen::seqN(6,4)) = initial_attitude;
     }
-    */
+    
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
 }
@@ -224,12 +224,12 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
         
     return initial_angular_rate;
 }
-/*
-Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State)
+
+Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
     Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
-    dis = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
+    std::uniform_real_distribution<> dis(-1, 1);
     auto uni = [&](){ return dis(gen); };
     Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
     Eigen::Vector3d h_normalized = h.normalized();
@@ -238,24 +238,74 @@ Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State)
     v1.normalize();
     Eigen::Vector3d v2 = h_normalized.cross(v1);
     v2.normalize();
+    Eigen::Matrix3d Rb; 
+    Rb << h_normalized, v1, v2;
+
+    // sun direction in inertial frame 
+    //Eigen::Vector3d s = State(Eigen::seqN(13, 3));
+    Eigen::Vector3d init_pos = State(Eigen::seqN(0, 3));
+    Eigen::Vector3d init_vel = State(Eigen::seqN(3, 3));
+    Eigen::Vector3d s = init_pos.cross(init_vel);
+    std::uniform_real_distribution<> dis2(-1, 1);
+    auto uni2 = [&](){ return dis2(gen); };
+    Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
+    Eigen::Vector3d s_normalized = s.normalized();
+    Eigen::Vector3d v3_proj_h = v3.dot(s_normalized) * s_normalized;
+    v3 -= v3_proj_h;
+    v3.normalize();
+    Eigen::Vector3d v4 = s_normalized.cross(v3);
+    v4.normalize();
+    Eigen::Matrix3d Ri; 
+    Ri << s_normalized, v3, v4;
+
+    Eigen::Matrix3d Rb2i = Ri * Rb.inverse();
+    Eigen::Quaterniond q(Rb2i);
+    Eigen::Matrix<double, 4, 1> init_att(q.w(), q.x(), q.y(), q.z());
+    //initial_attitude = q;
+    // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
+
+    return init_att;
+}
+
+Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 gen)
+{
+    // angular momentum direction in body frame
+    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    std::uniform_real_distribution<> dis(-1, 1);
+    auto uni = [&](){ return dis(gen); };
+    Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
+    Eigen::Vector3d h_normalized = h.normalized();
+    Eigen::Vector3d v1_proj_h = v1.dot(h_normalized) * h_normalized;
+    v1 -= v1_proj_h;
+    v1.normalize();
+    Eigen::Vector3d v2 = h_normalized.cross(v1);
+    v2.normalize();
+    Eigen::Matrix3d Rb; 
+    Rb << h_normalized, v1, v2;
 
     // sun direction in inertial frame 
     Eigen::Vector3d s = State(Eigen::seqN(13, 3));
-    
+    std::uniform_real_distribution<> dis2(-1, 1);
+    auto uni2 = [&](){ return dis2(gen); };
+    Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
+    Eigen::Vector3d s_normalized = s.normalized();
+    Eigen::Vector3d v3_proj_h = v3.dot(s_normalized) * s_normalized;
+    v3 -= v3_proj_h;
+    v3.normalize();
+    Eigen::Vector3d v4 = s_normalized.cross(v3);
+    v4.normalize();
+    Eigen::Matrix3d Ri; 
+    Ri << s_normalized, v3, v4;
 
+    Eigen::Matrix3d Rb2i = Ri * Rb.inverse();
+    Eigen::Quaterniond q(Rb2i);
+    Eigen::Matrix<double, 4, 1> init_att(q.w(), q.x(), q.y(), q.z());
+    //initial_attitude = q;
     // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
 
-
-    return initial_attitude;
+    return init_att;
 }
 
-Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, Matrix_3x3 I_sat)
-{
-    // initial_attitude;
-
-    return initial_attitude;
-}
-*/
 
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)

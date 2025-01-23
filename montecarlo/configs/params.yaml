@@ -54,7 +54,7 @@ initialization:
      initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
 
      start_spin_stabilized: True
-     start_ss_pointed: False
+     start_ss_pointed: True
      start_ss_pointing: "Nadir" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
