@@ -7,10 +7,11 @@
 #include <stdexcept>
 #include <string>
 #include <random>
-
+#include <math.h>
 #include "ExpressionEvaluation.h"
 #include "StringUtils/StringUtils.h"
 #include "colored_output.h"
+#include "math/EigenWrapper.h"
 #include "misc.h"
 #include "yaml-cpp/yaml.h"
 #include "utils_and_transforms.h"
@@ -137,7 +138,29 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     
     // Populate State Vector
     initial_true_state = initializeSatellite(sim_start_time);
-
+    
+    bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
+    //bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
+    //auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
+    
+    // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
+    if (start_spin_stabilized) {
+        auto tgt_ss_ang_vel = params["tgt_ss_ang_vel"].as<double>();
+        initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
+        initial_true_state(Eigen::seqN(10,3)) = initial_angular_rate;
+    }
+    /*
+    if (start_ss_pointed) {
+        if (start_ss_pointing == "Nadir") {
+            initial_attitude = nadirPointingAttitude(initial_true_state, I_sat);
+        } else if (start_ss_pointing == "Sun") {
+            initial_attitude = sunPointingAttitude(initial_true_state, sim_start_time);
+        } else {
+            throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
+        }
+        initial_true_state(Eigen::seqN(6,4)) = initial_attitude;
+    }
+    */
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
 }
@@ -169,6 +192,70 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
 
     return magnetorquer;
 }
+
+Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
+{
+    // get target angular momentum
+    Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
+    eigensolver.compute(I_sat);
+    Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
+    Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
+    double maxeigenval = 0;
+    Eigen::Vector3d I_max_dir;
+    for(int i=0; i<eigen_values.size(); i++){
+        if (eigen_values[i] > maxeigenval) {
+            maxeigenval = eigen_values[i];
+            I_max_dir = eigen_vectors.col(i);
+        }
+    }
+    // largest element should be positive
+    if (std::abs(I_max_dir.cwiseAbs().maxCoeff() + I_max_dir.maxCoeff()) < 1e-9) {
+        I_max_dir = -I_max_dir;
+    }
+    
+    // Eigen::Vector3d h_tgt = maxeigenval*tgt_ss_ang_vel*I_max_dir*M_PI/180.0;
+    // double h_tgt_norm = h_tgt.norm();
+
+    initial_angular_rate = tgt_ss_ang_vel*I_max_dir*M_PI/180.0;
+    // I_sat.inverse() * h_tgt;
+
+    // [TODO]: disperse around tolerated values
+    // spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
+        
+    return initial_angular_rate;
+}
+/*
+Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State)
+{
+    // angular momentum direction in body frame
+    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    dis = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
+    auto uni = [&](){ return dis(gen); };
+    Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
+    Eigen::Vector3d h_normalized = h.normalized();
+    Eigen::Vector3d v1_proj_h = v1.dot(h_normalized) * h_normalized;
+    v1 -= v1_proj_h;
+    v1.normalize();
+    Eigen::Vector3d v2 = h_normalized.cross(v1);
+    v2.normalize();
+
+    // sun direction in inertial frame 
+    Eigen::Vector3d s = State(Eigen::seqN(13, 3));
+    
+
+    // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
+
+
+    return initial_attitude;
+}
+
+Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, Matrix_3x3 I_sat)
+{
+    // initial_attitude;
+
+    return initial_attitude;
+}
+*/
 
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)

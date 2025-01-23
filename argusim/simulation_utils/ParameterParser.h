@@ -11,6 +11,11 @@
 class Simulation_Parameters {
    public:
     Simulation_Parameters(std::string filename, int trial_number, std::string results_folder);
+    Vector3 spinStabilizedRate(double tgt_ss_ang_vel);
+    /*
+    Vector4 nadirPointingAttitude(VectorXd State, Matrix_3x3 I_sat);
+    Vector4 sunPointingAttitude(VectorXd State, Matrix_3x3 I_sat);
+    */
     VectorXd initializeSatellite(double epoch);
     void dumpSampledParametersToYAML(std::string results_folder);
 

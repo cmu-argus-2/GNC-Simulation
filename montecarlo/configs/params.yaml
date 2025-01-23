@@ -2,8 +2,8 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 18000 # [s]
-dt: 0.1         # [s]
+MAX_TIME: 18000 # 96000 # [s]
+dt: 1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
@@ -49,9 +49,13 @@ initialization:
 
      # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
      # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : True
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     disperse_initial_angular_rate : False
+     initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
      initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
+
+     start_spin_stabilized: True
+     start_ss_pointed: False
+     start_ss_pointing: "Nadir" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
 # physical properties
@@ -68,9 +72,9 @@ area :
      min_area : 0.01 # Min area [m^2]
 
 inertia : 
-     nominal_inertia : [0.00149, 0.0, 0.00014,
+     nominal_inertia : [0.00149, 0.0, 0.00001,
                          0.0, 0.00147, 0.0,
-                         0.00014,   0.0, 0.00154] # 0.002]
+                         0.00001,   0.0, 0.00154] # 0.002]
      # [0.00149, 0.0, 0.00014,
      #  0.0, 0.00147, 0.0,
      #   0.00014,   0.0, 0.00154]
@@ -157,7 +161,7 @@ magnetometer:
      max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
 
 gyroscope:
-     gyro_dt : 0.1 # [UNITS: s]
+     gyro_dt : 1 # 0.1 # [UNITS: s]
      gyro_scale_factor_err_range : [-0.01, 0.01]
      gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
      gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
@@ -166,22 +170,26 @@ gyroscope:
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------
-algorithm: "Lyapunov" # "BaseSP" # "Bcross" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 1.0e+08 # 0.0028
 
-mtb_att_feedback_gains: [[1.0, 0.0, 0.0, 1.4, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0, 1.4, 0.0],
-                        [0.0, 0.0, 1.0, 0.0, 0.0, 1.4]]
+mtb_att_feedback_gains: [[0.00001, 0.0, 0.0, 0.000014,  0.0, 0.0],
+                         [0.0, 0.00001, 0.0,  0.0, 0.000014, 0.0],
+                         [0.0, 0.0, 0.00001,  0.0,  0.0, 0.000014]]
 rw_att_feedback_gains: [0.07071, 0.00028]
-rw_vel_gain: 3.3878e-06 # 6.5e-7
+rw_vel_gain: 1.0 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Nadir" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 2.0 # [deg/s]
+nom_rw_ang_vel: 0.0 # 1333.0 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
+spin_stab_tol: 15.0 # [deg]
+point_tol: 10.0 # [deg]
 debugFlags:
   bypass_controller: False # Open-loop
-  bypass_estimator: False  # Perfect state knowledge
+  bypass_estimator: True  # Perfect state knowledge
+  bypass_sensors: True  # Perfect measurements
 # -----------------------------------------------------------------------------------------------------------
 # Attitude Estimation Parameters
 # -----------------------------------------------------------------------------------------------------------

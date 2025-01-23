@@ -232,6 +232,7 @@ class Simulator:
         # Step through the simulation
         self.true_state = rk4(self.true_state, control_input, self.params, current_time, dt)
 
+        # Run Sensors
         # Mask state through sensors
         measurement = self.sensors(current_time, self.true_state)
 
@@ -248,10 +249,6 @@ class Simulator:
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             
             self.measurements[self.Idx["Y"]["SUN"]] = self.sunSensor.get_measurement(true_sun_ray_body)
-            
-            self.attitude_ekf.sun_sensor_update(
-                self.measurements[self.Idx["Y"]["SUN"]], true_sun_ray_ECI, current_time 
-            )
             self.last_sun_sensor_measurement_time = current_time
             self.logr.log_v(
                 "sun_sensor_measurement.bin",
@@ -265,10 +262,6 @@ class Simulator:
             true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
             true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
             self.measurements[self.Idx["Y"]["MAG"]] = measurement[9:12]
-
-            self.attitude_ekf.Bfield_update(
-                self.measurements[self.Idx["Y"]["MAG"]], true_Bfield_ECI, current_time
-            )
             self.last_magnetometer_measurement_time = current_time
             self.logr.log_v(
                 "magnetometer_measurement.bin",
@@ -277,21 +270,11 @@ class Simulator:
             )
             got_B = True
 
-        if got_B and got_sun:
-            if not self.attitude_ekf.initialized:
-                attitude_estimate = self.attitude_ekf.triad(
-                    true_sun_ray_ECI, self.measurements[self.Idx["Y"]["SUN"]], true_Bfield_ECI, self.measurements[self.Idx["Y"]["MAG"]]
-                )
-                self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
-                self.attitude_ekf.initialized = True
-                self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
-                self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
-
         # Propagate on Gyro
+        got_Gyr = False
         if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
             true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
             self.measurements[self.Idx["Y"]["GYRO"]] = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
             self.last_gyro_measurement_time = current_time
 
             self.logr.log_v(
@@ -299,36 +282,78 @@ class Simulator:
                 [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["GYRO"]].tolist(),
                 ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
             )
+            got_Gyr = True
 
         # Log pertinent Quantities
-
         true_gyro_bias = self.gyro.get_bias()
+        # Log pertinent Quantities
+        self.logr.log_v(
+            "gyro_bias_true.bin",
+            [current_time - self.J2000_start_time] + true_gyro_bias.tolist(),
+            ["Time [s]"] + true_gyro_bias_labels,
+        )
 
-        if self.attitude_ekf.initialized:
-            # get attitude estimate of the body wrt ECI
-            estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
-            attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
+        self.logr.log_v(
+            "state_true.bin",
+            [current_time - self.J2000_start_time]
+            + self.true_state.tolist()
+            + measurement.tolist()
+            + control_input.tolist(),
+            ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
+        )
+        
 
-            estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
-            gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+        # Run Attitude Estimation
+        if self.bypass_estimator:
+            # Sun Sensor update
+            if got_sun:
+                self.attitude_ekf.sun_sensor_update(
+                    self.measurements[self.Idx["Y"]["SUN"]], true_sun_ray_ECI, current_time 
+                )
+            if got_B:
+                self.attitude_ekf.Bfield_update(
+                    self.measurements[self.Idx["Y"]["MAG"]], true_Bfield_ECI, current_time
+                )
 
-            self.logr.log_v(
-                "EKF_state.bin",
-                [current_time - self.J2000_start_time] + self.attitude_ekf.get_state().tolist(),
-                ["Time [s]"] + EKF_state_labels,
-            )
-            self.logr.log_v(
-                "EKF_error.bin",
-                [current_time - self.J2000_start_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
-                ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
-            )
+            if got_B and got_sun:
+                if not self.attitude_ekf.initialized:
+                    attitude_estimate = self.attitude_ekf.triad(
+                        true_sun_ray_ECI, self.measurements[self.Idx["Y"]["SUN"]], true_Bfield_ECI, self.measurements[self.Idx["Y"]["MAG"]]
+                    )
+                    self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
+                    self.attitude_ekf.initialized = True
+                    self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
+                    self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
+            if got_Gyr:
+                self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
+      
+        
 
-            EKF_sigmas = self.attitude_ekf.get_uncertainty_sigma()
-            self.logr.log_v(
-                "state_covariance.bin",
-                [current_time - self.J2000_start_time] + EKF_sigmas.tolist(),
-                ["Time [s]"] + EKF_sigma_labels,
-            )
+            if self.attitude_ekf.initialized:
+                # get attitude estimate of the body wrt ECI
+                estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
+                attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
+
+                estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
+                gyro_bias_error = true_gyro_bias - estimated_gyro_bias
+
+                self.logr.log_v(
+                    "EKF_state.bin",
+                    [current_time - self.J2000_start_time] + self.attitude_ekf.get_state().tolist(),
+                    ["Time [s]"] + EKF_state_labels,
+                )
+                self.logr.log_v(
+                    "EKF_error.bin",
+                    [current_time - self.J2000_start_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
+                    ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
+                )
+
+                EKF_sigmas = self.attitude_ekf.get_uncertainty_sigma()
+                self.logr.log_v(
+                    "state_covariance.bin",
+                    [current_time - self.J2000_start_time] + EKF_sigmas.tolist(),
+                    ["Time [s]"] + EKF_sigma_labels,
+                )
 
         self.logr.log_v(
             "gyro_bias_true.bin",
@@ -371,24 +396,31 @@ class Simulator:
                 # Update the controller
                 if sim_delta_time >= last_controller_update + self.controller_dt:
                     if self.bypass_estimator:
-                        self.obsw_states = self.true_state
-                        Re2b       = quatrotation(self.obsw_states[self.Idx["X"]["QUAT"]]).T
-                        magfield   = Re2b @ self.obsw_states[self.Idx["X"]["MAG_FIELD"]]
+                        self.obsw_states = np.copy(self.true_state)
+                        Re2b       = quatrotation(self.true_state[self.Idx["X"]["QUAT"]]).T
+                        magfield   = Re2b @ self.true_state[self.Idx["X"]["MAG_FIELD"]]
                         sun_vector = Re2b @ self.true_state[self.Idx["X"]["SUN_POS"]]
+                        zenith_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_POS"]]
+                        cross_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_VEL"]]
+                        self.obsw_states[self.Idx["X"]["ECI_POS"]]   = zenith_vector / np.linalg.norm(zenith_vector)
+                        self.obsw_states[self.Idx["X"]["ECI_VEL"]]   = cross_vector / np.linalg.norm(cross_vector)
                         self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
                         self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = magfield
                     else:
-                        controller_state = np.zeros(self.Idx["NX"])
                         att_ekf = self.attitude_ekf.get_state()
                         Re2b = self.attitude_ekf.get_ECI_R_b().as_matrix().T
                         self.obsw_states[self.Idx["X"]["QUAT"]]    = att_ekf[:4]
                         gyro_meas = self.measurements[self.Idx["Y"]["GYRO"]]
                         self.obsw_states[self.Idx["X"]["ANG_VEL"]] = gyro_meas - att_ekf[4:]
-                        self.measurements[self.Idx["Y"]["SUN"]] 
+                        # self.measurements[self.Idx["Y"]["SUN"]] 
                         # TODO: use ECI Sun (RTC error) + att or sun sensor directly
                         # opt 1 robust to eclipse
                         # opt 2 robust to MEKF failure
                         sun_vector = Re2b @ self.true_state[self.Idx["X"]["SUN_POS"]]
+                        zenith_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_POS"]]
+                        cross_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_VEL"]]
+                        self.obsw_states[self.Idx["X"]["ECI_POS"]]   = zenith_vector / np.linalg.norm(zenith_vector)
+                        self.obsw_states[self.Idx["X"]["ECI_VEL"]]   = cross_vector / np.linalg.norm(cross_vector)
                         self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
                         self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = self.measurements[self.Idx["Y"]["MAG"]]
 
