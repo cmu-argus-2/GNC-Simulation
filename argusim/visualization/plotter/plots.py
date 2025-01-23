@@ -11,6 +11,7 @@ from argusim.visualization.plotter.plot_helper import (
 )
 from argusim.visualization.plotter.isolated_trace import itm
 from argusim.visualization.plotter.parse_bin_file import parse_bin_file_wrapper
+from argusim.visualization.plotter.plot_pointing import pointing_plots
 from argusim.build.world.pyphysics import ECI2GEOD
 from argusim.world.math.quaternions import quatrotation
 from argusim.actuators import Magnetorquer
@@ -235,160 +236,9 @@ class MontecarloPlots:
         # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
         with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
-            pyparams = yaml.safe_load(f)
-        
-        J_ref = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))
-        eigenvalues, _ = np.linalg.eig(J_ref)
-        J_ref_max = np.max(eigenvalues)
-        delta = np.deg2rad(15)
-        target_ang_mom_norm = np.linalg.norm( J_ref_max * np.deg2rad(pyparams["tgt_ss_ang_vel"]))
-        max_ang_mom = 0
-        spin_stabilize_times = []
-        sun_point_times = []
-        itm.figure()
-        for i, trial_number in enumerate(self.trials):
-            with open(os.path.join(self.trials_dir, f"trial{trial_number}/trial_params.yaml"), "r") as f:
-                pyparams2 = yaml.safe_load(f)
-            J = np.array(pyparams2[pyparams2.index("inertia") + 1]).reshape((3,3))
-            eigenvalues, eigenvectors = np.linalg.eig(J)
-            idx = np.argsort(eigenvalues)
-            major_axis = eigenvectors[:, idx[2]]
-            if major_axis[np.argmax(np.abs(major_axis))] < 0:
-                major_axis = -major_axis
-            bsun_vector = []
-            ang_mom_vector = []
-            ang_mom_norm_vector = []
-            for j in range(len(data_dicts[i]["Time [s]"])):
-                # Assuming the attitude quaternion is in the form [w, x, y, z]
-                quat = np.array(
-                    [data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]]
-                )
-                sun_vector_eci = np.array(
-                    [
-                        data_dicts[i]["rSun_x ECI [m]"][j],
-                        data_dicts[i]["rSun_y ECI [m]"][j],
-                        data_dicts[i]["rSun_z ECI [m]"][j],
-                    ]
-                )
-                # Rotate the sun vector from ECI to body frame using the quaternion
-                Re2b = quatrotation(quat).T
-                sun_vector_body = Re2b @ sun_vector_eci
-                sun_vector_body = sun_vector_body / np.linalg.norm(sun_vector_body)
-                ang_vel = np.array(
-                    [
-                        data_dicts[i]["omega_x [rad/s]"][j],
-                        data_dicts[i]["omega_y [rad/s]"][j],
-                        data_dicts[i]["omega_z [rad/s]"][j],
-                    ]
-                )
-                ang_mom = J @ ang_vel
-                ang_mom_norm = np.linalg.norm(ang_mom)
-                ang_mom_norm_vector.append(ang_mom_norm)
-                ang_mom = ang_mom / ang_mom_norm
-                angle_am = np.rad2deg(np.arccos(np.dot(ang_mom, major_axis)))
-                ang_mom_vector.append(angle_am)
-                # angle_sv = np.rad2deg(np.arccos(np.dot(sun_vector_body, major_axis)))
-                angle_sv = np.rad2deg(np.arccos(np.dot(sun_vector_body, ang_mom)))
-                bsun_vector.append(angle_sv)
-                
-                if max(ang_mom_norm_vector) > max_ang_mom:
-                    max_ang_mom = max(ang_mom_norm_vector)
-                
-            bsun_vector    = np.array(bsun_vector).T
-            ang_mom_vector = np.array(ang_mom_vector).T
-            time_data = data_dicts[i]["Time [s]"] - data_dicts[i]["Time [s]"][0]
-            if time_data[-1] > 4 * 24 * 3600:
-                time_data /= 24 * 3600
-                time_label = "Time [days]"
-            elif time_data[-1] > 4 * 3600:
-                time_data /= 3600
-                time_label = "Time [hours]"
-            elif time_data[-1] > 4 * 60:
-                time_data /= 60
-                time_label = "Time [minutes]"
-            else:
-                time_label = "Time [s]"
-            am_norm_error = np.abs(target_ang_mom_norm - ang_mom_norm_vector) / target_ang_mom_norm
-            ss_condition = (am_norm_error < np.deg2rad(15)) & (ang_mom_vector < 15)
-            spin_stabilize_time = time_data[np.where(ss_condition)[0][0]] if np.any(ss_condition) else time_data[-1]
-            sp_condition = (time_data > spin_stabilize_time) & (bsun_vector <= 10.1)
-            sun_point_time = time_data[np.where(sp_condition)[0][0]] if np.any(sp_condition) else time_data[-1]
-            
-            spin_stabilize_times.append(spin_stabilize_time)
-            sun_point_times.append(sun_point_time)
+            pyparams = yaml.safe_load(f)       
 
-            multiPlot(
-                time_data,
-                [bsun_vector, ang_mom_vector, ang_mom_norm_vector],
-                seriesLabel=f"_{trial_number}",
-            )
-
-            # annotateMultiPlot(title="Sun Pointing/Spin Stabilization", 
-            #                   ylabels=["SunVector/AngMom Angle [deg]", "AngMom/MajorAx Angle [deg]", "AngMom norm [Nms]"],)
-
-        time_data = data_dicts[0]["Time [s]"] - data_dicts[0]["Time [s]"][0]
-        if time_data[-1] > 4 * 24 * 3600:
-            time_data /= 24 * 3600
-            time_label = "Time [days]"
-        elif time_data[-1] > 4 * 3600:
-            time_data /= 3600
-            time_label = "Time [hours]"
-        elif time_data[-1] > 4 * 60:
-            time_data /= 60
-            time_label = "Time [minutes]"
-        else:
-            time_label = "Time [s]"
-
-        annotateMultiPlot(title="Sun Pointing/Spin Stabilization", 
-                        ylabels=["$\\angle_{\\mathbf{s}/\\mathbf{h}} [\\degree]$", 
-                                "$\\angle_{\\mathbf{h}/\\mathbf{I_{max}}} [\\degree]$",
-                                "$||\\mathbf{h}|| [Nms]$"])
-
-        # sun pointing threshold
-        itm.subplot(3, 1, 1)
-        itm.axhline(y=10, color='red', linestyle='--', linewidth=1.0)
-        plt.xlim([0, time_data[-1]])
-        plt.ylim([0, 180])
-        plt.xlabel(time_label)
-        # ang mom pointing threshold
-        itm.subplot(3, 1, 2)
-        itm.axhline(y=15, color='red', linestyle='--', linewidth=1.0)
-        plt.xlim([0, time_data[-1]])
-        plt.ylim([0, 180])
-        plt.xlabel(time_label)
-        # ang mom norm threshold
-        itm.subplot(3, 1, 3) 
-        itm.axhline(y=target_ang_mom_norm*(1-delta), color='red', linestyle='--', linewidth=1.0)
-        itm.axhline(y=target_ang_mom_norm*(1+delta), color='red', linestyle='--', linewidth=1.0)
-        plt.xlim([0, time_data[-1]])
-        plt.ylim([0, max_ang_mom])
-        plt.xlabel(time_label)
-
-        save_figure(itm.gcf(), self.plot_dir, "sun_vector_body.png", self.close_after_saving)
-        # ==========================================================================
-        # Plot the spin stabilization time and the sun pointing after spin stabilization time separately
-        plt.figure()
-
-        # Spin stabilization time
-        plt.subplot(2, 1, 1)
-        plt.hist(spin_stabilize_times, bins=20, alpha=0.7, label='Spin Stabilize Time')
-        plt.xlabel(time_label)
-        plt.ylabel('Frequency')
-        plt.legend()
-        plt.title('Histogram of Spin Stabilize Times')
-
-        # Sun pointing time after spin stabilization
-        plt.subplot(2, 1, 2)
-        sun_point_times_minus_spin_stabilize_times = [sun_point_times[i] - spin_stabilize_times[i] for i in range(len(spin_stabilize_times))]
-        plt.hist(sun_point_times_minus_spin_stabilize_times, bins=20, alpha=0.7, label='Sun Point Time')
-        plt.xlabel(time_label)
-        plt.ylabel('Frequency')
-        plt.legend()
-        plt.title('Histogram of Sun Point After SS Times')
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.plot_dir, "spin_stabilize_sun_point_histogram_separate.png"))
-        plt.close()
+        pointing_plots(pyparams, data_dicts, self.trials, self.trials_dir, self.plot_dir)
         # ==========================================================================
         # Reaction Wheel Speed and Torque
         num_RWs = pyparams["reaction_wheels"]["N_rw"]
@@ -397,7 +247,7 @@ class MontecarloPlots:
         itm.figure()
         for i, (trial_number, _) in enumerate(filepaths):
             rw_speed = [data_dicts[i]["omega_RW_" + str(j) + " [rad/s]"] for j in range(num_RWs)]
-            rw_speed_labels = [f"RW_{j}" for j in range(num_RWs)]
+            rw_speed_labels = [f"RW_{j} [rad/s]" for j in range(num_RWs)]
             torque_rw = [data_dicts[i]["T_RW_" + str(j) + " [Nm]"] for j in range(num_RWs)]
             rw_torque_labels = [f"Torque_RW_{j}" for j in range(num_RWs)]
             rw_speed_torque = rw_speed + torque_rw
@@ -461,7 +311,7 @@ class MontecarloPlots:
                 )
                 orb_ang_dir = np.cross(eci_pos, eci_vel)
                 orb_ang_dir = orb_ang_dir / np.linalg.norm(orb_ang_dir)
-                orb_ang_dir = Re2b @ orb_ang_dir
+                orb_ang_dir = RE2b @ orb_ang_dir
                 sun_pos = np.array(
                     [
                         data_dicts[i]["rSun_x ECI [m]"][j],
@@ -469,6 +319,7 @@ class MontecarloPlots:
                         data_dicts[i]["rSun_z ECI [m]"][j],
                     ]
                 )
+                sun_pos = RE2b @ sun_pos
                 if np.dot(sun_pos, orb_ang_dir) < 0:
                     orb_ang_dir = -orb_ang_dir
                 orb_angle = np.rad2deg(np.arccos(np.dot(orb_ang_dir, G_rw_b)))

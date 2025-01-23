@@ -61,7 +61,6 @@ def rotmat2quat(R):
 
     return q
 
-
 def Left(q):
     Q = np.zeros((4, 4))
     s = q[0]
@@ -111,9 +110,9 @@ def quat_from_two_vectors(v1: np.ndarray, v2: np.ndarray):
     v1 = v1 / np.linalg.norm(v1)
     v2 = v2 / np.linalg.norm(v2)
     z = v1
-    x = np.cross(v1, v2)
-    x = x / np.linalg.norm(x)
-    y = np.cross(z, x)
+    y = np.cross(z, v2)
+    y = y / np.linalg.norm(y)
+    x = -np.cross(y, z)
     
     R = np.vstack((x, y, z)).T
     return rotmat2quat(R)
