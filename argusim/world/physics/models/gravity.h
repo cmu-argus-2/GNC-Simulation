@@ -17,6 +17,13 @@ double R_earth = 6.378137e6;
 Vector3 gravitational_acceleration(const Vector3 r);
 
 /**
+ * @brief Computes gravity gradient torque
+ * 
+ * @return Gravity gradient torque vector [UNITS: Nm]
+ */
+Vector3 gravity_gradient_torque();
+
+/**
  * @brief Computes gravitational acceleration asssuming a spherical Earth given ECI position
  * 
  * @param r : velocity vector in ECI [UNITS: m]

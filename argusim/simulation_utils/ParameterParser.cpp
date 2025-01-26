@@ -60,6 +60,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
 
+    // Attitude perturbation properties
+    useDT = params["useDragTorque"].as<bool>();
+    useGG = params["useGravityGradient"].as<bool>();
+
     // Reaction Wheel
     num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
     G_rw_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["reaction_wheels"]["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);

@@ -21,6 +21,11 @@ Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, 
     return acceleration;
 }
 
+Vector3 drag_torque() {
+    // TODO: Write drag torque equations
+    return Vector3::Zero();
+}
+
 double density(const Vector3 r, double t_J2000) {
     // Load all kernels
     loadAllKernels();

@@ -24,7 +24,9 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
 {
 
     auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, t_J2000);
-    xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, sc.I_rw, sc.I_sat, sc.MTB, t_J2000);
+    xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
+                                sc.I_rw, sc.I_sat, sc.MTB, t_J2000,
+                                sc.useDT, sc.useGG);
 
     return xdot;
 }
@@ -60,7 +62,8 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 
 VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
                              const Eigen::MatrixXd& G_rw_b, const Eigen::MatrixXd& G_mtb_b,
-                             double I_rw, const Matrix_3x3 I_sat, Magnetorquer MTB, double t_J2000)
+                             double I_rw, const Matrix_3x3 I_sat, Magnetorquer MTB, double t_J2000,
+                             bool useDT, bool useGG)
 {
     
     // Assert matrix sizes
@@ -80,6 +83,8 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     Vector3 omega{x(10), x(11), x(12)};
     VectorXd omega_rw(num_RWs);
     omega_rw = x(Eigen::seqN(19, num_RWs));
+
+    Vector3 tau;
     
     /* Attitude Dynamics */
     Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
@@ -89,13 +94,23 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     // Reaction Wheels
     auto h_rw = I_rw*omega_rw;
     auto tau_rw = u(Eigen::seqN(num_MTBs, num_RWs));
+    tau = -G_rw_b*tau_rw;
     
     // Magnetorquers
-    Vector3 tau_mtb = MTB.getTorque(u(Eigen::seqN(0,num_MTBs)), q, MagneticField(r, t_J2000));
+    tau += MTB.getTorque(u(Eigen::seqN(0,num_MTBs)), q, MagneticField(r, t_J2000));
+    // Vector3 tau_mtb = MTB.getTorque(u(Eigen::seqN(0,num_MTBs)), q, MagneticField(r, t_J2000));
+
+    /* Perturbations */
+    if (useDT) {
+        tau += drag_torque();
+    }
+    if (useGG) {
+        tau += gravity_gradient_torque();
+    }
 
     // Gyrostat Equation
     Vector3 h_sc = I_sat*omega + G_rw_b*h_rw;
-    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) - G_rw_b*tau_rw + tau_mtb);
+    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) + tau);
     
     // Reaction wheel speeds
     auto omega_dot_rw = tau_rw/I_rw;

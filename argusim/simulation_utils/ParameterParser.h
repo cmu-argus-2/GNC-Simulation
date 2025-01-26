@@ -75,7 +75,9 @@ class Simulation_Parameters {
     double dt;                         // [s]
     double sim_start_time;             // [s] measured relative to J2000
     bool useDrag; // set to False to deactivate drag calcs
-    bool useSRP; // set to False to deactivate SRP calcs
+    bool useSRP;  // set to False to deactivate SRP calcs
+    bool useDT;   // set to False to deactivate Drag Torque calcs
+    bool useGG;   // set to False to deactivate Gravity Gradient calcs
 
     /* Satellite Initialization */
     double semimajor_axis; // [m]

@@ -10,6 +10,11 @@ Vector3 gravitational_acceleration(const Vector3 r)
     return spherical_acceleration(r) + J2_perturbation(r);
 }
 
+Vector3 gravity_gradient_torque() {
+    // TODO: Write gravity gradient torque equations
+    return Vector3::Zero();
+}
+
 Vector3 spherical_acceleration(const Vector3 r)
 {
     Vector3 acceleration = - (mu/pow(r.norm(), 3.0))*r;
