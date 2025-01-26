@@ -147,7 +147,6 @@ class BaselineNadirPointingController(ControllerAlgorithm):
             Katt[1,4] = Kd
             Katt[2,5] = Kdrw
             # repoint if strayed too far
-            """"""
             if np.linalg.norm(err_att[:2]) > np.deg2rad(10):
                 Kp = Kd ** 2 / (2 * self.J[0,0])
                 Katt[0,0] = Kp
@@ -164,57 +163,7 @@ class BaselineNadirPointingController(ControllerAlgorithm):
             # if np.linalg.norm(self.target_rw_ang_vel - rw_ang_vel) <= 3*2*np.pi:
             u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],u_wrw))
             u_rw  = -uatt[2] + cross_prod * u_wrw
-            """
-            uatt = self.k_mtb_att @ np.hstack((-err_att,ref_ang_vel - angular_velocity))
-            u_wrw = self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
-            cross_prod = np.linalg.norm(np.cross(magfield_hat, self.G_rw_b.flatten()))
             
-            # if np.linalg.norm(self.target_rw_ang_vel - rw_ang_vel) <= 3*2*np.pi:
-            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],0.0*uatt[2]))
-            u_rw  = uatt[2]
-            # else:
-            u_mtb += Bhat_pseudo_inv @ np.hstack((0.0*uatt[:2],-u_wrw))
-            u_rw  += 0.0*uatt[2] + cross_prod * u_wrw
-            """
-            """
-            K = np.array([[1.26322987722350e-05, 2.85536271674193e-05, 2.26742669931139e-09, 0.000140541115545958, 9.57380891354050e-06, 2.27286889350721e-09],
-              [-1.26393268138829e-05, 5.04893756643452e-07, 1.30444751984425e-08, -1.43163432947863e-05, 3.33078838612707e-05, 1.32317503719026e-08],
-              [-2.60896803980072e-05, 1.35806914580169e-05, 3.35298647532635e-08, 2.49175624152579e-05, 8.72483078823100e-05, 3.39995437601449e-08],
-              [-0.000101101468577644, 5.26688420761219e-05, -0.0999999350224099, 9.70055690808513e-05, 0.000338471556257369, -0.101528254381368]])
-            uatt = K @ np.hstack((-err_att, -angular_velocity))
-            u_wrw = self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
-            cross_prod = np.linalg.norm(np.cross(magfield_hat, self.G_rw_b.flatten()))
-            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],uatt[2]-u_wrw))
-            u_rw  = uatt[3] + cross_prod * u_wrw
-            """
-
-            """
-            Bmat = np.zeros((4,4))
-            Bmat[:3,:3] = Bhat_pseudo_inv
-            Bmat[:3,-1] = self.G_rw_b.flatten()
-            
-            Bmat[-1,:3] = Bmat[:3,:] @ np.hstack((-self.G_rw_b.flatten(),cross_prod))
-
-            alloc_mat = np.zeros((4,3))
-            if np.abs(np.dot(magnetic_field, self.G_rw_b.flatten())) / magnetic_field_norm < 1e-6: 
-                # [TODO]: fix this. No control over rw speed and another axis
-                alloc_mat[:,:3] = np.linalg.pinv(Bmat[:3,:])
-            else:
-                alloc_mat = np.linalg.pinv(Bmat)
-            # attitude control torque
-            uatt = alloc_mat[:,:3] @ self.k_mtb_att @ np.hstack((err_att, -angular_velocity))
-
-            # clipping the torques
-            uatt[:3] = self.clip_total_dipole_moment(uatt[:3])
-            uatt[3] = self.clip_rw_torque(uatt[3], rw_ang_vel)
-            rwlloc = Bmat @ np.hstack((-self.G_rw_b.flatten(),1))
-            rwlloc = rwlloc / (np.linalg.norm(rwlloc) ** 2)
-            u_wrw = alloc_mat[:,3] * self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
-
-            u_mtb = u_wrw[:3]  + uatt[:3]
-            u_rw  = u_wrw[3]   + uatt[3]
-            """
-
 
         u_mtb = self.clip_total_dipole_moment(u_mtb)
         u_rw = self.clip_rw_torque(u_rw, rw_ang_vel)
