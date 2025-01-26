@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 18000 # 96000 # [s]
+MAX_TIME: 72000 # 96000 # [s]
 dt: 1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
@@ -53,8 +53,8 @@ initialization:
      initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
      initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
 
-     start_spin_stabilized: True
-     start_ss_pointed: True
+     start_spin_stabilized: False
+     start_ss_pointed: False
      start_ss_pointing: "Nadir" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
@@ -173,15 +173,15 @@ gyroscope:
 algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 1.0e+08 # 0.0028
 
-mtb_att_feedback_gains: [[0.00001, 0.0, 0.0, 0.000014,  0.0, 0.0],
-                         [0.0, 0.00001, 0.0,  0.0, 0.000014, 0.0],
-                         [0.0, 0.0, 0.00001,  0.0,  0.0, 0.000014]]
+mtb_att_feedback_gains: [[0.000001, 0.0, 0.0, 0.0000056,  0.0, 0.0],
+                         [0.0, 0.000001, 0.0,  0.0, 0.0000056, 0.0],
+                         [0.0, 0.0, 0.000001,  0.0,  0.0, 0.000005]]
 rw_att_feedback_gains: [0.07071, 0.00028]
-rw_vel_gain: 1.0 # 6.5e-7
+rw_vel_gain: 0.0050 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Nadir" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 2.0 # [deg/s]
-nom_rw_ang_vel: 0.0 # 1333.0 # [deg/s]
+nom_rw_ang_vel: 15000.0 # 1333.0 # 0.0 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
 spin_stab_tol: 15.0 # [deg]

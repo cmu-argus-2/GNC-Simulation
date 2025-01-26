@@ -244,7 +244,7 @@ class Simulator:
         if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + self.sunSensor.dt):
             
             # TODO simulate RTC and use its drifting time
-            true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
+            true_sun_ray_ECI = np.copy(self.true_state[self.Idx["X"]["SUN_POS"]])
             true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
             true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
             
@@ -259,7 +259,7 @@ class Simulator:
 
         got_B = False
         if current_time >= self.last_magnetometer_measurement_time + self.magnetometer.dt:
-            true_Bfield_ECI = self.true_state[self.Idx["X"]["MAG_FIELD"]]
+            true_Bfield_ECI = np.copy(self.true_state[self.Idx["X"]["MAG_FIELD"]])
             true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
             self.measurements[self.Idx["Y"]["MAG"]] = measurement[9:12]
             self.last_magnetometer_measurement_time = current_time
@@ -273,7 +273,7 @@ class Simulator:
         # Propagate on Gyro
         got_Gyr = False
         if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
-            true_omega_body_wrt_ECI_in_body = self.true_state[10:13]
+            true_omega_body_wrt_ECI_in_body = np.copy(self.true_state[10:13])
             self.measurements[self.Idx["Y"]["GYRO"]] = self.gyro.update(true_omega_body_wrt_ECI_in_body)
             self.last_gyro_measurement_time = current_time
 
@@ -304,7 +304,7 @@ class Simulator:
         
 
         # Run Attitude Estimation
-        if self.bypass_estimator:
+        if not self.bypass_estimator:
             # Sun Sensor update
             if got_sun:
                 self.attitude_ekf.sun_sensor_update(

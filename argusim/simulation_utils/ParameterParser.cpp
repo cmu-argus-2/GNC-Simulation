@@ -154,7 +154,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         if (start_ss_pointing == "Nadir") {
             initial_attitude = nadirPointingAttitude(initial_true_state, dev);
         } else if (start_ss_pointing == "Sun") {
-            initial_attitude = sunPointingAttitude(initial_true_state, sim_start_time);
+            initial_attitude = sunPointingAttitude(initial_true_state, dev);
         } else {
             throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
         }

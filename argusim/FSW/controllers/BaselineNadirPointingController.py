@@ -57,6 +57,7 @@ class BaselineNadirPointingController(ControllerAlgorithm):
         rw_ang_vel       = est_ctrl_states[Idx["X"]["RW_SPEED"]]
         orbit_vector     = np.cross(zenith_vector, cross_vector)
         orbit_vector     = orbit_vector / np.linalg.norm(orbit_vector)
+        
         if np.dot(orbit_vector,sun_vector) < 0:
             orbit_vector = -orbit_vector
 
@@ -109,27 +110,84 @@ class BaselineNadirPointingController(ControllerAlgorithm):
 
             axis, angle = quat_to_axis_angle(q_target)
             """
-            Rtgt = np.vstack((orbit_vector,nadir_vector, np.cross(orbit_vector, nadir_vector))).T
-            R_ref = np.vstack((self.G_rw_b.flatten(), self.nadir_cam_dir, np.cross(self.G_rw_b.flatten(), self.nadir_cam_dir))).T
-            R = Rtgt @ np.linalg.pinv(R_ref)
+            # Re2b = self.attitude_ekf.get_ECI_R_b().as_matrix()
+            vtgt1 = orbit_vector / np.linalg.norm(orbit_vector)
+            vtgt2 = np.cross(orbit_vector, nadir_vector) / np.linalg.norm(np.cross(orbit_vector, nadir_vector))
+            vtgt3 = np.cross(vtgt1, vtgt2) / np.linalg.norm(np.cross(vtgt1, vtgt2))
+            Rtgt = np.vstack((vtgt1,vtgt2, vtgt3)).T
+            vref1 = self.G_rw_b.flatten() / np.linalg.norm(self.G_rw_b.flatten())
+            vref2 = np.cross(self.G_rw_b.flatten(), self.nadir_cam_dir) / np.linalg.norm(np.cross(self.G_rw_b.flatten(), self.nadir_cam_dir))
+            vref3 = np.cross(vref1, vref2) / np.linalg.norm(np.cross(vref1, vref2))
+            R_ref = np.vstack((vref1,vref2, vref3)).T
+            
+            R = Rtgt @ R_ref.T
             q =  rotmat2quat(R)
             axis, angle = quat_to_axis_angle(q)
-            
-            if angle > np.pi:
-                angle -= 2 * np.pi
-            elif angle < -np.pi:
-                angle += 2 * np.pi
             err_att = axis * angle
+            for i in range(3):
+                if err_att[i] > np.pi:
+                    err_att[i] -= 2 * np.pi
+                elif err_att[i] < -np.pi:
+                    err_att[i] += 2 * np.pi
             # PD controller
             Bhat = crossproduct(magnetic_field)
             magnetic_field_norm = np.linalg.norm(magnetic_field, ord=2)
             magfield_hat = magnetic_field / magnetic_field_norm
             Bhat_pseudo_inv = Bhat / (magnetic_field_norm ** 2)
-            uatt = self.k_mtb_att @ np.hstack((-self.J @ err_att, - self.J @ angular_velocity))
+            ref_ang_vel = orbit_vector*2*np.pi/86400.0
+            if np.abs(rw_ang_vel) > 10*2*np.pi:
+                Kd = self.rw_J *rw_ang_vel / np.sqrt(self.J[0,0]*self.J[1,1])
+            else:
+                Kd = 0.0
+            # if angle grows too large, torque closer to orbit normal
+            Kdrw  = 0.5 * self.J[2,2]
+            Katt = np.zeros((3,6))
+            Katt[2,2] = (Kdrw ** 2) / (2.0 * self.J[2,2])
+            Katt[0,3] = Kd
+            Katt[1,4] = Kd
+            Katt[2,5] = Kdrw
+            # repoint if strayed too far
+            """"""
+            if np.linalg.norm(err_att[:2]) > np.deg2rad(10):
+                Kp = Kd ** 2 / (2 * self.J[0,0])
+                Katt[0,0] = Kp
+                Katt[1,1] = Kp
+            
+            uatt = Katt @ np.hstack((err_att,ref_ang_vel - angular_velocity))
+            if np.linalg.norm(self.target_rw_ang_vel - rw_ang_vel) >= 3*2*np.pi:
+                u_wrw = self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
+            else:
+                u_wrw = 0.0
+            
+            cross_prod = np.linalg.norm(np.cross(magfield_hat, self.G_rw_b.flatten()))
+            
+            # if np.linalg.norm(self.target_rw_ang_vel - rw_ang_vel) <= 3*2*np.pi:
+            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],u_wrw))
+            u_rw  = -uatt[2] + cross_prod * u_wrw
+            """
+            uatt = self.k_mtb_att @ np.hstack((-err_att,ref_ang_vel - angular_velocity))
             u_wrw = self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
             cross_prod = np.linalg.norm(np.cross(magfield_hat, self.G_rw_b.flatten()))
-            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],-u_wrw))
-            u_rw  = uatt[2] # + cross_prod * u_wrw
+            
+            # if np.linalg.norm(self.target_rw_ang_vel - rw_ang_vel) <= 3*2*np.pi:
+            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],0.0*uatt[2]))
+            u_rw  = uatt[2]
+            # else:
+            u_mtb += Bhat_pseudo_inv @ np.hstack((0.0*uatt[:2],-u_wrw))
+            u_rw  += 0.0*uatt[2] + cross_prod * u_wrw
+            """
+            """
+            K = np.array([[1.26322987722350e-05, 2.85536271674193e-05, 2.26742669931139e-09, 0.000140541115545958, 9.57380891354050e-06, 2.27286889350721e-09],
+              [-1.26393268138829e-05, 5.04893756643452e-07, 1.30444751984425e-08, -1.43163432947863e-05, 3.33078838612707e-05, 1.32317503719026e-08],
+              [-2.60896803980072e-05, 1.35806914580169e-05, 3.35298647532635e-08, 2.49175624152579e-05, 8.72483078823100e-05, 3.39995437601449e-08],
+              [-0.000101101468577644, 5.26688420761219e-05, -0.0999999350224099, 9.70055690808513e-05, 0.000338471556257369, -0.101528254381368]])
+            uatt = K @ np.hstack((-err_att, -angular_velocity))
+            u_wrw = self.k_mtb_rw * self.rw_J * (self.target_rw_ang_vel - rw_ang_vel)
+            cross_prod = np.linalg.norm(np.cross(magfield_hat, self.G_rw_b.flatten()))
+            u_mtb = Bhat_pseudo_inv @ np.hstack((uatt[:2],uatt[2]-u_wrw))
+            u_rw  = uatt[3] + cross_prod * u_wrw
+            """
+
             """
             Bmat = np.zeros((4,4))
             Bmat[:3,:3] = Bhat_pseudo_inv
