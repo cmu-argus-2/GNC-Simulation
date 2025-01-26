@@ -200,7 +200,8 @@ MEKF:
 # -----------------------------------------------------------------------------------------------------------
 PlotFlags:
      sensor_measurements: True 
-     true_states: True
+     true_state_plots: True
+     actuator_plots: True
      att_animation : True
      EKF_plots : False
 debugFlags:
