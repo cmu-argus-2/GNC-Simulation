@@ -186,10 +186,6 @@ controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
 spin_stab_tol: 15.0 # [deg]
 point_tol: 10.0 # [deg]
-debugFlags:
-  bypass_controller: False # Open-loop
-  bypass_estimator: True  # Perfect state knowledge
-  bypass_sensors: True  # Perfect measurements
 # -----------------------------------------------------------------------------------------------------------
 # Attitude Estimation Parameters
 # -----------------------------------------------------------------------------------------------------------
@@ -199,3 +195,15 @@ MEKF:
      sigma_gyro_bias_deriv: 0.00034  # [(rad/s)/sqrt(s))]
      sigma_sunsensor_direction: 0.0524  # [rad]
      sigma_magnetometer_direction: 0.1  # [rad]
+# -----------------------------------------------------------------------------------------------------------
+# Plotting and Debugging
+# -----------------------------------------------------------------------------------------------------------
+PlotFlags:
+     sensor_measurements: True 
+     true_states: True
+     att_animation : True
+     EKF_plots : False
+debugFlags:
+     bypass_controller: False # Open-loop
+     bypass_estimator: True  # Perfect state knowledge
+     bypass_sensors: True  # Perfect measurements

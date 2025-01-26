@@ -12,6 +12,8 @@ from argusim.visualization.plotter.plot_helper import (
 from argusim.visualization.plotter.isolated_trace import itm
 from argusim.visualization.plotter.parse_bin_file import parse_bin_file_wrapper
 from argusim.visualization.plotter.plot_pointing import pointing_plots
+from argusim.visualization.plotter.actuator_plots import actuator_plots
+from argusim.visualization.plotter.att_animation import att_animation
 from argusim.build.world.pyphysics import ECI2GEOD
 from argusim.world.math.quaternions import quatrotation
 from argusim.actuators import Magnetorquer
@@ -232,138 +234,24 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
         save_figure(itm.gcf(), self.plot_dir, "ECI_sun_direction.png", self.close_after_saving)
+        
         # ==========================================================================
         # Plot the angle between the angular momentum and the sun vector with the major inertia axis
         # load inertia from config file (temp solution)
         with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
             pyparams = yaml.safe_load(f)       
-
-        pointing_plots(pyparams, data_dicts, self.trials, self.trials_dir, self.plot_dir)
+        pyparams["trials"]             = self.trials
+        pyparams["trials_dir"]         = self.trials_dir
+        pyparams["plot_dir"]           = self.plot_dir
+        pyparams["close_after_saving"] = self.close_after_saving
         # ==========================================================================
-        # Reaction Wheel Speed and Torque
-        num_RWs = pyparams["reaction_wheels"]["N_rw"]
+        # Pointing Plots: Controller target versus real attitude
+        pointing_plots(pyparams, data_dicts, filepaths)
 
-        # G_rw_b = np.array(pyparams["rw_orientation"]).reshape(3, num_RWs)
-        itm.figure()
-        for i, (trial_number, _) in enumerate(filepaths):
-            rw_speed = [data_dicts[i]["omega_RW_" + str(j) + " [rad/s]"] for j in range(num_RWs)]
-            rw_speed_labels = [f"RW_{j} [rad/s]" for j in range(num_RWs)]
-            torque_rw = [data_dicts[i]["T_RW_" + str(j) + " [Nm]"] for j in range(num_RWs)]
-            rw_torque_labels = [f"Torque_RW_{j}" for j in range(num_RWs)]
-            rw_speed_torque = rw_speed + torque_rw
-            rw_speed_torque_labels = rw_speed_labels + rw_torque_labels
-            multiPlot(
-            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
-            rw_speed_torque,
-            seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(title="Reaction Wheel Speed and Torque", ylabels=rw_speed_torque_labels)
-        save_figure(itm.gcf(), self.plot_dir, "rw_w_T_true.png", self.close_after_saving)
         # ==========================================================================
-        # Magnetorquer dipole moment
-        num_MTBs = pyparams["magnetorquers"]["N_mtb"]
-        Magnetorquers = [Magnetorquer(pyparams["magnetorquers"], IdMtb) for IdMtb in range(num_MTBs)]
-        itm.figure()
-        for i, (trial_number, _) in enumerate(filepaths):
-            volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
-            mtb_dipole_moment = np.zeros((num_MTBs, len(data_dicts[i]["Time [s]"])))
-            for j in range(len(data_dicts[i]["Time [s]"])):
-                for k in range(num_MTBs):
-                    Magnetorquers[k].set_voltage(volt_magnetorquer[k][j])
-                    mtb_dipole_moment[k][j] = np.linalg.norm(Magnetorquers[k].get_dipole_moment())
-
-            mtb_dipole_moment_labels = [f"MTB_{j} [Cm]" for j in range(num_MTBs)]
-            multiPlot(
-            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
-            mtb_dipole_moment,
-            seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(title="Magnetorquer Dipole Moment [C*m]", ylabels=mtb_dipole_moment_labels)
-        save_figure(itm.gcf(), self.plot_dir, "mtb_dipole_moment_true.png", self.close_after_saving)
-        # ==========================================================================
-        # Nadir Pointing
-        # Orbit Pointing
-        G_rw_b = np.array(pyparams["reaction_wheels"]["rw_orientation"]).reshape(3, num_RWs)
-        nadir_cam_dir = np.array(pyparams["nadir_cam_dir"])
-        itm.figure()
-        for i, (trial_number, _) in enumerate(filepaths):
-            nadir_cam_dir_angle = []
-            rw_orb_dir_angle = []
-            for j in range(len(data_dicts[i]["Time [s]"])):
-                quat = np.array(
-                    [data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]]
-                )
-                RE2b = quatrotation(quat).T
-                eci_pos = np.array(
-                    [data_dicts[i]["r_x ECI [m]"][j], data_dicts[i]["r_y ECI [m]"][j], data_dicts[i]["r_z ECI [m]"][j]]
-                )
-                nadir_vector = -RE2b @ eci_pos
-                nadir_vector = nadir_vector / np.linalg.norm(nadir_vector)
-                cam_angle = np.rad2deg(np.arccos(np.dot(nadir_cam_dir, nadir_vector)))
-                nadir_cam_dir_angle.append(cam_angle)
-
-                eci_vel = np.array(
-                    [
-                        data_dicts[i]["v_x ECI [m/s]"][j],
-                        data_dicts[i]["v_y ECI [m/s]"][j],
-                        data_dicts[i]["v_z ECI [m/s]"][j],
-                    ]
-                )
-                orb_ang_dir = np.cross(eci_pos, eci_vel)
-                orb_ang_dir = orb_ang_dir / np.linalg.norm(orb_ang_dir)
-                orb_ang_dir = RE2b @ orb_ang_dir
-                sun_pos = np.array(
-                    [
-                        data_dicts[i]["rSun_x ECI [m]"][j],
-                        data_dicts[i]["rSun_y ECI [m]"][j],
-                        data_dicts[i]["rSun_z ECI [m]"][j],
-                    ]
-                )
-                sun_pos = RE2b @ sun_pos
-                if np.dot(sun_pos, orb_ang_dir) < 0:
-                    orb_ang_dir = -orb_ang_dir
-                orb_angle = np.rad2deg(np.arccos(np.dot(orb_ang_dir, G_rw_b)))
-                rw_orb_dir_angle.append(orb_angle)
-
-            multiPlot(
-            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
-            [nadir_cam_dir_angle, rw_orb_dir_angle],
-            seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(
-            title="Nadir and Orbit Ang Mom alignment", ylabels=["Nadir Cam Dir Angle [deg]", "Orbit Dir Angle [deg]"]
-        )
-        save_figure(itm.gcf(), self.plot_dir, "nad_orb_point_true.png", self.close_after_saving)
-        # ==========================================================================
-        # Total Body frame torque of magnetorquers
-
-        itm.figure()
-        for i, (trial_number, _) in enumerate(filepaths):
-            volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
-            mag_field = np.array(
-                [data_dicts[i]["xMag ECI [T]"], data_dicts[i]["yMag ECI [T]"], data_dicts[i]["zMag ECI [T]"]]
-            )
-            quat = np.array([data_dicts[i]["q_w"], data_dicts[i]["q_x"], data_dicts[i]["q_y"], data_dicts[i]["q_z"]])
-            torque_magnetorquer = np.zeros((3, len(data_dicts[i]["Time [s]"])))
-            for j in range(len(data_dicts[i]["Time [s]"])):
-                RE2b = quatrotation(quat[:, j]).T
-                mag_field_loc = RE2b @ mag_field[:, j]
-                for k in range(num_MTBs):
-                    Magnetorquers[k].set_voltage(volt_magnetorquer[k][j])
-                torque_magnetorquer[:, j] = np.sum(
-                    [Magnetorquers[k].get_torque(mag_field_loc) for k in range(num_MTBs)], axis=0
-                )
-
-            total_torque = torque_magnetorquer.tolist()
-            multiPlot(
-            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
-            total_torque,
-            seriesLabel=f"_{trial_number}",
-            )
-        annotateMultiPlot(
-            title="Total Magnetorquer Body Frame Torque [Nm]", ylabels=["T_x [Nm]", "T_y [Nm]", "T_z [Nm]"]
-        )
-        save_figure(itm.gcf(), self.plot_dir, "total_mtb_body_frame_torque.png", self.close_after_saving)
+        # Actuator Plots: Reaction Wheel Speed and Torque, Magnetorquer Torque
+        actuator_plots(pyparams, data_dicts, filepaths)
+        
         # ========================= True gyro bias plots =========================
         filepaths = self._get_files_across_trials("gyro_bias_true.bin")
 
@@ -385,6 +273,10 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_true.png", self.close_after_saving)
+
+        # ==========================================================================
+        # Attitude Animation
+        att_animation(pyparams, data_dicts)
 
     def sensor_measurement_plots(self):
         # ======================= Gyro measurement plots =======================
@@ -663,58 +555,3 @@ class MontecarloPlots:
             )
         annotateMultiPlot(title="Estimated Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
         save_figure(itm.gcf(), self.plot_dir, "gyro_bias_estimated.png", self.close_after_saving)
-
-    # ==========================================================================
-    #  Video of attitude (very long, needs flag to enable)
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim([-1, 1])
-    ax.set_ylim([-1, 1])
-    ax.set_zlim([-1, 1])
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_title('Attitude Animation in ECI with Sun Vector')
-
-    quiver_nadir = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='r', label='Nadir')
-    quiver_mag   = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='g', label='Mag Field')
-    quiver_sp    = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='b', label='Solar Panels/+Z')
-    # quiver_x2 = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, label='Min J Axis')
-    # quiver_y2 = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, label='Med J Axis')
-    quiver_im = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='k', label='Max J Axis')
-    sun_quiver = ax.quiver(0, 0, 0, 0, 0, 0, length=1.0, normalize=True, color='y', label='Sun Vector')
-    ax.legend([quiver_nadir, quiver_mag, quiver_sp, quiver_im, sun_quiver], ['Nadir', 'Mag Field', 'Solar Panels/+Z', 'Max J Axis', 'Sun Vector'])
-
-    def update_quiver(num, data_dicts, quiver_nadir, quiver_mag, quiver_sp, quiver_im, sun_quiver):
-        quat = np.array([data_dicts[0]["q_w"][num], data_dicts[0]["q_x"][num], data_dicts[0]["q_y"][num], data_dicts[0]["q_z"][num]])
-        
-        Re2b = quatrotation(quat)
-        nadir = -np.array([data_dicts[0]["r_x ECI [m]"][num], data_dicts[0]["r_y ECI [m]"][num], data_dicts[0]["r_z ECI [m]"][num]])
-        nadir = nadir / np.linalg.norm(nadir)
-        mag_field = np.array([data_dicts[0]["xMag ECI [T]"][num], data_dicts[0]["yMag ECI [T]"][num], data_dicts[0]["zMag ECI [T]"][num]])
-        mag_field = mag_field / np.linalg.norm(mag_field)
-        body_z = Re2b @ G_rw_b.flatten()
-        # inertia_min = Re2b @ eigenvectors[:, idx[0]]
-        # inertia_med = Re2b @ eigenvectors[:, idx[1]]
-        inertia_max = Re2b @ major_axis
-        sun_vector_eci = np.array([data_dicts[0]["rSun_x ECI [m]"][num], data_dicts[0]["rSun_y ECI [m]"][num], data_dicts[0]["rSun_z ECI [m]"][num]])
-        sun_vector_eci = sun_vector_eci / np.linalg.norm(sun_vector_eci)
-
-        quiver_nadir.set_segments([[[0, 0, 0], nadir]])
-        quiver_mag.set_segments([[[0, 0, 0], mag_field]])
-        quiver_sp.set_segments([[[0, 0, 0], body_z]])
-        quiver_im.set_segments([[[0, 0, 0], inertia_max]])
-        sun_quiver.set_segments([[[0, 0, 0], sun_vector_eci]])
-
-        return quiver_nadir, quiver_mag, quiver_sp, quiver_im, sun_quiver
-    
-    fps = 24
-    max_duration = 15  # seconds
-    max_frames = fps * max_duration
-    total_frames = len(data_dicts[0]["Time [s]"])
-    step = max(1, total_frames // max_frames)
-
-    ani = FuncAnimation(fig, update_quiver, frames=range(0, total_frames, step), fargs=(data_dicts, quiver_nadir, quiver_mag, quiver_sp, quiver_im, sun_quiver), interval=1000/fps, blit=False)
-    ani.save(os.path.join(self.plot_dir, 'att_anim_BF_Sun.gif'), writer='pillow', fps=20)
-    """
