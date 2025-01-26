@@ -185,3 +185,21 @@ def plot_true_st(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
     save_figure(itm.gcf(), plot_dir, "ECI_sun_direction.png", close_after_saving)
+
+
+def plot_true_gyro_bias(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ==========================================================================
+
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.rad2deg(
+                np.array([data_dicts[i]["x [rad/s]"], data_dicts[i]["y [rad/s]"], data_dicts[i]["z [rad/s]"]])
+            ),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
+    save_figure(itm.gcf(), plot_dir, "gyro_bias_true.png", close_after_saving)

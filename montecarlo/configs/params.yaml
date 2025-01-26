@@ -201,8 +201,9 @@ MEKF:
 PlotFlags:
      sensor_measurements: True 
      true_state_plots: True
+     pointing_plots: True
      actuator_plots: True
-     att_animation : True
+     att_animation : False
      MEKF_plots : False
 debugFlags:
      bypass_controller: False # Open-loop
