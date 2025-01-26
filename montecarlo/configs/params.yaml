@@ -203,7 +203,7 @@ PlotFlags:
      true_state_plots: True
      actuator_plots: True
      att_animation : True
-     EKF_plots : False
+     MEKF_plots : False
 debugFlags:
      bypass_controller: False # Open-loop
      bypass_estimator: True  # Perfect state knowledge

@@ -41,7 +41,7 @@ def att_animation(pyparams, data_dicts):
     trials_dir         = pyparams["trials_dir"]
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
-    J = np.array(pyparams[pyparams.index("inertia") + 1]).reshape((3,3))
+    J = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))
     eigenvalues, eigenvectors = np.linalg.eig(J)
     idx = np.argsort(eigenvalues)
     major_axis = eigenvectors[:, idx[2]]

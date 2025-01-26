@@ -129,6 +129,8 @@ def plot_state_est_cov(pyparams, data_dicts, filepaths):
 
 
 def EKF_err_plots(pyparams, data_dicts):
+    if not pyparams["PlotFlags"]["MEKF_plots"]:
+        return
     trials = pyparams["trials"] 
     close_after_saving = pyparams["close_after_saving"] 
     plot_dir = pyparams["plot_dir"] 
@@ -190,6 +192,8 @@ def EKF_err_plots(pyparams, data_dicts):
     return pyparams
 
 def EKF_st_plots(pyparams, data_dicts, filepaths):
+    if not pyparams["PlotFlags"]["MEKF_plots"]:
+        return
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
     # ==========================================================================
