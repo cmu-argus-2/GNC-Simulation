@@ -25,7 +25,8 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
 
     auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, t_J2000);
     xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
-                                sc.I_rw, sc.I_sat, sc.MTB, t_J2000,
+                                sc.I_rw, sc.I_sat, sc.MTB, t_J2000,  
+                                sc.mass,  sc.Cd, sc.A, sc.CoPM,
                                 sc.useDT, sc.useGG);
 
     return xdot;
@@ -43,7 +44,6 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 
     // Physics Models
     Vector3 vdot = gravitational_acceleration(r);
-
     
     if (useDrag){ 
         vdot = vdot + drag_acceleration(r, v, q, t_J2000, Cd, A, mass);
@@ -63,6 +63,7 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
                              const Eigen::MatrixXd& G_rw_b, const Eigen::MatrixXd& G_mtb_b,
                              double I_rw, const Matrix_3x3 I_sat, Magnetorquer MTB, double t_J2000,
+                             double mass, double Cd, double A, const Vector3 CoPM,
                              bool useDT, bool useGG)
 {
     
@@ -102,7 +103,8 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 
     /* Perturbations */
     if (useDT) {
-        tau += drag_torque();
+        Vector3 v = x(Eigen::seqN(3, 3));
+        tau += drag_torque(r, v, q, t_J2000, Cd, A, mass, CoPM);
     }
     if (useGG) {
         tau += gravity_gradient_torque(r, I_sat);

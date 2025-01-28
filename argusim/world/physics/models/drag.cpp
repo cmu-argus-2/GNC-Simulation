@@ -6,24 +6,46 @@
 #include "SRP.h"
 
 
-Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, double t_J2000, double Cd, double A, double m)
+Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, 
+                            double t_J2000, double Cd, double A, double m)
 {
     // Get density
     double rho = density(r, t_J2000);
 
+    // [TODO]: Get more accurate earth rotation vector
+    Vector3 Omega_earth(0.0,0.0,2*M_PI / 86400);
+    Vector3 vatm = v - Omega_earth.cross(r);
+
     // Frontal Area
-    double A_f = A*FrontalAreaFactor(q, v);
+    double A_f = A*FrontalAreaFactor(q, vatm);
 
     //Drag acceleration
     Vector3 acceleration;
-    acceleration = (0.5*Cd*rho*A_f*v.norm()/m)*v;
+    acceleration = (0.5*Cd*rho*A_f*vatm.norm()/m)*vatm;
 
     return acceleration;
 }
 
-Vector3 drag_torque() {
-    // TODO: Write drag torque equations
-    return Vector3::Zero();
+Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q, 
+                    double t_J2000, double Cd, double A, double m, const Vector3 CoPM)
+{
+    // Get density
+    double rho = density(r, t_J2000);
+
+    // [TODO]: Get more accurate earth rotation vector
+    Vector3 Omega_earth(0.0,0.0,2*M_PI / 86400);
+    Vector3 vatm = v - Omega_earth.cross(r);
+
+    // Frontal Area
+    double A_f = A*FrontalAreaFactor(q, vatm);
+
+    //Drag torque
+    Vector3 torque;
+    Vector3 acceleration;
+    acceleration = (0.5*Cd*rho*A_f*vatm.norm()/m)*vatm;
+    torque       = CoPM.cross(acceleration);
+
+    return torque;
 }
 
 double density(const Vector3 r, double t_J2000) {

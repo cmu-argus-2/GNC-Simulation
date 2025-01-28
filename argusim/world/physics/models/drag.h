@@ -26,7 +26,8 @@ Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, 
  * 
  * @return drag torque in body frame [Nm]
  */
-Vector3 drag_torque();
+Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q, 
+                    double t_J2000, double Cd, double A, double m, const Vector3 CoPM);
 
 /**
  * @brief Compute atmospheric density at current time

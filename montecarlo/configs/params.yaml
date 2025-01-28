@@ -8,7 +8,7 @@ earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
-useDragTorque : False
+useDragTorque : True
 useGravityGradient : True
 
 # -----------------------------------------------------------------------------------------------------------
@@ -84,6 +84,8 @@ inertia :
      principal_axis_dev : [1,1,1]
      # [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] # stddev of principal axis inertias about nominal [kgm^2]
 
+CoPM : [0.005,-0.005,-0.005] # center of pressure with respect to center of mass of CubeSat
+CoPM_dev : 0.001 # stddev from nominal of CoPM [m]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 

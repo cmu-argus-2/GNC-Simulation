@@ -29,6 +29,9 @@ class Simulation_Parameters {
     Matrix_3x3 I_sat; // [kg.m^2]
     double A; // [m^2] face area of each facet
 
+    // Center of Pressure/Mass arm
+    Vector3 CoPM; // [m,m,m]
+
     // Drag and SRP properties
     double Cd; // [unitless]
     double CR; // [unitless]
@@ -99,9 +102,11 @@ class Simulation_Parameters {
     // Physical
     std::normal_distribution<double> mass_dist;
     std::normal_distribution<double> area_dist;
+    std::normal_distribution<double> CoPM_dist;
     std::normal_distribution<double> Ixx_dist;
     std::normal_distribution<double> Iyy_dist;
     std::normal_distribution<double> Izz_dist;
+
 
     // Actuators
     std::normal_distribution<double> rw_orientation_dist;
