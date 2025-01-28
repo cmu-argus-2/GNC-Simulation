@@ -105,7 +105,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
         tau += drag_torque();
     }
     if (useGG) {
-        tau += gravity_gradient_torque();
+        tau += gravity_gradient_torque(r, I_sat);
     }
 
     // Gyrostat Equation

@@ -17,11 +17,13 @@ double R_earth = 6.378137e6;
 Vector3 gravitational_acceleration(const Vector3 r);
 
 /**
- * @brief Computes gravity gradient torque
+ * @brief Computes gravity gradient torque given ECI position and satellite inertia matrix
  * 
+ * @param r : position vector in ECI [UNITS: m]
+ * @param I_sat : satellite inertia matrix [UNITS: kg*m^2]
  * @return Gravity gradient torque vector [UNITS: Nm]
  */
-Vector3 gravity_gradient_torque();
+Vector3 gravity_gradient_torque(const Vector3& r, const Matrix_3x3& I_sat);
 
 /**
  * @brief Computes gravitational acceleration asssuming a spherical Earth given ECI position

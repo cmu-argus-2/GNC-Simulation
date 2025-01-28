@@ -9,7 +9,7 @@ latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
 useDragTorque : False
-useGravityGradient : False
+useGravityGradient : True
 
 # -----------------------------------------------------------------------------------------------------------
 # Initialization
