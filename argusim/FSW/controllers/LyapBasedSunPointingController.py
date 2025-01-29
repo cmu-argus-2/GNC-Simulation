@@ -70,6 +70,7 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
         
         spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
         fine_sun_pointing   = (np.linalg.norm(sun_vector-(h/self.h_tgt_norm))<= np.deg2rad(10))
+        """
         coarse_sun_pointing = (np.linalg.norm(sun_vector-(h/self.h_tgt_norm))<= np.deg2rad(15))
         if not coarse_sun_pointing or not spin_stabilized:  
             self.sun_pointed = False
@@ -78,7 +79,7 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
             sun_pointing = coarse_sun_pointing
         else:
             sun_pointing = fine_sun_pointing
-
+        """
         if not spin_stabilized:
             # u = crossproduct(magnetic_field) @ (self.I_min_direction - (h/self.h_tgt_norm))
             u = crossproduct(magnetic_field) @ (self.I_min_direction*self.h_tgt_norm - h) * self.k
@@ -96,7 +97,7 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
                 u = self.ubmtb * u/np.linalg.norm(u) 
                 # element-wise division
                 # u = self.ubmtb * np.sign(u) 
-        else:
-            self.sun_pointed = True
+        # else:
+        #     self.sun_pointed = True
         
         return u.reshape(3, 1), []
