@@ -2,8 +2,8 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 100 # [s]
-dt: 0.01         # [s]
+MAX_TIME: 72000 # 96000 # [s]
+dt: 1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
@@ -13,19 +13,27 @@ useSRP : False
 # Initialization
 # -----------------------------------------------------------------------------------------------------------
 # All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
 initialization:
      semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 1 #  [%]
+     semimajor_axis_dev : 20000 #  [m]
 
      eccentricity : 0.007 
-     eccentricity_dev : 20 # [%]
+     eccentricity_dev : 0.0040 # [-] 
 
      inclination : 97.75 # [deg]
-     inclination_dev : 1 # [%]
+     inclination_dev : 0.1 # [deg]
 
      RAAN : 171 # [deg]
      RAAN_dev : 20 # [%]
 
+     disperse_LTDN : False
+     LTDN : 10:30:00 # [HH:MM:SS]
+     LTDN_min : 10:00:00 # [HH:MM:SS]
+     LTDN_max : 14:00:00 # [HH:MM:SS]
+
+     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
+     disperse_AOP : True 
      AOP : 63 # [deg]
      AOP_dev : 20 # [%]
 
@@ -41,9 +49,13 @@ initialization:
 
      # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
      # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : True
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
+     disperse_initial_angular_rate : False
+     initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
+
+     start_spin_stabilized: False
+     start_ss_pointed: False
+     start_ss_pointing: "Nadir" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
 # physical properties
@@ -60,10 +72,15 @@ area :
      min_area : 0.01 # Min area [m^2]
 
 inertia : 
-     nominal_inertia : [0.001796, 0.0, 0.000716, 
-                        0.0, 0.002081, 0.0,
-                        0.000716, 0.0, 0.002232]
-     principal_axis_dev : [20,20,20] # stddev of principal axis inertias about nominal as a % of nominal [%]
+     nominal_inertia : [0.00149, 0.0, 0.00001,
+                         0.0, 0.00147, 0.0,
+                         0.00001,   0.0, 0.00154] # 0.002]
+     # [0.00149, 0.0, 0.00014,
+     #  0.0, 0.00147, 0.0,
+     #   0.00014,   0.0, 0.00154]
+     # [Ixx, Iyy, Izz, Ixy, Iyz, Ixz] [kgm^2]
+     principal_axis_dev : [1,1,1]
+     # [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] # stddev of principal axis inertias about nominal [kgm^2]
 
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
@@ -81,8 +98,8 @@ reaction_wheels:
      rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
      rw_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector [rad]
 
-     I_rw : 6.5e-7              # kg.m^2 inertia of each reaction wheel
-     I_rw_dev : 20 # stddev from nominal I_rw as a % of nominal I_rw [%]
+     I_rw : 3.3878e-06 # 6.5e-7   # kg.m^2 inertia of each reaction wheel
+     I_rw_dev : 5 # stddev from nominal I_rw as a % of nominal I_rw [%]
 
 # -----------------------------------------------------------------------------------------------------------
 # Magnetorquers
@@ -102,9 +119,9 @@ magnetorquers:
                         0,1,0, 
                         0,0,1] # alignment axis of each magnetorquer in the body frame
      mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
-
-     mtb_resistance : 3.25e-7 # [UNITS: Ω]
-     mtb_resistance_dev : 5 # stddev from nominal resistance as a % of nominal resistance [%]
+     # 25 Ohm: expected resistance from the optimization 40 Ohm: actual resistance
+     mtb_resistance : 40 # [UNITS: Ω]
+     mtb_resistance_dev : 1 # stddev from nominal resistance as a % of nominal resistance [%]
      mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
      
 
@@ -117,11 +134,11 @@ nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sensors
 # -----------------------------------------------------------------------------------------------------------
 gps:
-     gps_pos_std : 10 # [UNITS: m]
-     gps_pos_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
+     gps_pos_std : 5 # [UNITS: m]
+     gps_pos_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
 
-     gps_vel_std : 1 # [UNITS: m/s]
-     gps_vel_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
+     gps_vel_std : 0.03 # [UNITS: m/s]
+     gps_vel_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
 
 photodiodes:
      photodiodes_dt : 1 # [s]
@@ -144,7 +161,7 @@ magnetometer:
      max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
 
 gyroscope:
-     gyro_dt : 0.1 # [UNITS: s]
+     gyro_dt : 1 # 0.1 # [UNITS: s]
      gyro_scale_factor_err_range : [-0.01, 0.01]
      gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
      gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
@@ -153,19 +170,26 @@ gyroscope:
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------
-algorithm: "Bcross" # "Lyapunov" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
-bcrossgain: 0.0028
+algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
+bcrossgain: 1.0e+08 # 0.0028
 
-mtb_att_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
-                    [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
-                    [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
-rw_att_feedback_gains: [0.7071, 0.0028]
-rw_vel_gain: 6.5e-7
+mtb_att_feedback_gains: [[0.000001, 0.0, 0.0, 0.0000056,  0.0, 0.0],
+                         [0.0, 0.000001, 0.0,  0.0, 0.0000056, 0.0],
+                         [0.0, 0.0, 0.000001,  0.0,  0.0, 0.000005]]
+rw_att_feedback_gains: [0.07071, 0.00028]
+rw_vel_gain: 0.0050 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
 pointing_target: "Nadir" # "Nadir" or "Sun"
-tgt_ss_ang_vel: 10 # [deg/s]
+tgt_ss_ang_vel: 2.0 # [deg/s]
+nom_rw_ang_vel: 15000.0 # 1333.0 # 0.0 # [deg/s]
 controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
+spin_stab_tol: 15.0 # [deg]
+point_tol: 10.0 # [deg]
+debugFlags:
+  bypass_controller: False # Open-loop
+  bypass_estimator: True  # Perfect state knowledge
+  bypass_sensors: True  # Perfect measurements
 # -----------------------------------------------------------------------------------------------------------
 # Attitude Estimation Parameters
 # -----------------------------------------------------------------------------------------------------------

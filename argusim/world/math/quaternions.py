@@ -1,5 +1,18 @@
 import numpy as np
 
+
+def quatnormalize(q: np.ndarray):
+    """
+    Normalize a quaternion.
+
+    Parameters:
+    q (np.ndarray): A quaternion represented as a numpy array of shape (4,).
+
+    Returns:
+    np.ndarray: The normalized quaternion.
+    """
+    return q / np.linalg.norm(q)
+
 """
     FUNCTION HAMILTONPRODUCT
     Computes the hamilton product q⊗v
@@ -48,12 +61,6 @@ def rotmat2quat(R):
 
     return q
 
-def q_inv(q):
-    q_inv = np.zeros_like(q)
-    q_inv[0] = q[0]
-    q_inv[1:] = -q[1:]
-    return q_inv
-
 def Left(q):
     Q = np.zeros((4, 4))
     s = q[0]
@@ -97,3 +104,33 @@ def quatrotation(q: np.ndarray):
 def Gquat(q):
     H = np.vstack((np.zeros((1, 3)), np.eye(3)))
     return Left(q) @ H
+
+
+def quat_from_two_vectors(v1: np.ndarray, v2: np.ndarray):
+    v1 = v1 / np.linalg.norm(v1)
+    v2 = v2 / np.linalg.norm(v2)
+    z = v1
+    y = np.cross(z, v2)
+    y = y / np.linalg.norm(y)
+    x = -np.cross(y, z)
+    
+    R = np.vstack((x, y, z)).T
+    return rotmat2quat(R)
+
+
+def quatconj(q: np.ndarray):
+    q_conj = np.zeros_like(q)
+    q_conj[0] = q[0]
+    q_conj[1:] = -q[1:]
+    return q_conj
+
+def quat_to_axis_angle(q: np.ndarray):
+    if q[0] > 1:  # normalize if needed
+        q = q / np.linalg.norm(q)
+    angle = 2 * np.arccos(q[0])
+    s = np.sqrt(1 - q[0]**2)
+    if s < 1e-8:  # to avoid division by zero
+        axis = q[1:]
+    else:
+        axis = q[1:] / s
+    return axis, angle

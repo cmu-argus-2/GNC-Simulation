@@ -21,6 +21,7 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
         self.I_min_direction = I_min_direction 
         self.h_tgt = self.J @ self.I_min_direction * np.deg2rad(params["tgt_ss_ang_vel"])
         self.h_tgt_norm = np.linalg.norm(self.h_tgt)
+        self.sun_pointed = False
 
     def get_dipole_moment_and_rw_torque_command(
         
@@ -59,26 +60,44 @@ class LyapBasedSunPointingController(ControllerAlgorithm):
         # omega_b gyro bias
         # I_max - direction of axis of greatest inertia
         
-        Re2b = quatrotation(est_ctrl_states[Idx["X"]["QUAT"]]).T
-        magnetic_field   = Re2b @ est_ctrl_states[Idx["X"]["MAG_FIELD"]]
+        magnetic_field   = est_ctrl_states[Idx["X"]["MAG_FIELD"]]
         angular_velocity = est_ctrl_states[Idx["X"]["ANG_VEL"]]
-        sun_vector       = Re2b @ est_ctrl_states[Idx["X"]["SUN_POS"]]
-        sun_vector       = sun_vector / np.linalg.norm(sun_vector)
+        sun_vector       = est_ctrl_states[Idx["X"]["SUN_POS"]]
 
         h = self.J @ angular_velocity 
         h_norm = np.linalg.norm(h)
         u = np.zeros(3)
-        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
-        sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
-
-        if not spin_stabilized:
-            u = crossproduct(magnetic_field) @ (self.I_min_direction - (h/self.h_tgt_norm))
-        elif not sun_pointing:
-            u = crossproduct(magnetic_field) @ (sun_vector - (h/self.h_tgt_norm)) # (h/self.h_tgt_norm))
         
-        if np.linalg.norm(u) == 0:
-            u = np.zeros(3)
+        spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
+        fine_sun_pointing   = (np.linalg.norm(sun_vector-(h/self.h_tgt_norm))<= np.deg2rad(10))
+        """
+        coarse_sun_pointing = (np.linalg.norm(sun_vector-(h/self.h_tgt_norm))<= np.deg2rad(15))
+        if not coarse_sun_pointing or not spin_stabilized:  
+            self.sun_pointed = False
+            sun_pointing = fine_sun_pointing
+        if self.sun_pointed:
+            sun_pointing = coarse_sun_pointing
         else:
-            u = self.ubmtb * u/np.linalg.norm(u) 
+            sun_pointing = fine_sun_pointing
+        """
+        if not spin_stabilized:
+            # u = crossproduct(magnetic_field) @ (self.I_min_direction - (h/self.h_tgt_norm))
+            u = crossproduct(magnetic_field) @ (self.I_min_direction*self.h_tgt_norm - h) * self.k
+
+            if np.linalg.norm(u) == 0:
+                u = np.zeros(3)
+            else:
+                u = self.ubmtb * np.tanh(u) 
+        
+        elif not fine_sun_pointing:
+            u = crossproduct(magnetic_field) @ (sun_vector - (h/self.h_tgt_norm)) # (h/self.h_tgt_norm))
+            if np.linalg.norm(u) == 0:
+                u = np.zeros(3)
+            else:
+                u = self.ubmtb * u/np.linalg.norm(u) 
+                # element-wise division
+                # u = self.ubmtb * np.sign(u) 
+        # else:
+        #     self.sun_pointed = True
         
         return u.reshape(3, 1), []

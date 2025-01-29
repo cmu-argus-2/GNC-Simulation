@@ -7,10 +7,11 @@
 #include <stdexcept>
 #include <string>
 #include <random>
-
+#include <math.h>
 #include "ExpressionEvaluation.h"
 #include "StringUtils/StringUtils.h"
 #include "colored_output.h"
+#include "math/EigenWrapper.h"
 #include "misc.h"
 #include "yaml-cpp/yaml.h"
 #include "utils_and_transforms.h"
@@ -68,8 +69,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_rw = I_rw_dist(dev);
 
     // GPS
-    gps_pos_std = gps_pos_dist(dev);
-    gps_vel_std = gps_vel_dist(dev);
+    gps_pos_std = params["gps"]["gps_pos_std"].as<double>(); // gps_pos_dist(dev);
+    gps_vel_std = params["gps"]["gps_vel_std"].as<double>(); // gps_vel_dist(dev);
 
     // Photodiodes
     num_photodiodes = params["photodiodes"]["num_photodiodes"].as<int>();
@@ -97,8 +98,15 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     semimajor_axis = sma_dist(dev);
     eccentricity = eccentricity_dist(dev);
     inclination = inclination_dist(dev);
-    RAAN = RAAN_dist(dev);
+    // RAAN = RAAN_dist(dev);
     AOP = AOP_dist(dev);
+    bool disperse_ltdn = params["initialization"]["disperse_LTDN"].as<bool>();
+    if (disperse_ltdn) {
+        LTDN = LTDN_dist(dev);
+    } else {
+        LTDN = UTCStringtoHours(params["initialization"]["LTDN"].as<std::string>());
+    }
+    std::cout << "LTDN: " << LTDN << std::endl;
 
     bool disperse_true_anomaly = params["initialization"]["disperse_true_anomaly"].as<bool>();
     if (disperse_true_anomaly) {
@@ -125,10 +133,34 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
+
+    RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
     
     // Populate State Vector
     initial_true_state = initializeSatellite(sim_start_time);
+    
+    bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
+    bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
+    auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
+    
+    // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
+    if (start_spin_stabilized) {
+        auto tgt_ss_ang_vel = params["tgt_ss_ang_vel"].as<double>();
+        initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
+        initial_true_state(Eigen::seqN(10,3)) = initial_angular_rate;
+    }
 
+    if (start_ss_pointed) {
+        if (start_ss_pointing == "Nadir") {
+            initial_attitude = nadirPointingAttitude(initial_true_state, dev);
+        } else if (start_ss_pointing == "Sun") {
+            initial_attitude = sunPointingAttitude(initial_true_state, dev);
+        } else {
+            throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
+        }
+        initial_true_state(Eigen::seqN(6,4)) = initial_attitude;
+    }
+    
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
 }
@@ -161,11 +193,127 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
     return magnetorquer;
 }
 
+Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
+{
+    // get target angular momentum
+    Eigen::EigenSolver<Eigen::MatrixXd> eigensolver;
+    eigensolver.compute(I_sat);
+    Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
+    Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
+    double maxeigenval = 0;
+    Eigen::Vector3d I_max_dir;
+    for(int i=0; i<eigen_values.size(); i++){
+        if (eigen_values[i] > maxeigenval) {
+            maxeigenval = eigen_values[i];
+            I_max_dir = eigen_vectors.col(i);
+        }
+    }
+    // largest element should be positive
+    if (std::abs(I_max_dir.cwiseAbs().maxCoeff() + I_max_dir.maxCoeff()) < 1e-9) {
+        I_max_dir = -I_max_dir;
+    }
+    
+    // Eigen::Vector3d h_tgt = maxeigenval*tgt_ss_ang_vel*I_max_dir*M_PI/180.0;
+    // double h_tgt_norm = h_tgt.norm();
+
+    initial_angular_rate = tgt_ss_ang_vel*I_max_dir*M_PI/180.0;
+    // I_sat.inverse() * h_tgt;
+
+    // [TODO]: disperse around tolerated values
+    // spin_stabilized = (np.linalg.norm(self.I_min_direction - (h/self.h_tgt_norm)) <= np.deg2rad(15))
+        
+    return initial_angular_rate;
+}
+
+Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt19937 gen)
+{
+    // angular momentum direction in body frame
+    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    std::uniform_real_distribution<> dis(-1, 1);
+    auto uni = [&](){ return dis(gen); };
+    Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
+    Eigen::Vector3d h_normalized = h.normalized();
+    Eigen::Vector3d v1_proj_h = v1.dot(h_normalized) * h_normalized;
+    v1 -= v1_proj_h;
+    v1.normalize();
+    Eigen::Vector3d v2 = h_normalized.cross(v1);
+    v2.normalize();
+    Eigen::Matrix3d Rb; 
+    Rb << h_normalized, v1, v2;
+
+    // sun direction in inertial frame 
+    //Eigen::Vector3d s = State(Eigen::seqN(13, 3));
+    Eigen::Vector3d init_pos = State(Eigen::seqN(0, 3));
+    Eigen::Vector3d init_vel = State(Eigen::seqN(3, 3));
+    Eigen::Vector3d s = init_pos.cross(init_vel);
+    std::uniform_real_distribution<> dis2(-1, 1);
+    auto uni2 = [&](){ return dis2(gen); };
+    Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
+    Eigen::Vector3d s_normalized = s.normalized();
+    Eigen::Vector3d v3_proj_h = v3.dot(s_normalized) * s_normalized;
+    v3 -= v3_proj_h;
+    v3.normalize();
+    Eigen::Vector3d v4 = s_normalized.cross(v3);
+    v4.normalize();
+    Eigen::Matrix3d Ri; 
+    Ri << s_normalized, v3, v4;
+
+    Eigen::Matrix3d Rb2i = Ri * Rb.inverse();
+    Eigen::Quaterniond q(Rb2i);
+    Eigen::Matrix<double, 4, 1> init_att(q.w(), q.x(), q.y(), q.z());
+    //initial_attitude = q;
+    // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
+
+    return init_att;
+}
+
+Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 gen)
+{
+    // angular momentum direction in body frame
+    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    std::uniform_real_distribution<> dis(-1, 1);
+    auto uni = [&](){ return dis(gen); };
+    Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
+    Eigen::Vector3d h_normalized = h.normalized();
+    Eigen::Vector3d v1_proj_h = v1.dot(h_normalized) * h_normalized;
+    v1 -= v1_proj_h;
+    v1.normalize();
+    Eigen::Vector3d v2 = h_normalized.cross(v1);
+    v2.normalize();
+    Eigen::Matrix3d Rb; 
+    Rb << h_normalized, v1, v2;
+
+    // sun direction in inertial frame 
+    Eigen::Vector3d s = State(Eigen::seqN(13, 3));
+    std::uniform_real_distribution<> dis2(-1, 1);
+    auto uni2 = [&](){ return dis2(gen); };
+    Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
+    Eigen::Vector3d s_normalized = s.normalized();
+    Eigen::Vector3d v3_proj_h = v3.dot(s_normalized) * s_normalized;
+    v3 -= v3_proj_h;
+    v3.normalize();
+    Eigen::Vector3d v4 = s_normalized.cross(v3);
+    v4.normalize();
+    Eigen::Matrix3d Ri; 
+    Ri << s_normalized, v3, v4;
+
+    Eigen::Matrix3d Rb2i = Ri * Rb.inverse();
+    Eigen::Quaterniond q(Rb2i);
+    Eigen::Matrix<double, 4, 1> init_att(q.w(), q.x(), q.y(), q.z());
+    //initial_attitude = q;
+    // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
+
+    return init_att;
+}
+
+
+
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
     VectorXd State(19+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
+
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
@@ -220,7 +368,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // GPS
     double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
     double gps_pos_std_std = gps_pos_std_nominal*(params["gps"]["gps_pos_std_dev"].as<double>()/100);
-    gps_pos_dist = std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
+    std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
     
     double gps_vel_std_nominal = params["gps"]["gps_vel_std"].as<double>();
     double gps_vel_std_std = gps_vel_std_nominal*(params["gps"]["gps_vel_std_dev"].as<double>()/100);
@@ -242,7 +390,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
 
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
-    double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
+    double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
     double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
@@ -253,24 +401,35 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
+    double LTDN_min = UTCStringtoHours(params["initialization"]["LTDN_min"].as<std::string>());
+    double LTDN_max = UTCStringtoHours(params["initialization"]["LTDN_max"].as<std::string>());
+    LTDN_dist = std::uniform_real_distribution<double>(LTDN_min, LTDN_max);
+
     double RAAN_nominal = params["initialization"]["RAAN"].as<double>();
     double RAAN_std = RAAN_nominal*(params["initialization"]["RAAN_dev"].as<double>()/100);
     RAAN_dist = std::normal_distribution<double>(RAAN_nominal, RAAN_std);
 
-    double AOP_nominal = params["initialization"]["AOP"].as<double>();
-    double AOP_std = AOP_nominal*(params["initialization"]["AOP_dev"].as<double>()/100);
-    AOP_dist = std::normal_distribution<double>(AOP_nominal, AOP_std);
+    //double AOP_nominal = params["initialization"]["AOP"].as<double>();
+    //double AOP_std = AOP_nominal*(params["initialization"]["AOP_dev"].as<double>()/100);
+    // std::normal_distribution<double>(AOP_nominal, AOP_std);
+    AOP_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
+
     true_anomaly_dist = std::uniform_real_distribution<double>(0, 360); // True anomaly uniformly distributed between 0 and 360
 
     initial_attitude_dist = std::uniform_real_distribution<double>(-1,1);
 
-    double angular_rate_bound = params["initialization"]["initial_angular_rate_bound"].as<double>();
-    initial_angular_rate_dist = std::uniform_real_distribution<double>(-angular_rate_bound, angular_rate_bound);
+    // auto angular_rate_bound = params["initialization"]["initial_angular_rate_bound"].as<double>();
+    // initial_angular_rate_dist = std::uniform_real_distribution<double>(-angular_rate_bound, angular_rate_bound);
+    double angular_rate_std = params["initialization"]["initial_angular_rate_dev"].as<double>();
+    initial_angular_rate_dist = std::normal_distribution<double>(0, angular_rate_std);
+    
+    //double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
+    //double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
+    //sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
     double earliest_sim_start_J2000 = UTCStringtoTJ2000(params["earliest_sim_start_time_UTC"].as<std::string>());
     double latest_sim_start_J2000 = UTCStringtoTJ2000(params["latest_sim_start_time_UTC"].as<std::string>());
     sim_start_time_dist = std::uniform_real_distribution<double>(earliest_sim_start_J2000, latest_sim_start_J2000);
-
 }
 
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
@@ -333,8 +492,6 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     std::ofstream fout(outpath);
     fout << out.c_str();
-
-
 }
 
 #ifdef USE_PYBIND_TO_COMPILE

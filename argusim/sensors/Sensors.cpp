@@ -16,6 +16,7 @@
 #pragma GCC diagnostic pop
 #endif
 
+
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
     gen.seed(std::hash<double>{}(t_J2000)); // set seed for determinism
@@ -50,6 +51,7 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
     return y;
 }
 
+
 VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 {
     // Photodiodes noise distribution
@@ -66,6 +68,11 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
     VectorXd solar_intensity_on_panel = 140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
 
     solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intnesity is negative, set to 0
+
+    double shadow_factor = partial_illumination(state(Eigen::seqN(0,3)), sun_pos_eci);
+
+    solar_intensity_on_panel *= shadow_factor;
+    
     return solar_intensity_on_panel;
 
 }

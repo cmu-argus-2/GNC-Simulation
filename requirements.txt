@@ -6,3 +6,4 @@ pyigrf
 flask
 scipy
 pyyaml
+pytest

@@ -191,4 +191,62 @@ std::string TJ2000toUTCString(double t_J2000);
  */
 double UTCStringtoTJ2000 (std::string UTC);
 
+
+/**
+ * @brief Converts a UTC time string to hours.
+ *
+ * This function takes a UTC time string in the format "HH:MM:SS" and converts it to a 
+ * double representing the total number of hours.
+ *
+ * @param UTC A string representing the UTC time in the format "HH:MM:SS".
+ * @return A double representing the total number of hours.
+ */
+double UTCStringtoHours(std::string UTC);
+
+/**
+ * @brief Computes the position of the Sun in the MOD (Mean of Date) frame at a given time.
+ *
+ * This function calculates the position of the Sun in the Mean of Date (MOD) frame based on the 
+ * provided time in Julian centuries since J2000. The MOD frame is a celestial coordinate system 
+ * that accounts for the precession of the equinoxes.
+ *
+ * @param t_J2000 Time in Julian centuries since J2000.
+ * @return Eigen::Vector3d The position of the Sun in the MOD frame.
+ */
+Eigen::Vector3d sun_position_mod(double t_J2000);
+
+/**
+ * @brief Calculates the equation of time for a given Julian date.
+ *
+ * The equation of time is the difference between apparent solar time and mean solar time.
+ * It accounts for the irregularities in the Earth's orbit and axial tilt.
+ *
+ * @param t_J2000 The Julian date in days since the epoch J2000.0 (January 1, 2000, 12:00 TT).
+ * @return The equation of time in minutes.
+ */
+double equation_of_time(double t_J2000);
+
+/**
+ * @brief Converts Local Time of the Ascending Node (LTAN) to Right Ascension of the Ascending Node (RAAN).
+ * 
+ * This function calculates the Right Ascension of the Ascending Node (RAAN) based on the given Local Time of the Ascending Node (LTAN)
+ * and the time since the J2000 epoch.
+ * 
+ * @param ltan Local Time of the Ascending Node (LTAN) in hours.
+ * @param t_J2000 Time since the J2000 epoch in Julian centuries.
+ * @return double The calculated Right Ascension of the Ascending Node (RAAN) in degrees.
+ */
+double LTAN_to_RAAN(double ltan, double t_J2000);
+
+/**
+ * @brief Converts Local Time of Descending Node (LTDN) to Right Ascension of the Ascending Node (RAAN).
+ *
+ * This function calculates the Right Ascension of the Ascending Node (RAAN) based on the given Local Time of Descending Node (LTDN) and the time since the J2000 epoch.
+ *
+ * @param ltdn Local Time of Descending Node in hours.
+ * @param t_J2000 Time since the J2000 epoch in seconds.
+ * @return The calculated Right Ascension of the Ascending Node (RAAN) in degrees.
+ */
+double LTDN_to_RAAN(double ltdn, double t_J2000);
+
 #endif   //_POSE_EKF_UTILS_AND_TRANSFORMS_ header
