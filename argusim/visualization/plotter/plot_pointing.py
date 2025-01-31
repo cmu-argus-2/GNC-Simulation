@@ -17,10 +17,14 @@ YELLOW = "\033[33m"
 WHITE = "\033[37m"
 RESET = "\033[0m"  # Resets all attributes
 
-def pointing_plots(pyparams, data_dicts, trials, trials_dir, plot_dir, close_after_saving=True):
+def pointing_plots(pyparams, data_dicts, filepaths):
     # ==========================================================================
     # Plot the sun vector in the body frame
     # ==========================================================================
+    trials             = pyparams["trials"]
+    trials_dir         = pyparams["trials_dir"]
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
     J_ref = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))
     eigenvalues, _ = np.linalg.eig(J_ref)
     J_ref_max = np.max(eigenvalues)
@@ -209,3 +213,59 @@ def pointing_plots(pyparams, data_dicts, trials, trials_dir, plot_dir, close_aft
     plt.tight_layout()
     plt.savefig(os.path.join(plot_dir, figname2))
     plt.close()
+
+    # ==========================================================================
+    # Nadir Pointing
+    # Orbit Pointing
+    num_RWs = pyparams["reaction_wheels"]["N_rw"]
+    G_rw_b = np.array(pyparams["reaction_wheels"]["rw_orientation"]).reshape(3, num_RWs)
+    nadir_cam_dir = np.array(pyparams["nadir_cam_dir"])
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        nadir_cam_dir_angle = []
+        rw_orb_dir_angle = []
+        for j in range(len(data_dicts[i]["Time [s]"])):
+            quat = np.array(
+                [data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]]
+            )
+            RE2b = quatrotation(quat).T
+            eci_pos = np.array(
+                [data_dicts[i]["r_x ECI [m]"][j], data_dicts[i]["r_y ECI [m]"][j], data_dicts[i]["r_z ECI [m]"][j]]
+            )
+            nadir_vector = -RE2b @ eci_pos
+            nadir_vector = nadir_vector / np.linalg.norm(nadir_vector)
+            cam_angle = np.rad2deg(np.arccos(np.dot(nadir_cam_dir, nadir_vector)))
+            nadir_cam_dir_angle.append(cam_angle)
+
+            eci_vel = np.array(
+                [
+                    data_dicts[i]["v_x ECI [m/s]"][j],
+                    data_dicts[i]["v_y ECI [m/s]"][j],
+                    data_dicts[i]["v_z ECI [m/s]"][j],
+                ]
+            )
+            orb_ang_dir = np.cross(eci_pos, eci_vel)
+            orb_ang_dir = orb_ang_dir / np.linalg.norm(orb_ang_dir)
+            orb_ang_dir = RE2b @ orb_ang_dir
+            sun_pos = np.array(
+                [
+                    data_dicts[i]["rSun_x ECI [m]"][j],
+                    data_dicts[i]["rSun_y ECI [m]"][j],
+                    data_dicts[i]["rSun_z ECI [m]"][j],
+                ]
+            )
+            sun_pos = RE2b @ sun_pos
+            if np.dot(sun_pos, orb_ang_dir) < 0:
+                orb_ang_dir = -orb_ang_dir
+            orb_angle = np.rad2deg(np.arccos(np.dot(orb_ang_dir, G_rw_b)))
+            rw_orb_dir_angle.append(orb_angle)
+
+        multiPlot(
+        data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
+        [nadir_cam_dir_angle, rw_orb_dir_angle],
+        seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(
+        title="Nadir and Orbit Ang Mom alignment", ylabels=["Nadir Cam Dir Angle [deg]", "Orbit Dir Angle [deg]"]
+    )
+    save_figure(itm.gcf(), plot_dir, "nad_orb_point_true.png", close_after_saving)

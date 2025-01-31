@@ -10,6 +10,13 @@ Vector3 gravitational_acceleration(const Vector3 r)
     return spherical_acceleration(r) + J2_perturbation(r);
 }
 
+Vector3 gravity_gradient_torque(const Vector3& r, const Matrix_3x3& I_sat) {
+    Vector3 r_hat = r.normalized();
+    Vector3 I_r_hat = I_sat * r_hat;
+    Vector3 tau_gg = 3 * mu / pow(r.norm(), 3) * r_hat.cross(I_r_hat);
+    return tau_gg;
+}
+
 Vector3 spherical_acceleration(const Vector3 r)
 {
     Vector3 acceleration = - (mu/pow(r.norm(), 3.0))*r;

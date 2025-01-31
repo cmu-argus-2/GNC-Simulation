@@ -2,12 +2,14 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 72000 # 96000 # [s]
+MAX_TIME: 18000 # 96000 # [s]
 dt: 1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
+useDragTorque : True
+useGravityGradient : True
 
 # -----------------------------------------------------------------------------------------------------------
 # Initialization
@@ -53,8 +55,8 @@ initialization:
      initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
      initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
 
-     start_spin_stabilized: False
-     start_ss_pointed: False
+     start_spin_stabilized: True
+     start_ss_pointed: True
      start_ss_pointing: "Nadir" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
@@ -82,6 +84,8 @@ inertia :
      principal_axis_dev : [1,1,1]
      # [0.0001,0.0001,0.0001,0.0001,0.0001,0.0001] # stddev of principal axis inertias about nominal [kgm^2]
 
+CoPM : [0.005,-0.005,-0.005] # center of pressure with respect to center of mass of CubeSat
+CoPM_dev : 0.001 # stddev from nominal of CoPM [m]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
@@ -186,10 +190,6 @@ controller_dt: 1 # [s]
 estimator_dt: 1    # [s]
 spin_stab_tol: 15.0 # [deg]
 point_tol: 10.0 # [deg]
-debugFlags:
-  bypass_controller: False # Open-loop
-  bypass_estimator: True  # Perfect state knowledge
-  bypass_sensors: True  # Perfect measurements
 # -----------------------------------------------------------------------------------------------------------
 # Attitude Estimation Parameters
 # -----------------------------------------------------------------------------------------------------------
@@ -199,3 +199,17 @@ MEKF:
      sigma_gyro_bias_deriv: 0.00034  # [(rad/s)/sqrt(s))]
      sigma_sunsensor_direction: 0.0524  # [rad]
      sigma_magnetometer_direction: 0.1  # [rad]
+# -----------------------------------------------------------------------------------------------------------
+# Plotting and Debugging
+# -----------------------------------------------------------------------------------------------------------
+PlotFlags:
+     sensor_measurements: True 
+     true_state_plots: True
+     pointing_plots: True
+     actuator_plots: True
+     att_animation : False
+     MEKF_plots : False
+debugFlags:
+     bypass_controller: False # Open-loop
+     bypass_estimator: True  # Perfect state knowledge
+     bypass_sensors: True  # Perfect measurements

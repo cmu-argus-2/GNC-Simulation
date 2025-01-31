@@ -54,11 +54,18 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
 
+    // Center of Pressure/Mass arm
+    CoPM = Vector3::NullaryExpr([&](){return CoPM_dist(dev);});
+
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
     CR = params["CR"].as<double>();
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
+
+    // Attitude perturbation properties
+    useDT = params["useDragTorque"].as<bool>();
+    useGG = params["useGravityGradient"].as<bool>();
 
     // Reaction Wheel
     num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
@@ -339,6 +346,10 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double area_nominal = params["area"]["nominal_area"].as<double>();
     double area_std = area_nominal*(params["area"]["area_dev"].as<double>()/100);
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
+
+    // Center of Pressure/Mass arm
+    double CoPM_std = params["CoPM_dev"].as<double>();
+    CoPM_dist = std::normal_distribution<double>(0, CoPM_std);
 
     // Inertia
     Vector3 inertia_dev = Eigen::Map<Vector3>(params["inertia"]["principal_axis_dev"].as<std::vector<double>>().data());
