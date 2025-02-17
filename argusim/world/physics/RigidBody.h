@@ -30,6 +30,8 @@ struct Spacecraft {
     // Physics Models
     bool useDrag;
     bool useSRP;
+    bool useDT;
+    bool useGG;
 };
 
 
@@ -40,7 +42,9 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 
 VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
                              const Eigen::MatrixXd& G_rw_b, const Eigen::MatrixXd& G_mtb_b,
-                             double I_rw, const Matrix_3x3 J_sat, Magnetorquer MTB, double t_J2000);
+                             double I_rw, const Matrix_3x3 I_sat, Magnetorquer MTB, double t_J2000,
+                             double mass, double Cd, double A, const Vector3 CoPM,
+                             bool useDT, bool useGG);
 
 VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, double t_J2000, double dt);
 
