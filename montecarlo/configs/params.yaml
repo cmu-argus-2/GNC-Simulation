@@ -124,7 +124,7 @@ magnetorquers:
                         0,0,1] # alignment axis of each magnetorquer in the body frame
      mtb_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each MTB [rad]
      # 25 Ohm: expected resistance from the optimization 40 Ohm: actual resistance
-     mtb_resistance : 40 # [UNITS: Ω]
+     mtb_resistance : 42 # [UNITS: Ω]
      mtb_resistance_dev : 1 # stddev from nominal resistance as a % of nominal resistance [%]
      mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
      
