@@ -208,7 +208,7 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
     Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
     Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
     double maxeigenval = 0;
-    Eigen::Vector3d I_max_dir;
+    Eigen::Vector3d I_max_dir = Eigen::Vector3d::Zero();
     for(int i=0; i<eigen_values.size(); i++){
         if (eigen_values[i] > maxeigenval) {
             maxeigenval = eigen_values[i];
