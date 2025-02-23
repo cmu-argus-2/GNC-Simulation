@@ -10,7 +10,7 @@
 
 class Simulation_Parameters {
    public:
-    Simulation_Parameters(std::string filename, int trial_number, std::string results_folder);
+    Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename);
     Vector3 spinStabilizedRate(double tgt_ss_ang_vel);
     Vector4 nadirPointingAttitude(VectorXd State, std::mt19937 gen);
     Vector4 sunPointingAttitude(VectorXd State, std::mt19937 gen);
@@ -81,6 +81,7 @@ class Simulation_Parameters {
     bool useSRP;  // set to False to deactivate SRP calcs
     bool useDT;   // set to False to deactivate Drag Torque calcs
     bool useGG;   // set to False to deactivate Gravity Gradient calcs
+    bool useLUTs; // set to False to deactivate LUTs
 
     /* Satellite Initialization */
     double semimajor_axis; // [m]
@@ -96,6 +97,17 @@ class Simulation_Parameters {
 
     double controller_dt; // [s]
     double estimator_dt;  // [s]
+
+    // Lookup tables
+    int NElev;
+    int NAzim;
+    int NSS;
+    MatrixXd sc_area_LUT;
+    MatrixXd sp_area_LUT;
+    MatrixXd ss_visib_LUT;
+    MatrixXd ss_visib_sum_LUT;
+    MatrixXd aero_torque_fac_LUT;
+    MatrixXd aero_force_fac_LUT;
 
     // Satellite Parameetr Dispersion distributions
 
@@ -139,6 +151,7 @@ class Simulation_Parameters {
     private:
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
     void defineDistributions(std::string filename);
+    void defineLUTs(std::string filename);
     std::mt19937 loadSeed(int trial_number);
 };
 

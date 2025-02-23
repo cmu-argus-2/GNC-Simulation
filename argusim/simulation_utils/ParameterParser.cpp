@@ -35,12 +35,14 @@
 // ==========================================================================
 // ==========================================================================
 
-Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder) : 
+Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename) : 
                                     dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
     YAML::Node params = YAML::LoadFile(filename);
     defineDistributions(filename);
+    useLUTs = params["useLUTs"].as<bool>();
+    defineLUTs(data_filename);
 
     results_folder = results_folder; // PLACEHOLDER
 
@@ -443,6 +445,45 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     sim_start_time_dist = std::uniform_real_distribution<double>(earliest_sim_start_J2000, latest_sim_start_J2000);
 }
 
+void Simulation_Parameters::defineLUTs(std::string data_folder)
+{
+    // Load LUTs
+    if (data_folder.empty() || !useLUTs) {
+        // Load dummy variables into LUTs
+        NElev = 0;
+        NAzim = 0;
+        NSS   = 0;
+        sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_LUT        = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
+        aero_torque_fac_LUT = Eigen::MatrixXd::Zero(3, 3);
+        aero_force_fac_LUT  = Eigen::MatrixXd::Zero(3, 3);
+
+    } else {
+        // Load actual LUTs from data_folder
+        YAML::Node data_params = YAML::LoadFile(data_folder);
+
+        NElev = data_params["NE"].as<int>();
+        NAzim = data_params["NA"].as<int>();
+        NSS   = data_params["NS"].as<int>();
+
+        // sc_area_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["effective_sc_area"].as<std::vector<double>>().data(), NElev, NAzim);
+        // sp_area_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["effective_sp_area"].as<std::vector<double>>().data(), NElev, NAzim);
+        // ss_visib_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["visibility"].as<std::vector<double>>().data(), NElev, NAzim);
+        // ss_visib_sum_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["visibility_sum"].as<std::vector<double>>().data(), NElev, NAzim);
+        // aero_torque_fac_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["aero_torque_fac"].as<std::vector<double>>().data(), NElev, NAzim);
+        // aero_force_fac_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["aero_force_fac"].as<std::vector<double>>().data(), NElev, NAzim);
+        
+        sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_LUT        = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
+        aero_torque_fac_LUT = Eigen::MatrixXd::Zero(3, 3);
+        aero_force_fac_LUT  = Eigen::MatrixXd::Zero(3, 3);
+    }
+}
+
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
 {
     std::mt19937 gen;
@@ -508,7 +549,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysim_utils, m) {
     pybind11::class_<Simulation_Parameters>(m, "Simulation_Parameters")
-        .def(pybind11::init<std::string, int, std::string>())
+        .def(pybind11::init<std::string, int, std::string, std::string>())
         //.def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
         //.def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
         .def_readonly("mass", &Simulation_Parameters::mass)

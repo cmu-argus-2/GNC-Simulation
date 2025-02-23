@@ -23,6 +23,7 @@ import yaml
 import numpy as np
 from time import time
 from scipy.spatial.transform import Rotation as R
+from argusim.world.LUT_generator import generate_lookup_tables
 
 
 attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
@@ -41,18 +42,29 @@ class Simulator:
         self.trial_number = trial_number
 
         # Datapaths
-        self.config_path = config_path
+        self.config_path   = config_path
         self.log_directory = log_directory
+
+        with open(config_path, "r") as f:
+            self.obsw_params = yaml.safe_load(f)
+
+        # if data_path does not, 
+        if self.obsw_params["useLUTs"]:
+            data_path = os.path.realpath("./argusim/data/lookup_tables.yaml")
+            if not os.path.exists(data_path):
+                generate_lookup_tables()
+        else:
+            data_path = ""
+        
         
         # Spacecraft Config
-        self.params = SimParams(self.config_path, self.trial_number, self.log_directory)
+        self.params = SimParams(self.config_path, self.trial_number, self.log_directory, data_path)
         self.num_RWs = self.params.num_RWs
         self.num_MTBs = self.params.num_MTBs
         self.num_photodiodes = self.params.num_photodiodes
 
         # Controller Config
-        with open(config_path, "r") as f:
-            self.obsw_params = yaml.safe_load(f)
+        
         self.define_controller()
         self.define_estimator()
 
@@ -86,15 +98,6 @@ class Simulator:
         self.measurements = np.zeros((self.Idx["NY"],))
 
         self.obsw_states = np.zeros((self.Idx["NX"],))
-
-        # Attitude Estimator Config
-        self.attitude_ekf = Attitude_EKF(
-            np.array(self.obsw_params["MEKF"]["sigma_initial_attitude"]),
-            np.array(self.obsw_params["MEKF"]["sigma_gyro_white"]),
-            np.array(self.obsw_params["MEKF"]["sigma_gyro_bias_deriv"]),
-            np.array(self.obsw_params["MEKF"]["sigma_sunsensor_direction"]),
-            np.array(self.obsw_params["MEKF"]["sigma_magnetometer_direction"]),
-        )
 
         # Logging
         self.logr = MultiFileLogger(log_directory)
@@ -153,6 +156,14 @@ class Simulator:
         self.Idx["Y"]["SUN"] = slice(12, 15) # 12+self.num_photodiodes)
         self.Idx["Y"]["RW_OMEGA"] = slice(15, 15+self.num_RWs)
         # slice(12+self.num_photodiodes, 12+self.num_photodiodes+self.num_RWs)
+        # Attitude Estimator Config
+        self.attitude_ekf = Attitude_EKF(
+            np.array(self.obsw_params["MEKF"]["sigma_initial_attitude"]),
+            np.array(self.obsw_params["MEKF"]["sigma_gyro_white"]),
+            np.array(self.obsw_params["MEKF"]["sigma_gyro_bias_deriv"]),
+            np.array(self.obsw_params["MEKF"]["sigma_sunsensor_direction"]),
+            np.array(self.obsw_params["MEKF"]["sigma_magnetometer_direction"]),
+        )
 
     def define_controller(self):
         """
