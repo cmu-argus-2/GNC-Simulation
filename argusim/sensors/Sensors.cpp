@@ -22,13 +22,14 @@ const double THRESHOLD_ILLUMINATION_LUX = 3000;
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
     gen.seed(std::hash<double>{}(t_J2000)); // set seed for determinism
-    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyro + Mag Field + Light Sensors
+    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes + sc.num_RWs; // GPS + Gyro + Mag Field + Light Sensors + RW encoder
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
     measurement(Eigen::seqN(6,3)) = Gyroscope(state, sc);
     measurement(Eigen::seqN(9,3)) = Magnetometer(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
+    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_RWs)) = RWEncoder(state, sc);
 
     return measurement;
 }
@@ -116,6 +117,21 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
     return omega_meas;
 }
 
+VectorXd RWEncoder(const VectorXd state, Simulation_Parameters sc)
+{
+    // RW Encoder Noise Distribution
+    // static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v/sqrt(sc.dt));
+
+    // Random white noise
+    // Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
+    
+    // [TODO:] add quantization error
+
+    VectorXd rw_encoders = state(Eigen::seqN(19, sc.num_RWs)); // + white_noise;
+
+    return rw_encoders;
+}
+
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysensors, m) {
@@ -126,5 +142,6 @@ PYBIND11_MODULE(pysensors, m) {
     m.def("readGyroscope", &Gyroscope, "Populate Gyroscope Measurement Vector");
     m.def("readSunSensor", &SunSensor, "Populate Sun Sensor Measurement Vector");
     m.def("readMagnetometer", &Magnetometer, "Populate Magnetometer Measurement Vector");
+    m.def("readRWEncoder", &RWEncoder, "Populate RW Encoder Measurement Vector");
 }
 #endif

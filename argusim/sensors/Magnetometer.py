@@ -6,6 +6,7 @@ class Magnetometer:
     def __init__(self, dt, sigma_angular_error):
         self.sigma_angular_error = sigma_angular_error
         self.dt                  = dt
+        self.last_meas_time      = -np.inf
 
     def get_measurement(self, clean_signal):
         angular_error = self.sigma_angular_error * np.random.standard_normal()

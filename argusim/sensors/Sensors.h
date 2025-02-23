@@ -56,5 +56,13 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc);
  */
 Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
 
+/**
+ * @brief Measures Reaction Wheel Encoder readings
+ * 
+ * @param state : True state vector of the satellite
+ * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
+ * @return Measured reaction wheel encoder readings
+ */
+VectorXd RWEncoder(const VectorXd state, Simulation_Parameters sc);
 
 #endif

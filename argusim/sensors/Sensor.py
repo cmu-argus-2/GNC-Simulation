@@ -45,6 +45,7 @@ class Sensor:
 class TriAxisSensor:
     def __init__(self, dt, axes_params):
         self.dt = dt
+        self.last_meas_time = -np.inf
         self.x  = Sensor(dt, axes_params[0])
         self.y  = Sensor(dt, axes_params[1])
         self.z  = Sensor(dt, axes_params[2])

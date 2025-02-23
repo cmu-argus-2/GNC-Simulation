@@ -7,7 +7,7 @@ from argusim.build.simulation_utils.pysim_utils import Simulation_Parameters as 
 from argusim.build.sensors.pysensors import readSensors
 
 # Python Imports
-from argusim.simulation_manager import MultiFileLogger
+from argusim.simulation_manager import MultiFileLogger, SimLogger
 from argusim.FSW.controllers.controller import Controller
 from argusim.FSW.estimators.AttitudeEKF import Attitude_EKF
 from argusim.FSW.meas_preprocessing import MeasurementPreprocessing
@@ -25,16 +25,6 @@ import numpy as np
 from time import time
 from scipy.spatial.transform import Rotation as R
 from argusim.world.LUT_generator import generate_lookup_tables
-
-
-attitude_estimate_error_labels = [f"{axis} [rad]" for axis in "xyz"]
-gyro_bias_error_labels = [f"{axis} [rad/s]" for axis in "xyz"]
-true_gyro_bias_labels = [f"{axis} [rad/s]" for axis in "xyz"]
-EKF_sigma_labels = [f"attitude error {axis} [rad]" for axis in "xyz"] + [
-    f"gyro bias error {axis} [rad/s]" for axis in "xyz"
-]
-EKF_state_labels = [f"q_{component}" for component in "wxyz"] + [f"{axis} [rad/s]" for axis in "xyz"]
-
 
 class Simulator:
     def __init__(self, trial_number, log_directory, config_path) -> None:
@@ -90,60 +80,21 @@ class Simulator:
             gyro_params.append(SensorNoiseParams.get_random_params(biasParams, sigma_v_range, scale_factor_error_range))
         self.gyro = TriAxisSensor(gyro_dt, gyro_params)
 
-        # Sun Sensor config
-        self.sunSensor  = SunSensor(self.params.photodiodes_dt, self.params.sigma_sunsensor)
+        # Sun Sensor config (OB processing)
+        self.sunSensor  = SunSensor(self.params.photodiodes_dt, self.params.sigma_sunsensor, self.obsw_params["photodiodes"])
 
         # Magnetometer config
         self.magnetometer = Magnetometer(self.params.magnetometer_dt, self.params.sigma_magnetometer)
 
-        self.measProc = MeasurementPreprocessing(self.magnetometer, self.sunSensor, self.gyro)
+        self.measProc = MeasurementPreprocessing(self.magnetometer, self.sunSensor, self.gyro, self.num_RWs)
 
         self.measurements = np.zeros((self.Idx["NY"],))
 
         self.obsw_states = np.zeros((self.Idx["NX"],))
 
         # Logging
-        self.logr = MultiFileLogger(log_directory)
-        self.state_labels = [
-            "r_x ECI [m]",
-            "r_y ECI [m]",
-            "r_z ECI [m]",
-            "v_x ECI [m/s]",
-            "v_y ECI [m/s]",
-            "v_z ECI [m/s]",
-            "q_w",
-            "q_x",
-            "q_y",
-            "q_z",
-            "omega_x [rad/s]",
-            "omega_y [rad/s]",
-            "omega_z [rad/s]",
-            "rSun_x ECI [m]",
-            "rSun_y ECI [m]",
-            "rSun_z ECI [m]",
-            "xMag ECI [T]",
-            "yMag ECI [T]",
-            "zMag ECI [T]",
-        ] + ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
-
-        self.measurement_labels = [
-            "gps_posx ECEF [m]",
-            "gps_posy ECEF [m]",
-            "gps_posz ECEF [m]",
-            "gps_velx ECEF [m/s]",
-            "gps_vely ECEF [m/s]",
-            "gps_velz ECEF [m/s]",
-            "gyro_x [rad/s]",
-            "gyro_y [rad/s]",
-            "gyro_z [rad/s]",
-            "mag_x_body [T]",
-            "mag_y_body [T]",
-            "mag_z_body [T]",
-        ] + ["light_sensor_lux " + str(i) for i in range(self.num_photodiodes)]
-
-        self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + [
-            "T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)
-        ]
+        # self.logr = MultiFileLogger(log_directory)
+        self.logr = SimLogger(log_directory, self.num_RWs, self.num_photodiodes, self.num_MTBs, self.J2000_start_time)
 
     def define_estimator(self):
         """
@@ -238,6 +189,7 @@ class Simulator:
         Executes a single simulation step of a given step size
         This function is written separately to allow FSW to access simualtion stepping
         """
+        ## Real World
         # Time
         current_time = self.J2000_start_time + sim_time
 
@@ -251,67 +203,40 @@ class Simulator:
         # Mask state through sensors
         sensor_data = self.sensors(current_time, self.true_state)
 
+        # [TODO:] Split function calls between Real World and FSW
+
+        ## FSW
         # sensor pre-processing
         self.measurements, gotSensor = self.measProc.preprocess_measurements(sensor_data, current_time, self.Idx)
 
         # measurement data logging
-        if gotSensor["got_Sun"]:
-            self.logr.log_v(
-                "sun_sensor_measurement.bin",
-                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["SUN"]].tolist(),
-                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
-            )
-
-        if gotSensor["got_Mag"]:
-            self.logr.log_v(
-                "magnetometer_measurement.bin",
-                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["MAG"]].tolist(),
-                ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
-            )
-
-        if gotSensor["got_Gyro"]:
-            self.logr.log_v(
-                "gyro_measurement.bin",
-                [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["GYRO"]].tolist(),
-                ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
-            )
-
-        # Log pertinent Quantities
+        self.logr.log_measurements(current_time, self.measurements, self.Idx, gotSensor)
+        
+        # Log true state
         # [TODO:] gyro bias should be logged as part of the state vector
         true_gyro_bias = self.gyro.get_bias()
-        # Log pertinent Quantities
-        self.logr.log_v(
-            "gyro_bias_true.bin",
-            [current_time - self.J2000_start_time] + true_gyro_bias.tolist(),
-            ["Time [s]"] + true_gyro_bias_labels,
-        )
-
-        self.logr.log_v(
-            "state_true.bin",
-            [current_time - self.J2000_start_time]
-            + self.true_state.tolist()
-            + self.measurements.tolist()
-            + control_input.tolist(),
-            ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
-        )
+        
+        # self.measurements
+        self.logr.log_true_state(current_time, self.true_state, control_input, sensor_data, true_gyro_bias)
         
         # Run Attitude Estimation
         if not self.bypass_estimator:
             # [TODO:] true_sun_ray_ECI and true_Bfield_ECI should come from onboard knowledge
             # using GPS and simplified IGRF and ephem data to get these parameters
-            true_sun_ray_ECI = 0
-            true_Bfield_ECI  = 0
+            true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
+            true_Bfield_ECI  = self.true_state[self.Idx["X"]["MAG_FIELD"]]
+            
             # Sun Sensor update
-            if gotSensor["got_Sun"]:
+            if gotSensor["GotSun"]:
                 self.attitude_ekf.sun_sensor_update(
                     self.measurements[self.Idx["Y"]["SUN"]], true_sun_ray_ECI, current_time 
                 )
-            if gotSensor["got_Mag"]:
+            if gotSensor["GotMag"]:
                 self.attitude_ekf.Bfield_update(
                     self.measurements[self.Idx["Y"]["MAG"]], true_Bfield_ECI, current_time
                 )
 
-            if gotSensor["got_Mag"] and gotSensor["got_Sun"]:
+            if gotSensor["GotMag"] and gotSensor["GotSun"]:
                 if not self.attitude_ekf.initialized:
                     attitude_estimate = self.attitude_ekf.triad(
                         true_sun_ray_ECI, self.measurements[self.Idx["Y"]["SUN"]], true_Bfield_ECI, self.measurements[self.Idx["Y"]["MAG"]]
@@ -320,53 +245,23 @@ class Simulator:
                     self.attitude_ekf.initialized = True
                     self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
                     self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
-            if gotSensor["got_Gyro"]:
+            if gotSensor["GotGyro"]:
                 self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
       
-        
-
             if self.attitude_ekf.initialized:
                 # get attitude estimate of the body wrt ECI
                 estimated_ECI_R_body = self.attitude_ekf.get_ECI_R_b()
+                true_ECI_R_body = R.from_quat([*self.true_state[7:10], self.true_state[6]])
                 attitude_estimate_error = (true_ECI_R_body * estimated_ECI_R_body.inv()).as_rotvec()
 
                 estimated_gyro_bias = self.attitude_ekf.get_gyro_bias()
                 gyro_bias_error = true_gyro_bias - estimated_gyro_bias
 
-                self.logr.log_v(
-                    "EKF_state.bin",
-                    [current_time - self.J2000_start_time] + self.attitude_ekf.get_state().tolist(),
-                    ["Time [s]"] + EKF_state_labels,
-                )
-                self.logr.log_v(
-                    "EKF_error.bin",
-                    [current_time - self.J2000_start_time] + attitude_estimate_error.tolist() + gyro_bias_error.tolist(),
-                    ["Time [s]"] + attitude_estimate_error_labels + gyro_bias_error_labels,
-                )
-
                 EKF_sigmas = self.attitude_ekf.get_uncertainty_sigma()
-                self.logr.log_v(
-                    "state_covariance.bin",
-                    [current_time - self.J2000_start_time] + EKF_sigmas.tolist(),
-                    ["Time [s]"] + EKF_sigma_labels,
-                )
 
-        self.logr.log_v(
-            "gyro_bias_true.bin",
-            [current_time - self.J2000_start_time] + true_gyro_bias.tolist(),
-            ["Time [s]"] + true_gyro_bias_labels,
-        )
+                self.logr.log_estimation(current_time, self.attitude_ekf.get_state(), attitude_estimate_error, gyro_bias_error, EKF_sigmas)
 
-        self.logr.log_v(
-            "state_true.bin",
-            [current_time - self.J2000_start_time]
-            + self.true_state.tolist()
-            + measurement.tolist()
-            + control_input.tolist(),
-            ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
-        )
-
-        return measurement
+        return self.measurements
 
     def run(self):
         """

@@ -5,13 +5,24 @@ from argusim.sensors.SunSensor import SunSensor
 from argusim.sensors.Magnetometer import Magnetometer
 
 class MeasurementPreprocessing:
-    def __init__(self, magnetometer: Magnetometer, sun_sensor: SunSensor, gyro: TriAxisSensor):
+    def __init__(self, magnetometer: Magnetometer, sun_sensor: SunSensor, gyro: TriAxisSensor, num_RWs: int):
         self.magnetometer = magnetometer
         self.sunSensor    = sun_sensor
         self.gyro         = gyro
-        self.measurements = {}
+        # unprocessed, sensor data idx
+        num_photodiodes = self.sunSensor.num_photodiodes
+        self.Idx = {} 
+        self.Idx["NY"] = 12+num_RWs+num_photodiodes
+        self.Idx["Y"] = dict()
+        self.Idx["Y"]["GPS"] = slice(0, 6)
+        self.Idx["Y"]["GPS_POS"] = slice(0, 3)
+        self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
+        self.Idx["Y"]["GYRO"] = slice(6, 9)
+        self.Idx["Y"]["MAG"] = slice(9, 12)
+        self.Idx["Y"]["SUN"] = slice(12, 12+num_photodiodes) # self.sunSensor.num_photodiodes
+        self.Idx["Y"]["RW_OMEGA"] = slice(12+num_photodiodes, 12+num_photodiodes+num_RWs)          
 
-    def preprocess_measurements(self, sensor_data, current_time, Idx):
+    def preprocess_measurements(self, sensor_data, current_time, Idxp):
         """
         Preprocess measurements from the sensors in the system.
 
@@ -22,35 +33,33 @@ class MeasurementPreprocessing:
         Returns:
         dict: Dictionary containing preprocessed sensor data.
         """
-        # true_ECI_R_body = R.from_quat([*self.true_state[7:10], self.true_state[6]])
+        # [TODO:] whether there are new measurements or not should be checked in the C++ code to avoid computing meas values
+        # every time step
 
-        proc_meas = np.zeros(Idx["NY"])
-
-        self.Idx["Y"] = dict()
-        self.Idx["Y"]["GPS_POS"] = slice(0, 3)
-        self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
-        self.Idx["Y"]["GYRO"] = slice(6, 9)
-        self.Idx["Y"]["MAG"] = slice(9, 12)
-        self.Idx["Y"]["SUN"] = slice(12, 15) 
-        self.Idx["Y"]["RW_OMEGA"] = slice(15, 15+self.num_RWs)
+        proc_meas = np.zeros(Idxp["NY"])
 
         # Preprocess GPS data
-        proc_meas[Idx['Y']["GPS"]], GotGPS = self.preprocess_gps(sensor_data['gps'], current_time)
+        proc_meas[Idxp['Y']["GPS"]], GotGPS = self.preprocess_gps(sensor_data[self.Idx["Y"]["GPS"]], current_time)
 
         # Preprocess gyrometer data
-        proc_meas[Idx['Y']["GYRO"]], GotGyro = self.preprocess_gyrometer(sensor_data['gyrometer'], current_time)
+        proc_meas[Idxp['Y']["GYRO"]], GotGyro = self.preprocess_gyrometer(sensor_data[self.Idx["Y"]["GYRO"]], current_time)
 
         # Preprocess magnetometer data
-        proc_meas[Idx['Y']["MAG"]], GotMag = self.preprocess_magnetometer(sensor_data['magnetometer'], current_time)
+        proc_meas[Idxp['Y']["MAG"]], GotMag = self.preprocess_magnetometer(sensor_data[self.Idx["Y"]["MAG"]], current_time)
 
         # Preprocess sun sensor data
-        proc_meas[Idx['Y']["SUN"]], GotSun = self.preprocess_sun_sensor(sensor_data['sun_sensor'], current_time)
+        proc_meas[Idxp['Y']["SUN"]], GotSun = self.preprocess_sun_sensor(sensor_data[self.Idx["Y"]["SUN"]], current_time)
+
+        # Preprocess reaction wheel encoder data 
+        # [TODO]: add preprocessing function
+        proc_meas[Idxp['Y']["RW_OMEGA"]] = sensor_data[self.Idx["Y"]["RW_OMEGA"]]
 
         got_flags = {
             "GotGPS": GotGPS,
             "GotGyro": GotGyro,
             "GotMag": GotMag,
-            "GotSun": GotSun
+            "GotSun": GotSun,
+            "GotRW": True
         }
 
         return proc_meas, got_flags
@@ -58,10 +67,12 @@ class MeasurementPreprocessing:
     def preprocess_magnetometer(self, raw_mag_data, cur_time):
         got_B = False
         proc_mag_data = None
-        if cur_time >= self.last_magnetometer_measurement_time + self.magnetometer.dt:
+        if cur_time >= self.magnetometer.last_meas_time + self.magnetometer.dt:
             proc_mag_data = np.copy(raw_mag_data)  # Add actual preprocessing logic here
-            self.last_magnetometer_measurement_time = cur_time
+            self.magnetometer.last_meas_time = cur_time
             got_B = True
+        else:
+            proc_mag_data = np.zeros(3)
         
         return proc_mag_data, got_B
 
@@ -73,28 +84,31 @@ class MeasurementPreprocessing:
         if SUN_IN_VIEW and (current_time >= self.sunSensor.last_meas_time + self.sunSensor.dt):
             
             valid_ids = data > self.sunSensor.THRESHOLD_ILLUMINATION_LUX
-            sun_vector = np.linalg.pinv(self.sunSensor.G_pd_b[:,valid_ids]) @ data[valid_ids]
+            sun_vector = np.linalg.pinv(self.sunSensor.G_pd_b[valid_ids,:]) @ data[valid_ids]
+            sun_vector /= np.linalg.norm(sun_vector)
             # direction of photodiodes
-            self.sun_sensor.last_meas_time = current_time
+            self.sunSensor.last_meas_time = current_time
             got_sun = True
+        else:
+            sun_vector = np.zeros(3)
 
         return sun_vector, got_sun
 
-    def preprocess_gps(self, data):
+    def preprocess_gps(self, data, current_time):
         # Implement GPS data preprocessing here
         # Example: Convert coordinates to a standard format
         # TODO simulate RTC and use its drifting time
 
-        return 
+        return data, True
 
     def preprocess_gyrometer(self, data, current_time):
         # Propagate on Gyro
         got_Gyr = False
-        if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
-            true_omega_body_wrt_ECI_in_body = np.copy(self.true_state[10:13])
-            self.measurements[self.Idx["Y"]["GYRO"]] = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            self.last_gyro_measurement_time = current_time
-
+        if current_time >= self.gyro.last_meas_time + self.gyro.dt:
+            gyro_meas = np.copy(data)
+            self.gyro.last_meas_time = current_time
             got_Gyr = True
+        else:
+            gyro_meas = np.zeros(3)
 
-        return got_Gyr
+        return gyro_meas, got_Gyr
