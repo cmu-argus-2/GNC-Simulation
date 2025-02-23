@@ -455,10 +455,10 @@ void Simulation_Parameters::defineLUTs(std::string data_folder)
         NSS   = 0;
         sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
         sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
-        ss_visib_LUT        = Eigen::MatrixXd::Zero(3, 3);
         ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
-        aero_torque_fac_LUT = Eigen::MatrixXd::Zero(3, 3);
-        aero_force_fac_LUT  = Eigen::MatrixXd::Zero(3, 3);
+        //ss_visib_LUT        = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
 
     } else {
         // Load actual LUTs from data_folder
@@ -468,19 +468,28 @@ void Simulation_Parameters::defineLUTs(std::string data_folder)
         NAzim = data_params["NA"].as<int>();
         NSS   = data_params["NS"].as<int>();
 
-        // sc_area_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["effective_sc_area"].as<std::vector<double>>().data(), NElev, NAzim);
-        // sp_area_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["effective_sp_area"].as<std::vector<double>>().data(), NElev, NAzim);
-        // ss_visib_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["visibility"].as<std::vector<double>>().data(), NElev, NAzim);
-        // ss_visib_sum_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["visibility_sum"].as<std::vector<double>>().data(), NElev, NAzim);
-        // aero_torque_fac_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["aero_torque_fac"].as<std::vector<double>>().data(), NElev, NAzim);
-        // aero_force_fac_LUT = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(data_params["aero_force_fac"].as<std::vector<double>>().data(), NElev, NAzim);
+        sc_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(NElev, NAzim);
+        // ss_visib_LUT        = std::vector<Eigen::MatrixXd>(NSS, Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
         
-        sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
-        sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
-        ss_visib_LUT        = Eigen::MatrixXd::Zero(3, 3);
-        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
-        aero_torque_fac_LUT = Eigen::MatrixXd::Zero(3, 3);
-        aero_force_fac_LUT  = Eigen::MatrixXd::Zero(3, 3);
+        for (int i = 0; i < NElev; ++i) {
+            for (int j = 0; j < NAzim; ++j) {
+                sc_area_LUT(i, j) = data_params["effective_sc_area"][i][j].as<double>();
+                sp_area_LUT(i, j) = data_params["effective_sp_area"][i][j].as<double>();
+                ss_visib_sum_LUT(i, j) = data_params["visibility_sum"][i][j].as<double>();
+
+                //for (int k = 0; k < NSS; ++k) {
+                //    ss_visib_LUT[k](i, j) = data_params["visibility"][k][i][j].as<double>();
+                //}
+                for (int k = 0; k < 3; ++k) {
+                    aero_torque_fac_LUT[k](i, j) = data_params["aero_torque_fac"][i][j][k].as<double>();
+                    aero_force_fac_LUT[k](i, j)  = data_params["aero_force_fac"][i][j][k].as<double>();
+                }
+            }
+        }
     }
 }
 
@@ -578,6 +587,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
+        //
+        .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //
         .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }

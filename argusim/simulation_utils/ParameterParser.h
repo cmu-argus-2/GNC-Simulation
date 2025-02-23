@@ -104,10 +104,10 @@ class Simulation_Parameters {
     int NSS;
     MatrixXd sc_area_LUT;
     MatrixXd sp_area_LUT;
-    MatrixXd ss_visib_LUT;
     MatrixXd ss_visib_sum_LUT;
-    MatrixXd aero_torque_fac_LUT;
-    MatrixXd aero_force_fac_LUT;
+    //std::vector<MatrixXd> ss_visib_LUT;
+    std::vector<MatrixXd> aero_torque_fac_LUT;
+    std::vector<MatrixXd> aero_force_fac_LUT;
 
     // Satellite Parameetr Dispersion distributions
 

@@ -10,7 +10,7 @@ useDrag : False
 useSRP : False
 useDragTorque : True
 useGravityGradient : True
-useLUTs : False
+useLUTs : True
 
 # -----------------------------------------------------------------------------------------------------------
 # Initialization
