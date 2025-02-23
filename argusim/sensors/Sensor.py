@@ -26,6 +26,7 @@ class Sensor:
     def __init__(self, dt, sensor_noise_params):
         self.dt   = dt
         self.bias = Bias(dt, sensor_noise_params.bias_params)
+        self.last_meas_time = -np.inf
 
         # discrete version of sensor_noise_params.sigma_v causing the bias to random walk when integrated
         self.white_noise = sensor_noise_params.sigma_v / sqrt(dt)

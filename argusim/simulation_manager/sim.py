@@ -10,6 +10,7 @@ from argusim.build.sensors.pysensors import readSensors
 from argusim.simulation_manager import MultiFileLogger
 from argusim.FSW.controllers.controller import Controller
 from argusim.FSW.estimators.AttitudeEKF import Attitude_EKF
+from argusim.FSW.meas_preprocessing import MeasurementPreprocessing
 from argusim.actuators import Magnetorquer
 from argusim.actuators import ReactionWheel
 from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
@@ -95,6 +96,8 @@ class Simulator:
         # Magnetometer config
         self.magnetometer = Magnetometer(self.params.magnetometer_dt, self.params.sigma_magnetometer)
 
+        self.measProc = MeasurementPreprocessing(self.magnetometer, self.sunSensor, self.gyro)
+
         self.measurements = np.zeros((self.Idx["NY"],))
 
         self.obsw_states = np.zeros((self.Idx["NX"],))
@@ -149,6 +152,7 @@ class Simulator:
         # 12+self.num_photodiodes+self.num_RWs
         self.Idx["NY"] = 15+self.num_RWs 
         self.Idx["Y"] = dict()
+        self.Idx["Y"]["GPS"] = slice(0, 6)
         self.Idx["Y"]["GPS_POS"] = slice(0, 3)
         self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
         self.Idx["Y"]["GYRO"] = slice(6, 9)
@@ -245,57 +249,35 @@ class Simulator:
 
         # Run Sensors
         # Mask state through sensors
-        measurement = self.sensors(current_time, self.true_state)
+        sensor_data = self.sensors(current_time, self.true_state)
 
-        true_ECI_R_body = R.from_quat([*self.true_state[7:10], self.true_state[6]])
+        # sensor pre-processing
+        self.measurements, gotSensor = self.measProc.preprocess_measurements(sensor_data, current_time, self.Idx)
 
-        # Sun Sensor update
-        got_sun = False
-        SUN_IN_VIEW = True  # TODO actually check if sun is in view
-        if SUN_IN_VIEW and (current_time >= self.last_sun_sensor_measurement_time + self.sunSensor.dt):
-            
-            # TODO simulate RTC and use its drifting time
-            true_sun_ray_ECI = np.copy(self.true_state[self.Idx["X"]["SUN_POS"]])
-            true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
-            true_sun_ray_body = true_ECI_R_body.inv().as_matrix() @ true_sun_ray_ECI
-            
-            self.measurements[self.Idx["Y"]["SUN"]] = self.sunSensor.get_measurement(true_sun_ray_body)
-            self.last_sun_sensor_measurement_time = current_time
+        # measurement data logging
+        if gotSensor["got_Sun"]:
             self.logr.log_v(
                 "sun_sensor_measurement.bin",
                 [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["SUN"]].tolist(),
                 ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
             )
-            got_sun = True
 
-        got_B = False
-        if current_time >= self.last_magnetometer_measurement_time + self.magnetometer.dt:
-            true_Bfield_ECI = np.copy(self.true_state[self.Idx["X"]["MAG_FIELD"]])
-            true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
-            self.measurements[self.Idx["Y"]["MAG"]] = measurement[9:12]
-            self.last_magnetometer_measurement_time = current_time
+        if gotSensor["got_Mag"]:
             self.logr.log_v(
                 "magnetometer_measurement.bin",
                 [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["MAG"]].tolist(),
                 ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
             )
-            got_B = True
 
-        # Propagate on Gyro
-        got_Gyr = False
-        if current_time >= self.last_gyro_measurement_time + self.gyro.dt:
-            true_omega_body_wrt_ECI_in_body = np.copy(self.true_state[10:13])
-            self.measurements[self.Idx["Y"]["GYRO"]] = self.gyro.update(true_omega_body_wrt_ECI_in_body)
-            self.last_gyro_measurement_time = current_time
-
+        if gotSensor["got_Gyro"]:
             self.logr.log_v(
                 "gyro_measurement.bin",
                 [current_time - self.J2000_start_time] + self.measurements[self.Idx["Y"]["GYRO"]].tolist(),
                 ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
             )
-            got_Gyr = True
 
         # Log pertinent Quantities
+        # [TODO:] gyro bias should be logged as part of the state vector
         true_gyro_bias = self.gyro.get_bias()
         # Log pertinent Quantities
         self.logr.log_v(
@@ -308,25 +290,28 @@ class Simulator:
             "state_true.bin",
             [current_time - self.J2000_start_time]
             + self.true_state.tolist()
-            + measurement.tolist()
+            + self.measurements.tolist()
             + control_input.tolist(),
             ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
         )
         
-
         # Run Attitude Estimation
         if not self.bypass_estimator:
+            # [TODO:] true_sun_ray_ECI and true_Bfield_ECI should come from onboard knowledge
+            # using GPS and simplified IGRF and ephem data to get these parameters
+            true_sun_ray_ECI = 0
+            true_Bfield_ECI  = 0
             # Sun Sensor update
-            if got_sun:
+            if gotSensor["got_Sun"]:
                 self.attitude_ekf.sun_sensor_update(
                     self.measurements[self.Idx["Y"]["SUN"]], true_sun_ray_ECI, current_time 
                 )
-            if got_B:
+            if gotSensor["got_Mag"]:
                 self.attitude_ekf.Bfield_update(
                     self.measurements[self.Idx["Y"]["MAG"]], true_Bfield_ECI, current_time
                 )
 
-            if got_B and got_sun:
+            if gotSensor["got_Mag"] and gotSensor["got_Sun"]:
                 if not self.attitude_ekf.initialized:
                     attitude_estimate = self.attitude_ekf.triad(
                         true_sun_ray_ECI, self.measurements[self.Idx["Y"]["SUN"]], true_Bfield_ECI, self.measurements[self.Idx["Y"]["MAG"]]
@@ -335,7 +320,7 @@ class Simulator:
                     self.attitude_ekf.initialized = True
                     self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
                     self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
-            if got_Gyr:
+            if gotSensor["got_Gyro"]:
                 self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
       
         

@@ -16,6 +16,8 @@
 #pragma GCC diagnostic pop
 #endif
 
+const double MAX_RANGE = 117000;  // OPT4001
+const double THRESHOLD_ILLUMINATION_LUX = 3000;
 
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
@@ -65,7 +67,7 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 
     // Noisy Measurements
     VectorXd photodiode_noise = VectorXd::NullaryExpr(sc.num_photodiodes, [&](){return pd_noise_dist(gen);});
-    VectorXd solar_intensity_on_panel = 140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
+    VectorXd solar_intensity_on_panel = MAX_RANGE*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
 
     solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intnesity is negative, set to 0
 

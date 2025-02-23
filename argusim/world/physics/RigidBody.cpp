@@ -28,6 +28,8 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
                                 sc.I_rw, sc.I_sat, sc.MTB, t_J2000,  
                                 sc.mass,  sc.Cd, sc.A, sc.CoPM,
                                 sc.useDT, sc.useGG);
+    // [TODO:] Actuator Dynamics
+    // [TODO:] Sensor Dynamics (bias, noise, etc)
 
     return xdot;
 }
