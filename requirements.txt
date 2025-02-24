@@ -4,3 +4,4 @@ basemap
 psutil
 pyigrf
 flask
+argcomplete==1.9.4
