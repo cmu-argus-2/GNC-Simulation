@@ -11,6 +11,7 @@ from argusim.simulation_manager import MultiFileLogger, SimLogger
 from argusim.FSW.controllers.controller import Controller
 from argusim.FSW.estimators.AttitudeEKF import Attitude_EKF
 from argusim.FSW.meas_preprocessing import MeasurementPreprocessing
+from argusim.FSW.fsw_utils import *
 from argusim.actuators import Magnetorquer
 from argusim.actuators import ReactionWheel
 from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
@@ -215,16 +216,25 @@ class Simulator:
         # Log true state
         # [TODO:] gyro bias should be logged as part of the state vector
         true_gyro_bias = self.gyro.get_bias()
-        
+
         # self.measurements
         self.logr.log_true_state(current_time, self.true_state, control_input, sensor_data, true_gyro_bias)
         
         # Run Attitude Estimation
         if not self.bypass_estimator:
-            # [TODO:] true_sun_ray_ECI and true_Bfield_ECI should come from onboard knowledge
+            # [TODO 1:] true_sun_ray_ECI and true_Bfield_ECI should come from onboard knowledge
             # using GPS and simplified IGRF and ephem data to get these parameters
-            true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
-            true_Bfield_ECI  = self.true_state[self.Idx["X"]["MAG_FIELD"]]
+            # [TODO 2:] everything within this if should be moved to a main attitude determination function
+
+            # true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
+            # approx 0.1 deg error. 
+            unixtime = j2000_to_unix_time(current_time)
+            true_sun_ray_ECI = approx_sun_position_ECI(unixtime) 
+
+            # true_Bfield_ECI  = self.true_state[self.Idx["X"]["MAG_FIELD"]]
+            # [TODO:] position should come from GPS knowledge/orbit propagation, not true state
+            # [TODO:] update igrf coefficients for FSW
+            true_Bfield_ECI  = igrf_eci(unixtime, self.true_state[self.Idx["X"]["ECI_POS"]])
             
             # Sun Sensor update
             if gotSensor["GotSun"]:
@@ -243,6 +253,7 @@ class Simulator:
                     )
                     self.attitude_ekf.set_ECI_R_b(R.from_matrix(attitude_estimate))
                     self.attitude_ekf.initialized = True
+                    # TODO: have this defined in params file
                     self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
                     self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
             if gotSensor["GotGyro"]:
@@ -285,6 +296,7 @@ class Simulator:
                 self.control_input = np.zeros(self.Idx["NU"])
             else:
                 # Update the controller
+                # [TODO:] This should be moved to a main attitude controller function
                 if sim_delta_time >= last_controller_update + self.controller_dt:
                     if self.bypass_estimator:
                         self.obsw_states = np.copy(self.true_state)

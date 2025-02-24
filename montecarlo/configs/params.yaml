@@ -58,7 +58,7 @@ initialization:
 
      start_spin_stabilized: True
      start_ss_pointed: True
-     start_ss_pointing: "Nadir" # "Nadir" or "Sun"
+     start_ss_pointing: "Sun" # "Nadir" or "Sun"
 
 # -----------------------------------------------------------------------------------------------------------
 # physical properties
@@ -175,7 +175,7 @@ gyroscope:
 # -----------------------------------------------------------------------------------------------------------
 # Controller Parameters
 # -----------------------------------------------------------------------------------------------------------
-algorithm: "BaseNP" # "Lyapunov" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
+algorithm: "Lyapunov" # "BaseNP" # "BaseSP" # "Bcross" # # "BCROSS" or "PID" or "BaseSP"
 bcrossgain: 1.0e+08 # 0.0028
 
 mtb_att_feedback_gains: [[0.000001, 0.0, 0.0, 0.0000056,  0.0, 0.0],
@@ -184,7 +184,7 @@ mtb_att_feedback_gains: [[0.000001, 0.0, 0.0, 0.0000056,  0.0, 0.0],
 rw_att_feedback_gains: [0.07071, 0.00028]
 rw_vel_gain: 0.0050 # 6.5e-7
 pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
-pointing_target: "Nadir" # "Nadir" or "Sun"
+pointing_target: "Sun" # "Nadir" or "Sun"
 tgt_ss_ang_vel: 2.0 # [deg/s]
 nom_rw_ang_vel: 15000.0 # 1333.0 # 0.0 # [deg/s]
 controller_dt: 1 # [s]
@@ -212,5 +212,5 @@ PlotFlags:
      MEKF_plots : False
 debugFlags:
      bypass_controller: False # Open-loop
-     bypass_estimator: True  # Perfect state knowledge
+     bypass_estimator: False  # Perfect state knowledge
      bypass_sensors: True  # Perfect measurements
