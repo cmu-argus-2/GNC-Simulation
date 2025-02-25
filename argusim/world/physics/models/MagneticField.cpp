@@ -46,6 +46,7 @@ Vector3 MagneticFieldSEZ(const Vector3 r_geod, double year)
     int itype = 1;
     double Bn, Be, Bd, Bt;
     double alt = r_geod(2)/1000.0; 
+    // [TODO:] update to igrf14syn_
     igrf13syn_(&isv, &year, &itype, &alt, &colat, &elong, &Bn, &Be, &Bd, &Bt);
     
     Vector3 B_sez (-Bn, Be, -Bd);

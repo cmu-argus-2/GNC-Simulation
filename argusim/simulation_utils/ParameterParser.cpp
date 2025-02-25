@@ -35,12 +35,14 @@
 // ==========================================================================
 // ==========================================================================
 
-Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder) : 
+Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename) : 
                                     dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
     YAML::Node params = YAML::LoadFile(filename);
     defineDistributions(filename);
+    useLUTs = params["useLUTs"].as<bool>();
+    defineLUTs(data_filename);
 
     results_folder = results_folder; // PLACEHOLDER
 
@@ -54,11 +56,18 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
 
+    // Center of Pressure/Mass arm
+    CoPM = Vector3::NullaryExpr([&](){return CoPM_dist(dev);});
+
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
     CR = params["CR"].as<double>();
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
+
+    // Attitude perturbation properties
+    useDT = params["useDragTorque"].as<bool>();
+    useGG = params["useGravityGradient"].as<bool>();
 
     // Reaction Wheel
     num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
@@ -69,6 +78,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_rw = I_rw_dist(dev);
 
     // GPS
+    gps_dt = params["gps"]["gps_dt"].as<double>();
     gps_pos_std = params["gps"]["gps_pos_std"].as<double>(); // gps_pos_dist(dev);
     gps_vel_std = params["gps"]["gps_vel_std"].as<double>(); // gps_vel_dist(dev);
 
@@ -201,7 +211,7 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
     Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
     Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
     double maxeigenval = 0;
-    Eigen::Vector3d I_max_dir;
+    Eigen::Vector3d I_max_dir = Eigen::Vector3d::Zero();
     for(int i=0; i<eigen_values.size(); i++){
         if (eigen_values[i] > maxeigenval) {
             maxeigenval = eigen_values[i];
@@ -340,6 +350,10 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double area_std = area_nominal*(params["area"]["area_dev"].as<double>()/100);
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
 
+    // Center of Pressure/Mass arm
+    double CoPM_std = params["CoPM_dev"].as<double>();
+    CoPM_dist = std::normal_distribution<double>(0, CoPM_std);
+
     // Inertia
     Vector3 inertia_dev = Eigen::Map<Vector3>(params["inertia"]["principal_axis_dev"].as<std::vector<double>>().data());
     MatrixXd Isat = Eigen::Map<Matrix_3x3, Eigen::RowMajor>(params["inertia"]["nominal_inertia"].as<std::vector<double>>().data());
@@ -432,6 +446,54 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     sim_start_time_dist = std::uniform_real_distribution<double>(earliest_sim_start_J2000, latest_sim_start_J2000);
 }
 
+void Simulation_Parameters::defineLUTs(std::string data_folder)
+{
+    // Load LUTs
+    if (data_folder.empty() || !useLUTs) {
+        // Load dummy variables into LUTs
+        NElev = 0;
+        NAzim = 0;
+        NSS   = 0;
+        sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
+        //ss_visib_LUT        = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+
+    } else {
+        // Load actual LUTs from data_folder
+        YAML::Node data_params = YAML::LoadFile(data_folder);
+
+        NElev = data_params["NE"].as<int>();
+        NAzim = data_params["NA"].as<int>();
+        NSS   = data_params["NS"].as<int>();
+
+        sc_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(NElev, NAzim);
+        // ss_visib_LUT        = std::vector<Eigen::MatrixXd>(NSS, Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
+        
+        for (int i = 0; i < NElev; ++i) {
+            for (int j = 0; j < NAzim; ++j) {
+                sc_area_LUT(i, j) = data_params["effective_sc_area"][i][j].as<double>();
+                sp_area_LUT(i, j) = data_params["effective_sp_area"][i][j].as<double>();
+                ss_visib_sum_LUT(i, j) = data_params["visibility_sum"][i][j].as<double>();
+
+                //for (int k = 0; k < NSS; ++k) {
+                //    ss_visib_LUT[k](i, j) = data_params["visibility"][k][i][j].as<double>();
+                //}
+                for (int k = 0; k < 3; ++k) {
+                    aero_torque_fac_LUT[k](i, j) = data_params["aero_torque_fac"][i][j][k].as<double>();
+                    aero_force_fac_LUT[k](i, j)  = data_params["aero_force_fac"][i][j][k].as<double>();
+                }
+            }
+        }
+    }
+}
+
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
 {
     std::mt19937 gen;
@@ -497,7 +559,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysim_utils, m) {
     pybind11::class_<Simulation_Parameters>(m, "Simulation_Parameters")
-        .def(pybind11::init<std::string, int, std::string>())
+        .def(pybind11::init<std::string, int, std::string, std::string>())
         //.def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
         //.def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
         .def_readonly("mass", &Simulation_Parameters::mass)
@@ -508,6 +570,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("G_rw_b", &Simulation_Parameters::G_rw_b)
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia_RW", &Simulation_Parameters::I_rw)
+        //
+        .def_readonly("gps_dt", &Simulation_Parameters::gps_dt)
         //
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
@@ -526,6 +590,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
+        //
+        .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //
         .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
 }

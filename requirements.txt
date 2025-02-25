@@ -7,3 +7,4 @@ flask
 scipy
 pyyaml
 pytest
+shapely

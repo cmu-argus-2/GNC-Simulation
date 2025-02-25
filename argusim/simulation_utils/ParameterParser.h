@@ -10,7 +10,7 @@
 
 class Simulation_Parameters {
    public:
-    Simulation_Parameters(std::string filename, int trial_number, std::string results_folder);
+    Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename);
     Vector3 spinStabilizedRate(double tgt_ss_ang_vel);
     Vector4 nadirPointingAttitude(VectorXd State, std::mt19937 gen);
     Vector4 sunPointingAttitude(VectorXd State, std::mt19937 gen);
@@ -28,6 +28,9 @@ class Simulation_Parameters {
     double mass; // [Kg]
     Matrix_3x3 I_sat; // [kg.m^2]
     double A; // [m^2] face area of each facet
+
+    // Center of Pressure/Mass arm
+    Vector3 CoPM; // [m,m,m]
 
     // Drag and SRP properties
     double Cd; // [unitless]
@@ -49,6 +52,7 @@ class Simulation_Parameters {
 
     /* Sensors */
     // GPS
+    double gps_dt; // [s]
     double gps_pos_std;
     double gps_vel_std;
 
@@ -75,7 +79,10 @@ class Simulation_Parameters {
     double dt;                         // [s]
     double sim_start_time;             // [s] measured relative to J2000
     bool useDrag; // set to False to deactivate drag calcs
-    bool useSRP; // set to False to deactivate SRP calcs
+    bool useSRP;  // set to False to deactivate SRP calcs
+    bool useDT;   // set to False to deactivate Drag Torque calcs
+    bool useGG;   // set to False to deactivate Gravity Gradient calcs
+    bool useLUTs; // set to False to deactivate LUTs
 
     /* Satellite Initialization */
     double semimajor_axis; // [m]
@@ -92,14 +99,27 @@ class Simulation_Parameters {
     double controller_dt; // [s]
     double estimator_dt;  // [s]
 
+    // Lookup tables
+    int NElev;
+    int NAzim;
+    int NSS;
+    MatrixXd sc_area_LUT;
+    MatrixXd sp_area_LUT;
+    MatrixXd ss_visib_sum_LUT;
+    //std::vector<MatrixXd> ss_visib_LUT;
+    std::vector<MatrixXd> aero_torque_fac_LUT;
+    std::vector<MatrixXd> aero_force_fac_LUT;
+
     // Satellite Parameetr Dispersion distributions
 
     // Physical
     std::normal_distribution<double> mass_dist;
     std::normal_distribution<double> area_dist;
+    std::normal_distribution<double> CoPM_dist;
     std::normal_distribution<double> Ixx_dist;
     std::normal_distribution<double> Iyy_dist;
     std::normal_distribution<double> Izz_dist;
+
 
     // Actuators
     std::normal_distribution<double> rw_orientation_dist;
@@ -132,6 +152,7 @@ class Simulation_Parameters {
     private:
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
     void defineDistributions(std::string filename);
+    void defineLUTs(std::string filename);
     std::mt19937 loadSeed(int trial_number);
 };
 
