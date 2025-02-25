@@ -27,6 +27,7 @@ class Sensor:
         self.dt   = dt
         self.bias = Bias(dt, sensor_noise_params.bias_params)
         self.last_meas_time = -np.inf
+        self.last_measurement = np.zeros(1)
 
         # discrete version of sensor_noise_params.sigma_v causing the bias to random walk when integrated
         self.white_noise = sensor_noise_params.sigma_v / sqrt(dt)
@@ -49,6 +50,7 @@ class TriAxisSensor:
         self.x  = Sensor(dt, axes_params[0])
         self.y  = Sensor(dt, axes_params[1])
         self.z  = Sensor(dt, axes_params[2])
+        self.last_measurement = np.zeros(3)
 
     def get_bias(self):
         return np.array([self.x.get_bias(), self.y.get_bias(), self.z.get_bias()])

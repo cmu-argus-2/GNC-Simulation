@@ -12,12 +12,8 @@ from argusim.FSW.controllers.controller import Controller
 from argusim.FSW.estimators.AttitudeEKF import Attitude_EKF
 from argusim.FSW.meas_preprocessing import MeasurementPreprocessing
 from argusim.FSW.fsw_utils import *
-from argusim.actuators import Magnetorquer
-from argusim.actuators import ReactionWheel
-from argusim.sensors.Sensor import SensorNoiseParams, TriAxisSensor
-from argusim.sensors.SunSensor import SunSensor
-from argusim.sensors.Magnetometer import Magnetometer
-from argusim.sensors.Bias import BiasParams
+from argusim.actuators import Magnetorquer, ReactionWheel
+from argusim.sensors import GPS, SunSensor, Magnetometer, TriAxisSensor, SensorNoiseParams, BiasParams
 from argusim.world.math.quaternions import *
 
 import os
@@ -87,7 +83,10 @@ class Simulator:
         # Magnetometer config
         self.magnetometer = Magnetometer(self.params.magnetometer_dt, self.params.sigma_magnetometer)
 
-        self.measProc = MeasurementPreprocessing(self.magnetometer, self.sunSensor, self.gyro, self.num_RWs)
+        # GPS config
+        self.gps = GPS(self.params.gps_dt)
+
+        self.measProc = MeasurementPreprocessing(self.magnetometer, self.sunSensor, self.gyro, self.gps, self.num_RWs)
 
         self.measurements = np.zeros((self.Idx["NY"],))
 
@@ -225,7 +224,7 @@ class Simulator:
             # [TODO 1:] true_sun_ray_ECI and true_Bfield_ECI should come from onboard knowledge
             # using GPS and simplified IGRF and ephem data to get these parameters
             # [TODO 2:] everything within this if should be moved to a main attitude determination function
-
+            
             # true_sun_ray_ECI = self.true_state[self.Idx["X"]["SUN_POS"]]
             # approx 0.1 deg error. 
             unixtime = j2000_to_unix_time(current_time)
@@ -234,7 +233,10 @@ class Simulator:
             # true_Bfield_ECI  = self.true_state[self.Idx["X"]["MAG_FIELD"]]
             # [TODO:] position should come from GPS knowledge/orbit propagation, not true state
             # [TODO:] update igrf coefficients for FSW
-            true_Bfield_ECI  = igrf_eci(unixtime, self.true_state[self.Idx["X"]["ECI_POS"]])
+            # current_eci_pos = self.true_state[self.Idx["X"]["ECI_POS"]]
+            # error of some 15 kms
+            current_eci_pos = self.measurements[self.Idx["Y"]["GPS_POS"]]
+            true_Bfield_ECI  = igrf_eci(unixtime, current_eci_pos)
             
             # Sun Sensor update
             if gotSensor["GotSun"]:
@@ -256,7 +258,8 @@ class Simulator:
                     # TODO: have this defined in params file
                     self.attitude_ekf.P[0:3, 0:3] = np.eye(3) * np.deg2rad(10) ** 2
                     self.attitude_ekf.P[3:6, 3:6] = np.eye(3) * np.deg2rad(5) ** 2
-            if gotSensor["GotGyro"]:
+
+            if gotSensor["GotGyro"] and self.attitude_ekf.initialized:
                 self.attitude_ekf.gyro_update(self.measurements[self.Idx["Y"]["GYRO"]], current_time)
       
             if self.attitude_ekf.initialized:
@@ -311,22 +314,39 @@ class Simulator:
                         self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = magfield
                     else:
                         att_ekf = self.attitude_ekf.get_state()
-                        Re2b = self.attitude_ekf.get_ECI_R_b().as_matrix().T
-                        self.obsw_states[self.Idx["X"]["QUAT"]]    = att_ekf[:4]
-                        gyro_meas = self.measurements[self.Idx["Y"]["GYRO"]]
-                        self.obsw_states[self.Idx["X"]["ANG_VEL"]] = gyro_meas - att_ekf[4:]
-                        # self.measurements[self.Idx["Y"]["SUN"]] 
+                        if self.attitude_ekf.initialized:
+                            Re2b = self.attitude_ekf.get_ECI_R_b().as_matrix().T
+                            self.obsw_states[self.Idx["X"]["QUAT"]]    = att_ekf[:4]
+                        else: # [TODO:] fix this
+                            Re2b = quatrotation(self.true_state[self.Idx["X"]["QUAT"]]).T
+                            self.obsw_states[self.Idx["X"]["QUAT"]]    = self.true_state[self.Idx["X"]["QUAT"]]
+                        
                         # TODO: use ECI Sun (RTC error) + att or sun sensor directly
                         # opt 1 robust to eclipse
-                        # opt 2 robust to MEKF failure
+                        gyro_meas  = self.measurements[self.Idx["Y"]["GYRO"]]
+                        # [TODO:] only do this if last sun sensor measurement is recent
+                        # sun_vector = self.measurements[self.Idx["Y"]["SUN"]]
                         sun_vector = Re2b @ self.true_state[self.Idx["X"]["SUN_POS"]]
+
+                        mag_field  = self.measurements[self.Idx["Y"]["MAG"]]
+
+                        self.obsw_states[self.Idx["X"]["ANG_VEL"]]   = gyro_meas - att_ekf[4:]
+                        self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
+                        self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = mag_field
+
+                        # needs both attitude and position
+                        """
+                        zenith_vector = Re2b @ self.measurements[self.Idx["Y"]["GPS_POS"]]
+                        cross_vector  = Re2b @ self.measurements[self.Idx["Y"]["GPS_VEL"]]
+
+                        # opt 2 robust to MEKF failure
                         zenith_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_POS"]]
                         cross_vector = Re2b @ self.true_state[self.Idx["X"]["ECI_VEL"]]
+
                         self.obsw_states[self.Idx["X"]["ECI_POS"]]   = zenith_vector / np.linalg.norm(zenith_vector)
                         self.obsw_states[self.Idx["X"]["ECI_VEL"]]   = cross_vector / np.linalg.norm(cross_vector)
-                        self.obsw_states[self.Idx["X"]["SUN_POS"]]   = sun_vector / np.linalg.norm(sun_vector)
-                        self.obsw_states[self.Idx["X"]["MAG_FIELD"]] = self.measurements[self.Idx["Y"]["MAG"]]
-
+                        """
+                        
                     self.control_input = self.controller.run(
                         self.obsw_states, self.Idx
                     )  

@@ -78,6 +78,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_rw = I_rw_dist(dev);
 
     // GPS
+    gps_dt = params["gps"]["gps_dt"].as<double>();
     gps_pos_std = params["gps"]["gps_pos_std"].as<double>(); // gps_pos_dist(dev);
     gps_vel_std = params["gps"]["gps_vel_std"].as<double>(); // gps_vel_dist(dev);
 
@@ -569,6 +570,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("G_rw_b", &Simulation_Parameters::G_rw_b)
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia_RW", &Simulation_Parameters::I_rw)
+        //
+        .def_readonly("gps_dt", &Simulation_Parameters::gps_dt)
         //
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)

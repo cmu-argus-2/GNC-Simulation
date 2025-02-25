@@ -139,6 +139,7 @@ nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sensors
 # -----------------------------------------------------------------------------------------------------------
 gps:
+     gps_dt : 1 # [UNITS: s] # assuming a GPS measurement every second is very optimistic, should be around every 30 minutes
      gps_pos_std : 5 # [UNITS: m]
      gps_pos_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
 

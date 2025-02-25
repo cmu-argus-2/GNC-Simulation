@@ -11,6 +11,7 @@ class SunSensor:
         self.G_pd_b = np.array(ss_params["photodiode_normals"]).reshape(-1, 3)
         self.MAX_RANGE = 117000  # OPT4001
         self.THRESHOLD_ILLUMINATION_LUX = 3000
+        self.last_measurement = np.zeros(3)
 
     def get_measurement(self, clean_signal):
         angular_error = self.sigma_angular_error * np.random.standard_normal()

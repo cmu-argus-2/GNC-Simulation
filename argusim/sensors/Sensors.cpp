@@ -101,12 +101,12 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
     static Vector3 bias = Vector3::Zero();
 
     // Gyro Noise Models
-    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w*sqrt(sc.dt));
+    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w/sqrt(sc.dt));
     static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v/sqrt(sc.dt));
 
     // Update Bias
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
-    bias = bias + sc.dt*(bias_noise - bias/sc.gyro_correlation_time);
+    bias = bias + sc.dt*bias_noise;
 
     // Random white noise
     Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
@@ -124,7 +124,7 @@ VectorXd RWEncoder(const VectorXd state, Simulation_Parameters sc)
 
     // Random white noise
     // Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
-    
+
     // [TODO:] add quantization error
 
     VectorXd rw_encoders = state(Eigen::seqN(19, sc.num_RWs)); // + white_noise;

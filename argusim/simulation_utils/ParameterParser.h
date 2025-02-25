@@ -52,6 +52,7 @@ class Simulation_Parameters {
 
     /* Sensors */
     // GPS
+    double gps_dt; // [s]
     double gps_pos_std;
     double gps_vel_std;
 
