@@ -145,6 +145,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     sim_start_time = sim_start_time_dist(dev);
 
     RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
+
+    initial_gyro_bias = Vector3::NullaryExpr([&](){return gyro_bias_dist(dev);});
     
     // Populate State Vector
     initial_true_state = initializeSatellite(sim_start_time);
@@ -331,6 +333,7 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     State(Eigen::seqN(13, 3)) = sun_position_eci(epoch);
     State(Eigen::seqN(16, 3)) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
     State(Eigen::seqN(19, num_RWs)).setZero();
+    State(Eigen::seqN(19+num_RWs, 3)) = initial_gyro_bias;
 
     return State;
 
@@ -402,6 +405,13 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
     sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
+    // Gyroscope
+    initial_bias_range = params["gyroscope"]["initial_bias_range"].as<double>();
+    gyro_scale_factor_err_range : [-0.01, 0.01]
+     gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
+     gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
+     initial_bias_range : [-0.0873, 0.0873]  # [(rad/s)/sqrt(s))]
+
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
@@ -437,6 +447,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double angular_rate_std = params["initialization"]["initial_angular_rate_dev"].as<double>();
     initial_angular_rate_dist = std::normal_distribution<double>(0, angular_rate_std);
     
+    double gyro_bias_std = params["initialization"]["gyro_bias_dev"].as<double>();
     //double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     //double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
     //sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);

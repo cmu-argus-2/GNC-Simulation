@@ -161,10 +161,8 @@ class Simulator:
         # Controller Frequency
         self.controller_dt = self.obsw_params["controller_dt"]
 
-        # sensor sampling frequency
-        self.last_sun_sensor_measurement_time = 0.0
-        self.last_magnetometer_measurement_time = 0.0
-        self.last_gyro_measurement_time = 0.0
+        # sensors
+        self.Idx["X"]["GYRO_BIAS"] = slice(19 + self.num_RWs, 22 + self.num_RWs)
 
     def set_control_input(self, u):
         """

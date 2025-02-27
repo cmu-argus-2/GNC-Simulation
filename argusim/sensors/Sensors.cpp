@@ -98,6 +98,7 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 
 Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
 {
+    
     static Vector3 bias = Vector3::Zero();
 
     // Gyro Noise Models

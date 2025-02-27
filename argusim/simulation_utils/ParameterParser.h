@@ -94,6 +94,7 @@ class Simulation_Parameters {
     double LTDN; // [hours]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
+    Vector3 initial_gyro_bias; // [rad/s]
     VectorXd initial_true_state;
 
     double controller_dt; // [s]
