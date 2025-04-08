@@ -17,13 +17,14 @@
 
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
-    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyro + Mag Field + Light Sensors
+    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes; // GPS + Gyroscope + Magnetometer + Lux Readings
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
     measurement(Eigen::seqN(6,3)) = Gyroscope(state, sc);
     measurement(Eigen::seqN(9,3)) = Magnetometer(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
+    //measurement(Eigen::seqN(12+sc.num_photodiodes, 3)) = PowerGeneration(state);
 
     return measurement;
 }
@@ -59,12 +60,34 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
     Vector3 sun_pos_eci = state(Eigen::seqN(13,3));
     Vector3 sun_pos_body = quat.toRotationMatrix().transpose()*sun_pos_eci; // q represents body to ECI transformation
 
+    std::cout << sc.G_pd_b << "\n";
+
     // Noisy Measurements
     VectorXd photodiode_noise = VectorXd::NullaryExpr(sc.num_photodiodes, [&](){return pd_noise_dist(gen);});
     VectorXd solar_intensity_on_panel = 140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
 
-    solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intnesity is negative, set to 0
+    solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intensity is negative, set to 0
+
     return solar_intensity_on_panel;
+
+}
+
+VectorXd PowerGeneration(const VectorXd state)
+{
+
+    Quaternion quat {state(6), state(7), state(8), state(9)};
+
+    // True sun position
+    Vector3 sun_pos_eci = state(Eigen::seqN(13,3));
+    Vector3 sun_pos_body = quat.toRotationMatrix().transpose()*sun_pos_eci; // q represents body to ECI transformation
+
+    // // Noisy Measurements
+    // VectorXd photodiode_noise = VectorXd::NullaryExpr(sc.num_photodiodes, [&](){return pd_noise_dist(gen);});
+    // VectorXd solar_intensity_on_panel = 140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
+
+    // solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intensity is negative, set to 0
+
+    return sun_pos_body;
 
 }
 

@@ -78,12 +78,15 @@ gps:
      gps_vel_std_dev : 20 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%]
 
 photodiodes:
-     num_photodiodes : 6
-     photodiode_normals : [1,0,0, 
-                           0,1,0, 
-                           0,0,1, 
-                          -1,0,0, 
-                           0,-1,0, 
+     num_photodiodes : 9
+     photodiode_normals : [1,0,0,
+                           -1,0,0, 
+                           0,1,0,
+                           0,-1,0,
+                           0.7071,0,0.7071, 
+                           0,0.7071,0.7071,
+                           -0.7071,0,0.7071,
+                           0,-0.7071,0.7071, 
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
 

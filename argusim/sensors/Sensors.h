@@ -18,6 +18,7 @@ std::mt19937 gen(rd());
  * @return measurement vector with added noise
  */
 VectorXd ReadSensors(const VectorXd state, double t_J2000, Simulation_Parameters sc);
+VectorXd PowerGeneration(const VectorXd state);
 
 /**
  * @brief Measures the spacecraft position and velocity in ECEF frame
