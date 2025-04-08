@@ -53,7 +53,7 @@ class Simulator():
             
             self.measurement_labels = ["gps_posx ECEF [m]", "gps_posy ECEF [m]", "gps_posz ECEF [m]", "gps_velx ECEF [m/s]", "gps_vely ECEF [m/s]", "gps_velz ECEF [m/s]",
                                     "gyro_x [rad/s]", "gyro_y [rad/s]", "gyro_z [rad/s]", "mag_x_body [T]", "mag_y_body [T]", "mag_z_body [T]"] + \
-                                    ['light_sensor_lux ' + str(i) for i in range(self.num_photodiodes)]
+                                    ['light_sensor_lux ' + str(i) for i in range(self.num_photodiodes)] + ['mtb_power ' + str(i) for i in range(self.num_MTBs)]
             
             self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)]
 
@@ -110,11 +110,11 @@ class Simulator():
         else:
             self.control_input = u # magnetorquers + RWs
     
-    def sensors(self, current_time, state):
+    def sensors(self, current_time, state, control_input):
         '''
             Implements partial observability using sensor models
         '''
-        return readSensors(state, current_time, self.params)
+        return readSensors(state, control_input, current_time, self.params)
 
     def step(self, sim_time, dt):
         '''
@@ -131,7 +131,7 @@ class Simulator():
         self.state = rk4(self.state, control_input, self.params, current_time, dt)
 
         # Mask state through sensors
-        measurement = self.sensors(current_time, self.state)
+        measurement = self.sensors(current_time, self.state, control_input)
         
         # Log pertinent Quantities
         if self.log:
