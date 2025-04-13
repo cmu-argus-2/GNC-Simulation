@@ -17,18 +17,25 @@
 
 VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
 {
+    /* Measurement Vector: [GPS state          (6x1),
+                            IMU reading        (3x1),
+                            Lux Readings       (9x1),
+                            Magnetorquer power (6x1)]*/
     int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes + sc.num_MTBs; // GPS + Gyroscope + Magnetometer + Lux Readings + MTB power consumptions
+    
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
-    measurement(Eigen::seqN(6,3)) = Gyroscope(state, sc);
-    measurement(Eigen::seqN(9,3)) = Magnetometer(state, sc);
+    measurement(Eigen::seqN(6,6)) = IMU(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs)) = ActuatorPowerConsumption(control_input, sc);
+    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs)) = Magnetorquers(control_input, sc);
 
     return measurement;
 }
 
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ---------------------------------------------------- GPS -------------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
 Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
     // Noise Distributions
@@ -49,6 +56,53 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
     return y;
 }
 
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ---------------------------------------------------- IMU -------------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
+Vector3 IMU(const VectorXd state, Simulation_Parameters sc)
+{
+    VectorXd imu_reading = VectorXd::Zero(6);
+
+    /* Gyroscope */ 
+    static Vector3 bias = Vector3::Zero();
+
+    // Gyro Noise Models
+    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w*sqrt(sc.dt));
+    static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v/sqrt(sc.dt));
+
+    // Update Bias
+    Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
+    bias = bias + sc.dt*(bias_noise - bias/sc.gyro_correlation_time);
+
+    // Random white noise
+    Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
+
+    // Noisy Measurement
+    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(Eigen::seqN(10,3)) + bias + white_noise;
+    
+    imu_reading(Eigen::seqN(0,3)) = omega_meas;
+
+    /* Magnetometer */
+    
+    // Magnetometer Noise Distribution
+    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
+
+    Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
+
+    // True Magnetic Field
+    Vector3 B_eci = state(Eigen::seqN(16,3));
+
+    // Noisy Measurement
+    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
+
+    imu_reading(Eigen::seqN(3,3)) = B_body;
+
+    return imu_reading;
+}
+
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ------------------------------------------------- LIGHT SENSORS ------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 {
     // Photodiodes noise distribution
@@ -70,50 +124,30 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 
 }
 
-VectorXd ActuatorPowerConsumption(const VectorXd control_input, Simulation_Parameters sc)
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ------------------------------------------------- MAGNETORQUERS ------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
+VectorXd Magnetorquers(const VectorXd control_input, Simulation_Parameters sc)
 {
-
     VectorXd power_consumption = control_input(Eigen::seqN(0,sc.num_MTBs)).array() * control_input(Eigen::seqN(0,sc.num_MTBs)).array() / sc.resistances.array();
     return power_consumption;
-
 }
 
-Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
-{
-    // Magnetometer Noise Distribution
-    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
+// VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, Simulation_Parameters sc)
+// {
+//     int reading_size = 3;
 
-    Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
-
-    // True Magnetic Field
-    Vector3 B_eci = state(Eigen::seqN(16,3));
-
-    // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
-
-    return B_body;
-}
-
-Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
-{
-    static Vector3 bias = Vector3::Zero();
-
-    // Gyro Noise Models
-    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w*sqrt(sc.dt));
-    static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v/sqrt(sc.dt));
-
-    // Update Bias
-    Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
-    bias = bias + sc.dt*(bias_noise - bias/sc.gyro_correlation_time);
-
-    // Random white noise
-    Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
-
-    // Noisy Measurement
-    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(Eigen::seqN(10,3)) + bias + white_noise;
+//     //static VectorXd
     
-    return omega_meas;
-}
+//     // Magnetorquer Power Consumption
+//     mtb_power = control_input(Eigen::seqN(0,sc.num_MTBs)).array() * control_input(Eigen::seqN(0,sc.num_MTBs)).array() / sc.resistances.array();
+
+//     // Solar power generation
+//     solar_power = 
+// }
 
 
 #ifdef USE_PYBIND_TO_COMPILE
@@ -121,9 +155,5 @@ PYBIND11_MODULE(pysensors, m) {
     m.doc() = "pybind11 sensors plugin";   // module docstring    
 
     m.def("readSensors", &ReadSensors, "Populate Sensor Measurement Vector");
-    m.def("readGPS", &GPS, "Populate GPS Measurement Vector");
-    m.def("readGyroscope", &Gyroscope, "Populate Gyroscope Measurement Vector");
-    m.def("readSunSensor", &SunSensor, "Populate Sun Sensor Measurement Vector");
-    m.def("readMagnetometer", &Magnetometer, "Populate Magnetometer Measurement Vector");
 }
 #endif

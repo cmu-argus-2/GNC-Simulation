@@ -106,6 +106,10 @@ gyroscope:
 
      gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
      gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+
+solar_panels:
+     efficiency: 0.15 # [%]
+     area: 0.01 # [m^2]
      
 
 # -----------------------------------------------------------------------------------------------------------

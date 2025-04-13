@@ -31,6 +31,15 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
 Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc);
 
 /**
+ * @brief Measures Angular Velocity and local magnetic field readings in the body frame
+ * 
+ * @param state : True state vector of the satellite
+ * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
+ * @return Measured IMU reading
+ */
+ Vector3 IMU(const VectorXd state, Simulation_Parameters sc);
+
+/**
  * @brief Measures the % of nominal solar flux incident at each light diode
  * 
  * @param state : True state vector of the satellite
@@ -46,25 +55,6 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc);
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return N_MTB element vector of power consumption
  */
-VectorXd ActuatorPowerConsumption(const VectorXd control_input, Simulation_Parameters sc);
-
-/**
- * @brief Measures magnetic field reading in the body frame
- * 
- * @param state : True state vector of the satellite
- * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
- * @return Magnetic field in the body frame
- */
-Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc);
-
-/**
- * @brief Measures Angular Velocity reading in the body frame
- * 
- * @param state : True state vector of the satellite
- * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
- * @return Measured angular rate through the gyroscope
- */
-Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
-
+VectorXd Magnetorquers(const VectorXd control_input, Simulation_Parameters sc);
 
 #endif
