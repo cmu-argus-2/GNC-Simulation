@@ -61,6 +61,25 @@ class Simulation_Parameters {
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
+
+    // Solar Panels
+    int num_panels;
+    MatrixXd G_sp_b;
+    double solar_panel_efficiency;
+    double solar_panel_area;
+
+    // Static power consumption
+    double mb_power;
+    double jetson_power;
+
+    // Batteries
+    double battery_capacity;
+    double battery_initial_soc;
+    double battery_internal_resistance;
+    double battery_mass;
+    double battery_radiative_loss;
+    double battery_initial_temp;
+    double max_pack_voltage;
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
@@ -79,9 +98,6 @@ class Simulation_Parameters {
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
-
-    double controller_dt; // [s]
-    double estimator_dt;  // [s]
 
     // Satellite Parameetr Dispersion distributions
 
@@ -106,6 +122,7 @@ class Simulation_Parameters {
     std::normal_distribution<double> magnetometer_dist;
     std::normal_distribution<double> gyro_bias_dist;
     std::normal_distribution<double> gyro_white_noise_dist;
+    std::normal_distribution<double> solar_panel_orientation_dist;
 
     // Initialization
     std::normal_distribution<double> sma_dist;

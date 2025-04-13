@@ -88,11 +88,22 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
     gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
 
+    // Solar panels
+    num_panels = params["solar_panels"]["num_panels"].as<int>();
+    G_sp_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["solar_panels"]["panel_normals"].as<std::vector<double>>().data(), 3, num_panels);
+    for (int i=0; i<num_panels; i++) {
+        G_sp_b.col(i) = random_SO3_rotation(solar_panel_orientation_dist, dev)*G_sp_b.col(i);
+    }
+    solar_panel_efficiency = params["solar_panels"]["efficiency"].as<double>();
+    solar_panel_area = params["solar_panels"]["area"].as<double>();
+
+    // Static power consumption
+    mb_power = params["static_power_consumption"]["mainboard"].as<double>();
+    jetson_power = params["static_power_consumption"]["jetson"].as<double>();
+
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
-    controller_dt = params["controller_dt"].as<double>();
-    estimator_dt  = params["estimator_dt"].as<double>();
     
     // Satellite Orbit Initialization
     semimajor_axis = sma_dist(dev);
@@ -124,11 +135,26 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
     }
 
+    // Battery Initialization
+    double battery_state_size = 4;
+    battery_capacity = params["initialization"]["battery_capacity"].as<double>();
+    battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
+    battery_internal_resistance = params["initialization"]["battery_internal_resistance"].as<double>();
+    battery_mass = params["initialization"]["battery_mass"].as<double>();
+    battery_radiative_loss = params["initialization"]["battery_radiative_loss"].as<double>();
+    battery_initial_temp = params["initialization"]["battery_initial_temp"].as<double>();
+    max_pack_voltage = params["initialization"]["max_pack_voltage"].as<double>();
+
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
     
     // Populate State Vector
-    initial_state = initializeSatellite(sim_start_time);
+    initial_state = VectorXd::Zero(19+num_RWs+battery_state_size);
+    initial_state(Eigen::seqN(0,19+num_RWs)) = initializeSatellite(sim_start_time);
+    initial_state(19+num_RWs) = battery_initial_soc;
+    initial_state(19+num_RWs+1) = battery_initial_temp;
+    initial_state(19+num_RWs+2) = max_pack_voltage;
+    initial_state(19+num_RWs+3) = 0;    
 
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
@@ -246,6 +272,9 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
     double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
     gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
+
+    // Solar Panels
+    solar_panel_orientation_dist = std::normal_distribution<double>(0, params["solar_panels"]["panel_orientation_dev"].as<double>());
 
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();

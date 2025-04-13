@@ -108,8 +108,29 @@ gyroscope:
      gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
 
 solar_panels:
+     num_panels : 14
+     panel_normals : [1,0,0,  # XP
+                      -1,0,0, # XM
+                      0,1,0,  # YP
+                      0,-1,0, # YM
+                      0,0,1,  # ZP
+                      0,0,-1, # ZM
+                      0,0,1,  # Deployable 1 ZP
+                      0,0,-1, # Deployable 1 ZM
+                      0,0,1,  # Deployable 2 ZP
+                      0,0,-1, # Deployable 2 ZM
+                      0,0,1,  # Deployable 3 ZP
+                      0,0,-1, # Deployable 3 ZM
+                      0,0,1,  # Deployable 4 ZP
+                      0,0,-1  # Deployable 4 ZM
+                     ] # Solar panel normals in body frame
+     panel_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each solar panel [rad]
      efficiency: 0.15 # [%]
      area: 0.01 # [m^2]
+
+static_power_consumption:
+     mainboard: 0.6 # W
+     jetson: 7.5 # W
      
 
 # -----------------------------------------------------------------------------------------------------------
@@ -158,20 +179,11 @@ initialization:
      initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
      initial_angular_rate_bound : 0.5 # Max initial angular rate about any axis [rad/s]
 
-
-# -----------------------------------------------------------------------------------------------------------
-# Controller Parameters
-# -----------------------------------------------------------------------------------------------------------
-algorithm: "Bcross" # "Lyapunov" # "BaseSP" # "BaseNP" # # "BCROSS" or "PID" or "BaseSP"
-bcrossgain: 0.0028
-
-mtb_att_feedback_gains: [[0.7071, 0.0, 0.0, 0.0028, 0.0, 0.0],
-                    [0.0, 0.7071, 0.0, 0.0, 0.0028, 0.0],
-                    [0.0, 0.0, 0.7071, 0.0, 0.0, 0.0028]]
-rw_att_feedback_gains: [0.7071, 0.0028]
-rw_vel_gain: 6.5e-7
-pointing_mode: "spin-stabilized" # "detumble" # "detumble" or "spin-stabilized" or "3D-stabilized"
-pointing_target: "Nadir" # "Nadir" or "Sun"
-tgt_ss_ang_vel: 10 # [deg/s]
-controller_dt: 1 # [s]
-estimator_dt: 1    # [s]
+     # Battery Settings (no deviations in battery capacity)
+     battery_capacity: 270000 # Joules
+     battery_initial_soc: 80 # [%] soc
+     battery_internal_resistance: 10 # Ohm
+     battery_mass: 0.4 # kg
+     battery_radiative_loss: 5e-11 # W/K^4
+     battery_initial_temp: 273.16 # K
+     max_pack_voltage : 8.4 # V at 100% SoC

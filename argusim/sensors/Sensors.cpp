@@ -15,7 +15,9 @@
 #pragma GCC diagnostic pop
 #endif
 
-VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
+#define NOMINAL_SOLAR_INTENSITY 1373 // W/m^2
+
+VectorXd ReadSensors(const VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
 {
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (3x1),
@@ -36,7 +38,7 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- GPS -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
+Vector6 GPS(const VectorXd &state, double t_J2000, Simulation_Parameters sc)
 {
     // Noise Distributions
     static std::normal_distribution<double> pos_noise_dist(0, sc.gps_pos_std);
@@ -59,7 +61,7 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- IMU -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-Vector3 IMU(const VectorXd state, Simulation_Parameters sc)
+Vector3 IMU(const VectorXd &state, Simulation_Parameters sc)
 {
     VectorXd imu_reading = VectorXd::Zero(6);
 
@@ -103,7 +105,7 @@ Vector3 IMU(const VectorXd state, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ------------------------------------------------- LIGHT SENSORS ------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
+VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc)
 {
     // Photodiodes noise distribution
     static std::normal_distribution<double> pd_noise_dist(0, sc.photodiode_std);
@@ -125,29 +127,77 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 }
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
-   ------------------------------------------------- MAGNETORQUERS ------------------------------------------------------------------------------
+   ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
+VectorXd PowerConsumption(const VectorXd &state, const VectorXd control_input, Simulation_Parameters sc)
+{
+    int reading_size = sc.num_MTBs + 8; // power consumptions for each MTB and 8 battery diagnostics
+
+    static VectorXd power_readings = VectorXd::Zero(reading_size);
+    
+    /* Magnetorquer Power Consumption */ 
+    VectorXd mtb_power = Magnetorquers(control_input, sc);
+    power_readings(Eigen::seqN(0,sc.num_MTBs)) = mtb_power;
+
+    /* Solar power generation */
+    VectorXd solar_power = SolarPanels(state, sc);
+    
+    /* Static Power Consumption */
+    double static_power_draw = sc.mb_power + control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power;
+
+    /* Get Battery State */
+    double net_power_draw = mtb_power.sum() + static_power_draw - solar_power.sum();
+    power_readings(Eigen::seqN(sc.num_MTBs, 8)) = Battery(state, sc, net_power_draw);
+
+    return power_readings;
+
+}
+
 VectorXd Magnetorquers(const VectorXd control_input, Simulation_Parameters sc)
 {
     VectorXd power_consumption = control_input(Eigen::seqN(0,sc.num_MTBs)).array() * control_input(Eigen::seqN(0,sc.num_MTBs)).array() / sc.resistances.array();
     return power_consumption;
 }
 
-/* ----------------------------------------------------------------------------------------------------------------------------------------------
-   ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
-   ---------------------------------------------------------------------------------------------------------------------------------------------- */
-// VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, Simulation_Parameters sc)
-// {
-//     int reading_size = 3;
+VectorXd SolarPanels(const VectorXd &state, Simulation_Parameters sc)
+{
+    Quaternion quat {state(6), state(7), state(8), state(9)};
 
-//     //static VectorXd
+    // True sun position
+    Vector3 sun_pos_eci = state(Eigen::seqN(13,3));
+    Vector3 sun_pos_body = quat.toRotationMatrix().transpose()*sun_pos_eci; // q represents body to ECI transformation
+
+    // Compute solar power
+    VectorXd solar_power = NOMINAL_SOLAR_INTENSITY*sc.G_sp_b.transpose()*sc.solar_panel_efficiency*sc.solar_panel_area*sun_pos_body/sun_pos_body.norm();
+    solar_power = (solar_power.array() < 0.0).select(0, solar_power);
+
+    return solar_power;
+}
+
+VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_consumption)
+{
+    static double net_power_consumed_lpf = 0;
+
+    VectorXd battery_readings = VectorXd::Zero(8);
     
-//     // Magnetorquer Power Consumption
-//     mtb_power = control_input(Eigen::seqN(0,sc.num_MTBs)).array() * control_input(Eigen::seqN(0,sc.num_MTBs)).array() / sc.resistances.array();
+    double power_consumed = net_power_consumption*sc.dt;
+    state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
+    state(19+sc.num_RWs+3) = std::fabs(power_consumed)/state(19+sc.num_RWs+2); // Current in A
+    state(19+sc.num_RWs+1) += (pow(state(19+sc.num_RWs+3),2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(state(19+sc.num_RWs+1),4))*sc.dt;
 
-//     // Solar power generation
-//     solar_power = 
-// }
+    // Populate battery readings
+    net_power_consumed_lpf = net_power_consumed_lpf*0.8 + 0.2*power_consumed;
+    battery_readings(0) = state(19+sc.num_RWs);
+    battery_readings(1) = sc.battery_capacity;
+    battery_readings(2) = state(19+sc.num_RWs+3);
+    battery_readings(3) = sc.max_pack_voltage;
+    battery_readings(4) = 7.4;
+    battery_readings(5) = 0; //
+    battery_readings(6) = 0; //
+    battery_readings(7) = state(19+sc.num_RWs+1);
+
+    return battery_readings;
+}
 
 
 #ifdef USE_PYBIND_TO_COMPILE

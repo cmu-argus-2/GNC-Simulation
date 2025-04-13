@@ -28,7 +28,7 @@ class Simulator():
         # Initialization
         self.state = np.array(self.params.initial_state)
         self.J2000_start_time = self.params.sim_start_time
-        self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs))
+        self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
 
         # Logging
         if self.log:
@@ -52,7 +52,8 @@ class Simulator():
                                  "xMag ECI [T]",
                                  "yMag ECI [T]",
                                  "zMag ECI [T]"] + \
-                                ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
+                                ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)] + \
+                                ["Battery SoC", "Battery temperature [K]", "Pack Voltage [V]", "Pack Current [A]"]
             
             self.measurement_labels = ["gps_posx ECEF [m]", 
                                        "gps_posy ECEF [m]", 
