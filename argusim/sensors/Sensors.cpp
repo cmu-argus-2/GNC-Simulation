@@ -192,8 +192,8 @@ VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_con
     battery_readings(2) = state(19+sc.num_RWs+3);
     battery_readings(3) = sc.max_pack_voltage;
     battery_readings(4) = 7.4;
-    battery_readings(5) = 0; //
-    battery_readings(6) = 0; //
+    battery_readings(5) = (net_power_consumed_lpf > 0) ? 0.01*state(19+sc.num_RWs)*sc.battery_capacity/net_power_consumed_lpf : 1.0e10; // TTE
+    battery_readings(6) = (net_power_consumed_lpf < 0) ? 0.01*(100-state(19+sc.num_RWs))*sc.battery_capacity/net_power_consumed_lpf : 1.0e10; // TTF
     battery_readings(7) = state(19+sc.num_RWs+1);
 
     return battery_readings;
