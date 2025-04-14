@@ -18,7 +18,7 @@ std::mt19937 gen(rd());
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return measurement vector with added noise
  */
-VectorXd ReadSensors(const VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc);
+VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc);
 
 /**
  * @brief Measures the spacecraft position and velocity in ECEF frame
@@ -57,7 +57,7 @@ VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc);
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return power consumption measurements
  */
-VectorXd PowerConsumption(const VectorXd &state, const VectorXd control_input, Simulation_Parameters sc);
+VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulation_Parameters sc);
 
 /**
  * @brief Measures the power consumed by each actuator
@@ -84,6 +84,6 @@ VectorXd SolarPanels(const VectorXd &state, Simulation_Parameters sc);
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return battery diagnostics information
  */
-VectorXd Battery(const VectorXd &state, Simulation_Parameters sc, double net_power_consumption);
+VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_consumption);
 
 #endif

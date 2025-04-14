@@ -17,7 +17,7 @@
 
 #define NOMINAL_SOLAR_INTENSITY 1373 // W/m^2
 
-VectorXd ReadSensors(const VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
+VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
 {
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (3x1),
@@ -129,7 +129,7 @@ VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd PowerConsumption(const VectorXd &state, const VectorXd control_input, Simulation_Parameters sc)
+VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulation_Parameters sc)
 {
     int reading_size = sc.num_MTBs + 8; // power consumptions for each MTB and 8 battery diagnostics
 
