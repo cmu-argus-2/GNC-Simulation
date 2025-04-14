@@ -22,15 +22,15 @@ VectorXd ReadSensors(const VectorXd &state, const VectorXd control_input, double
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (3x1),
                             Lux Readings       (9x1),
-                            Magnetorquer power (6x1)]*/
-    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes + sc.num_MTBs; // GPS + Gyroscope + Magnetometer + Lux Readings + MTB power consumptions
+                            Power Diagnostics ((6+8)x1)]*/
+    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes + sc.num_MTBs + 8;
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
     measurement(Eigen::seqN(6,6)) = IMU(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs)) = Magnetorquers(control_input, sc);
+    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + 8)) = PowerConsumption(state, control_input, sc);
 
     return measurement;
 }
