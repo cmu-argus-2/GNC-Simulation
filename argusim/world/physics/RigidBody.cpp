@@ -64,8 +64,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 {
     
     // Assert matrix sizes
-    assert(x.size() == (19 + num_RWs)); // State vector = 13x1 vector + RW speeds
-    assert(u.size() == (num_MTBs + num_RWs)); // num_MTB + num_RWs torques
+    assert(u.size() == (num_MTBs + num_RWs+1)); // num_MTB + num_RWs torques + Jetson ON/OFF
     assert(G_rw_b.rows() == 3); // Orientation matrix has 3 element vectors
     assert(G_rw_b.cols() == num_RWs); // 1 column for each RW
     assert(G_mtb_b.rows() == 3); // 3D vector for each MTB

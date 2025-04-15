@@ -37,7 +37,7 @@ Vector6 GPS(const VectorXd &state, double t_J2000, Simulation_Parameters sc);
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return Measured IMU reading
  */
- Vector3 IMU(const VectorXd &state, Simulation_Parameters sc);
+ VectorXd IMU(const VectorXd &state, Simulation_Parameters sc);
 
 /**
  * @brief Measures the % of nominal solar flux incident at each light diode

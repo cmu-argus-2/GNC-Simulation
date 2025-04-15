@@ -23,7 +23,7 @@ VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J20
                             IMU reading        (3x1),
                             Lux Readings       (9x1),
                             Power Diagnostics ((6+8)x1)]*/
-    int measurement_vec_size = 6 + 3 + 3 + sc.num_photodiodes + sc.num_MTBs + 8;
+    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + 8;
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -61,7 +61,7 @@ Vector6 GPS(const VectorXd &state, double t_J2000, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- IMU -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-Vector3 IMU(const VectorXd &state, Simulation_Parameters sc)
+VectorXd IMU(const VectorXd &state, Simulation_Parameters sc)
 {
     VectorXd imu_reading = VectorXd::Zero(6);
 
@@ -133,7 +133,7 @@ VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulat
 {
     int reading_size = sc.num_MTBs + 8; // power consumptions for each MTB and 8 battery diagnostics
 
-    static VectorXd power_readings = VectorXd::Zero(reading_size);
+    VectorXd power_readings = VectorXd::Zero(reading_size);
     
     /* Magnetorquer Power Consumption */ 
     VectorXd mtb_power = Magnetorquers(control_input, sc);

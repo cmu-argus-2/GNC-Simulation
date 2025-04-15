@@ -122,8 +122,8 @@ solar_panels:
                       0,0,1,  # Deployable 3 ZP
                       0,0,-1, # Deployable 3 ZM
                       0,0,1,  # Deployable 4 ZP
-                      0,0,-1  # Deployable 4 ZM
-                     ] # Solar panel normals in body frame
+                      0,0,-1]  # Deployable 4 ZM
+                    # Solar panel normals in body frame
      panel_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each solar panel [rad]
      efficiency: 0.15 # [%]
      area: 0.01 # [m^2]

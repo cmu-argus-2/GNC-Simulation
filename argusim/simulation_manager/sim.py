@@ -68,22 +68,27 @@ class Simulator():
                                        "mag_y_body [T]", 
                                        "mag_z_body [T]"] + \
                                        ['light_sensor_lux ' + str(i) for i in range(self.num_photodiodes)] + \
-                                       ['mtb_power ' + str(i) for i in range(self.num_MTBs)]
+                                       ['mtb_power ' + str(i) for i in range(self.num_MTBs)] +\
+                                       ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
+                                        "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
+                                        "Battery TTF [s]", "Battery Temperature [K]"]
             
             self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + \
-                                ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)]
+                                ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
 
     def set_control_input(self, u):
         '''
             Sets the control input field of the class
             Exists for FSW to provide control inputs
         '''
-        if len(u) < len(self.control_input) - 1:
+        if len(u) < len(self.control_input) - 2:
             raise Exception("Control Input not provided to all Magnetorquers")
-        elif len(u) == len(self.control_input)-1:
+        elif len(u) == len(self.control_input)-2:
             self.control_input[0:len(u)] = u # Only magnetorquers
+        elif len(u) == len(self.control_input)-1:
+            self.control_input[0:len(u)] = u # Only magnetorquers + RW
         else:
-            self.control_input = u # magnetorquers + RWs
+            self.control_input = u # magnetorquers + RWs + Jetson
     
     def sensors(self, current_time, state, control_input):
         '''
@@ -104,7 +109,7 @@ class Simulator():
 
         # Step through the simulation
         self.state = rk4(self.state, control_input, self.params, current_time, dt)
-
+        
         # Mask state through sensors
         measurement = self.sensors(current_time, self.state, control_input)
         
