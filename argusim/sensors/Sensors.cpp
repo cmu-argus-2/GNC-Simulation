@@ -154,8 +154,9 @@ result PowerConsumption(const VectorXd state, const VectorXd control_input, Simu
 
     /* Get Battery State */
     double net_power_draw = mtb_power.sum() + static_power_draw - solar_power.sum();
+    double through_power = mtb_power.sum() + static_power_draw - solar_power.sum();
     
-    auto retval = Battery(state, sc, net_power_draw);
+    auto retval = Battery(state, sc, net_power_draw, through_power);
     power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = retval.retval;
     VectorXd new_state = retval.state;
 
@@ -185,7 +186,7 @@ VectorXd SolarPanels(const VectorXd state, Simulation_Parameters sc)
     return solar_power;
 }
 
-result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_consumption)
+result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_consumption, double through_power)
 {
     VectorXd battery_readings = VectorXd::Zero(8);
     VectorXd new_state = state;
@@ -193,7 +194,7 @@ result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_
     double power_consumed = net_power_consumption*sc.dt;
     new_state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
     new_state(19+sc.num_RWs+3) = -std::fabs(power_consumed)/new_state(19+sc.num_RWs+2); // Current in A
-    new_state(19+sc.num_RWs+1) += (pow(new_state(19+sc.num_RWs+3),2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(new_state(19+sc.num_RWs+1),4))*sc.dt/sc.battery_thermal_mass;
+    new_state(19+sc.num_RWs+1) += (pow(through_power/sc.max_pack_voltage,2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(new_state(19+sc.num_RWs+1),4))*sc.dt/sc.battery_thermal_mass;
 
     // Populate battery readings
     battery_readings(0) = new_state(19+sc.num_RWs);

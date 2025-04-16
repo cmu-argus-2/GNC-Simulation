@@ -90,6 +90,6 @@ VectorXd SolarPanels(const VectorXd state, Simulation_Parameters sc);
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return battery diagnostics information
  */
-result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_consumption);
+result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_consumption, double through_power);
 
 #endif
