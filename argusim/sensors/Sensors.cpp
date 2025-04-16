@@ -178,13 +178,17 @@ VectorXd Magnetorquers(const VectorXd control_input, Simulation_Parameters sc)
 VectorXd SolarPanels(const VectorXd state, Simulation_Parameters sc)
 {
     Quaternion quat {state(6), state(7), state(8), state(9)};
+    Vector3 r_eci = state(Eigen::seqN(0,3));
 
     // True sun position
     Vector3 sun_pos_eci = state(Eigen::seqN(13,3));
     Vector3 sun_pos_body = quat.toRotationMatrix().transpose()*sun_pos_eci; // q represents body to ECI transformation
 
+    // Shadow Factor
+    double shadow = shadow_factor(r_eci, sun_pos_eci);
+
     // Compute solar power
-    VectorXd solar_power = NOMINAL_SOLAR_INTENSITY*sc.G_sp_b.transpose()*sc.solar_panel_efficiency*sc.solar_panel_area*sun_pos_body/sun_pos_body.norm();
+    VectorXd solar_power = shadow*NOMINAL_SOLAR_INTENSITY*sc.G_sp_b.transpose()*sc.solar_panel_efficiency*sc.solar_panel_area*sun_pos_body/sun_pos_body.norm();
     solar_power = (solar_power.array() < 0.0).select(0, solar_power);
 
     return solar_power;
@@ -197,7 +201,7 @@ result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_
     
     double power_consumed = net_power_consumption*sc.dt;
     new_state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
-    new_state(19+sc.num_RWs+3) = -std::fabs(power_consumed)/new_state(19+sc.num_RWs+2); // Current in A
+    new_state(19+sc.num_RWs+3) = -power_consumed/new_state(19+sc.num_RWs+2); // Current in A
     new_state(19+sc.num_RWs+1) += (solar_heat*sc.solar_heat_factor + 
                                    pow(net_power_consumption/sc.max_pack_voltage,2)*sc.battery_internal_resistance - 
                                    sc.battery_radiative_loss*pow(new_state(19+sc.num_RWs+1),4))*sc.dt/sc.battery_thermal_mass;

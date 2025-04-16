@@ -125,7 +125,7 @@ solar_panels:
                     # Solar panel normals in body frame
      panel_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each solar panel [rad]
      efficiency: 0.15 # [%]
-     area: 0.01 # [m^2]
+     area: 0.005 # [m^2]
 
 static_power_consumption:
      mainboard: 0.6 # W
