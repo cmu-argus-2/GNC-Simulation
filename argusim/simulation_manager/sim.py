@@ -29,6 +29,7 @@ class Simulator():
         # Initialization
         self.state = np.array(self.params.initial_state)
         self.J2000_start_time = self.params.sim_start_time
+        self.current_time = self.J2000_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
 
         # Logging
@@ -100,6 +101,12 @@ class Simulator():
         measurement = np.array(result.measurement)
         new_state = np.array(result.state)
         return measurement, new_state
+    
+    def get_time(self):
+        '''
+            Get current simulation time
+        '''
+        return self.current_time
 
     def step(self, sim_time, dt):
         '''
@@ -107,22 +114,22 @@ class Simulator():
             This function is written separately to allow FSW to access simualtion stepping
         '''
         # Time
-        current_time = self.J2000_start_time + sim_time
+        self.current_time = self.J2000_start_time + sim_time
         
         # Get control input
         control_input = self.control_input
 
         # Step through the simulation
-        self.state = rk4(self.state, control_input, self.params, current_time, dt)
+        self.state = rk4(self.state, control_input, self.params, self.current_time, dt)
         
         # Mask state through sensors
-        measurement, self.state = self.sensors(current_time, self.state, control_input)
+        measurement, self.state = self.sensors(self.current_time, self.state, control_input)
         
         # Log pertinent Quantities
         if self.log:
             self.logr.log_v(
                 "state_true.bin",
-                [current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist(),
+                [self.current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist(),
                 ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels
             )
 
