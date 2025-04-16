@@ -10,13 +10,13 @@ const double R_SUN = 696340000.0; // Sun radius in meters
 
 double shadow_factor(const Vector3 r_sat, const Vector3 r_sun) 
 {
-    Vector3 r_earth = r_sat - r_sun;
+    Vector3 r_rel = r_sun - r_sat;
 
-    double r_mag = r_earth.norm();
+    double r_mag = r_sat.norm();
     double R_sun = R_SUN;
     double R_earth = R_EARTH;
-    double dmag = r_sun.norm();
-    double sd = r_earth.dot(r_sun);
+    double dmag = r_rel.norm();
+    double sd = -r_sat.dot(r_rel);
     double a = asin(R_sun / dmag);
     if (R_earth > r_mag) {
         std::cerr << "Error! Collision detected with Earth." << std::endl;
