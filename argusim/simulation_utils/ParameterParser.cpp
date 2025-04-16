@@ -393,6 +393,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         //
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         //
+        .def_readonly("num_panels", &Simulation_Parameters::num_panels)
+        //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)
         .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)

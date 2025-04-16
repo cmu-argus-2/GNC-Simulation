@@ -24,6 +24,7 @@ class Simulator():
         self.num_RWs = self.params.num_RWs
         self.num_MTBs = self.params.num_MTBs
         self.num_photodiodes = self.params.num_photodiodes
+        self.num_panels = self.params.num_panels
 
         # Initialization
         self.state = np.array(self.params.initial_state)
@@ -69,6 +70,7 @@ class Simulator():
                                        "mag_z_body [T]"] + \
                                        ['light_sensor_lux ' + str(i) for i in range(self.num_photodiodes)] + \
                                        ['mtb_power ' + str(i) for i in range(self.num_MTBs)] +\
+                                       ['solar_power' + str(i) for i in range(self.num_panels)] +\
                                        ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
                                         "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
                                         "Battery TTF [s]", "Battery Temperature [K]"]

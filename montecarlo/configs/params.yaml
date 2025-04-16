@@ -108,13 +108,12 @@ gyroscope:
      gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
 
 solar_panels:
-     num_panels : 14
+     num_panels : 13
      panel_normals : [1,0,0,  # XP
                       -1,0,0, # XM
                       0,1,0,  # YP
                       0,-1,0, # YM
                       0,0,1,  # ZP
-                      0,0,-1, # ZM
                       0,0,1,  # Deployable 1 ZP
                       0,0,-1, # Deployable 1 ZM
                       0,0,1,  # Deployable 2 ZP

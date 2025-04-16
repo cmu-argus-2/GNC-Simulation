@@ -22,15 +22,16 @@ VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J20
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (3x1),
                             Lux Readings       (9x1),
+                            solar power        (14x1),  
                             Power Diagnostics ((6+8)x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + 8;
+    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8;
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
     measurement(Eigen::seqN(6,6)) = IMU(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + 8)) = PowerConsumption(state, control_input, sc);
+    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = PowerConsumption(state, control_input, sc);
 
     return measurement;
 }
@@ -131,7 +132,7 @@ VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulation_Parameters sc)
 {
-    int reading_size = sc.num_MTBs + 8; // power consumptions for each MTB and 8 battery diagnostics
+    int reading_size = sc.num_MTBs + sc.num_panels + 8; // power consumptions for each MTB and 8 battery diagnostics
 
     VectorXd power_readings = VectorXd::Zero(reading_size);
     
@@ -141,13 +142,14 @@ VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulat
 
     /* Solar power generation */
     VectorXd solar_power = SolarPanels(state, sc);
+    power_readings(Eigen::seqN(sc.num_MTBs, sc.num_panels)) = solar_power;
     
     /* Static Power Consumption */
     double static_power_draw = sc.mb_power + control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power;
 
     /* Get Battery State */
     double net_power_draw = mtb_power.sum() + static_power_draw - solar_power.sum();
-    power_readings(Eigen::seqN(sc.num_MTBs, 8)) = Battery(state, sc, net_power_draw);
+    power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = Battery(state, sc, net_power_draw);
 
     return power_readings;
 
@@ -176,8 +178,6 @@ VectorXd SolarPanels(const VectorXd &state, Simulation_Parameters sc)
 
 VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_consumption)
 {
-    static double net_power_consumed_lpf = 0;
-
     VectorXd battery_readings = VectorXd::Zero(8);
     
     double power_consumed = net_power_consumption*sc.dt;
@@ -186,14 +186,13 @@ VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_con
     state(19+sc.num_RWs+1) += (pow(state(19+sc.num_RWs+3),2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(state(19+sc.num_RWs+1),4))*sc.dt;
 
     // Populate battery readings
-    net_power_consumed_lpf = net_power_consumed_lpf*0.8 + 0.2*power_consumed;
     battery_readings(0) = state(19+sc.num_RWs);
     battery_readings(1) = sc.battery_capacity;
     battery_readings(2) = state(19+sc.num_RWs+3);
     battery_readings(3) = sc.max_pack_voltage;
     battery_readings(4) = 7.4;
-    battery_readings(5) = (net_power_consumed_lpf > 0) ? 0.01*state(19+sc.num_RWs)*sc.battery_capacity/net_power_consumed_lpf : 1.0e10; // TTE
-    battery_readings(6) = (net_power_consumed_lpf < 0) ? -0.01*(100-state(19+sc.num_RWs))*sc.battery_capacity/net_power_consumed_lpf : 1.0e10; // TTF
+    battery_readings(5) = (state(19+sc.num_RWs+3) < 0) ? 0.01*state(19+sc.num_RWs)*sc.battery_capacity/(-state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTE
+    battery_readings(6) = (state(19+sc.num_RWs+3) > 0) ? 0.01*(100-state(19+sc.num_RWs))*sc.battery_capacity/(state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTF
     battery_readings(7) = state(19+sc.num_RWs+1);
 
     return battery_readings;
