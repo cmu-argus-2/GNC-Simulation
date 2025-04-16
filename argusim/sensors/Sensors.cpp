@@ -201,6 +201,7 @@ result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_
     
     double power_consumed = net_power_consumption*sc.dt;
     new_state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
+    new_state(19+sc.num_RWs) = max(0,min(100, new_state(19+sc.num_RWs)));
     new_state(19+sc.num_RWs+3) = -power_consumed/new_state(19+sc.num_RWs+2); // Current in A
     new_state(19+sc.num_RWs+1) += (solar_heat*sc.solar_heat_factor + 
                                    pow(net_power_consumption/sc.max_pack_voltage,2)*sc.battery_internal_resistance - 
