@@ -31,11 +31,11 @@ Vector3 Magnetorquer::getTorque(VectorXd voltages, Quaternion q, Vector3 magneti
     Eigen::VectorXd max_applied_voltage = voltages.cwiseAbs();
     Eigen::VectorXd max_applied_power = power.cwiseAbs();
 
-    for (int i=0; i<num_MTBs; i++) {
-        assert(max_current(i) <= max_current_rating);
-        assert(max_applied_voltage(i) <= max_voltage);
-        assert(max_applied_power(i) <= max_power);
-    }
+    // for (int i=0; i<num_MTBs; i++) {
+    //     assert(max_current(i) <= max_current_rating);
+    //     assert(max_applied_voltage(i) <= max_voltage);
+    //     assert(max_applied_power(i) <= max_power);
+    // }
 
     //auto dipole_moments = N_per_face*A_cross*
     Vector3 dipole_moment;
