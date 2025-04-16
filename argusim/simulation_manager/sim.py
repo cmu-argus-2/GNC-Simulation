@@ -73,7 +73,7 @@ class Simulator():
                                        ['solar_power' + str(i) for i in range(self.num_panels)] +\
                                        ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
                                         "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
-                                        "Battery TTF [s]", "Battery Temperature [K]"]
+                                        "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
             
             self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + \
                                 ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]

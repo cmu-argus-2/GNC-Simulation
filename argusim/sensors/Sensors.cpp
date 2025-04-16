@@ -23,8 +23,9 @@ VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J20
                             IMU reading        (3x1),
                             Lux Readings       (9x1),
                             solar power        (14x1),  
-                            Power Diagnostics ((6+8)x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8;
+                            Power Diagnostics ((6+8)x1),
+                            Jetson Power       (1x1)]*/
+    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -32,6 +33,7 @@ VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J20
     measurement(Eigen::seqN(6,6)) = IMU(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
     measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = PowerConsumption(state, control_input, sc);
+    measurement(12+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
 
     return measurement;
 }
