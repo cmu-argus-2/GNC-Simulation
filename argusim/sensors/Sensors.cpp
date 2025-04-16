@@ -17,7 +17,7 @@
 
 #define NOMINAL_SOLAR_INTENSITY 1373 // W/m^2
 
-VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
+result ReadSensors(const VectorXd state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
 {
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (3x1),
@@ -32,16 +32,19 @@ VectorXd ReadSensors(VectorXd &state, const VectorXd control_input, double t_J20
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
     measurement(Eigen::seqN(6,6)) = IMU(state, sc);
     measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = PowerConsumption(state, control_input, sc);
-    measurement(12+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
 
-    return measurement;
+    auto retval = PowerConsumption(state, control_input, sc);
+    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = retval.retval;
+    measurement(12+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
+    VectorXd new_state = retval.state;
+
+    return {measurement, new_state};
 }
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- GPS -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-Vector6 GPS(const VectorXd &state, double t_J2000, Simulation_Parameters sc)
+Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
     // Noise Distributions
     static std::normal_distribution<double> pos_noise_dist(0, sc.gps_pos_std);
@@ -64,7 +67,7 @@ Vector6 GPS(const VectorXd &state, double t_J2000, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- IMU -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd IMU(const VectorXd &state, Simulation_Parameters sc)
+VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
 {
     VectorXd imu_reading = VectorXd::Zero(6);
 
@@ -108,7 +111,7 @@ VectorXd IMU(const VectorXd &state, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ------------------------------------------------- LIGHT SENSORS ------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc)
+VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 {
     // Photodiodes noise distribution
     static std::normal_distribution<double> pd_noise_dist(0, sc.photodiode_std);
@@ -132,7 +135,7 @@ VectorXd SunSensor(const VectorXd &state, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulation_Parameters sc)
+result PowerConsumption(const VectorXd state, const VectorXd control_input, Simulation_Parameters sc)
 {
     int reading_size = sc.num_MTBs + sc.num_panels + 8; // power consumptions for each MTB and 8 battery diagnostics
 
@@ -151,9 +154,13 @@ VectorXd PowerConsumption(VectorXd &state, const VectorXd control_input, Simulat
 
     /* Get Battery State */
     double net_power_draw = mtb_power.sum() + static_power_draw - solar_power.sum();
-    power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = Battery(state, sc, net_power_draw);
+    
+    auto retval = Battery(state, sc, net_power_draw);
+    power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = retval.retval;
+    VectorXd new_state = retval.state;
 
-    return power_readings;
+
+    return {power_readings, new_state};
 
 }
 
@@ -163,7 +170,7 @@ VectorXd Magnetorquers(const VectorXd control_input, Simulation_Parameters sc)
     return power_consumption;
 }
 
-VectorXd SolarPanels(const VectorXd &state, Simulation_Parameters sc)
+VectorXd SolarPanels(const VectorXd state, Simulation_Parameters sc)
 {
     Quaternion quat {state(6), state(7), state(8), state(9)};
 
@@ -178,32 +185,38 @@ VectorXd SolarPanels(const VectorXd &state, Simulation_Parameters sc)
     return solar_power;
 }
 
-VectorXd Battery(VectorXd &state, Simulation_Parameters sc, double net_power_consumption)
+result Battery(const VectorXd state, Simulation_Parameters sc, double net_power_consumption)
 {
     VectorXd battery_readings = VectorXd::Zero(8);
+    VectorXd new_state = state;
     
     double power_consumed = net_power_consumption*sc.dt;
-    state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
-    state(19+sc.num_RWs+3) = -std::fabs(power_consumed)/state(19+sc.num_RWs+2); // Current in A
-    state(19+sc.num_RWs+1) += (pow(state(19+sc.num_RWs+3),2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(state(19+sc.num_RWs+1),4))*sc.dt;
+    new_state(19+sc.num_RWs) -= 100*power_consumed/sc.battery_capacity; // Change in SoC
+    new_state(19+sc.num_RWs+3) = -std::fabs(power_consumed)/new_state(19+sc.num_RWs+2); // Current in A
+    new_state(19+sc.num_RWs+1) += (pow(new_state(19+sc.num_RWs+3),2)*sc.battery_internal_resistance - sc.battery_radiative_loss*pow(new_state(19+sc.num_RWs+1),4))*sc.dt/sc.battery_thermal_mass;
 
     // Populate battery readings
-    battery_readings(0) = state(19+sc.num_RWs);
+    battery_readings(0) = new_state(19+sc.num_RWs);
     battery_readings(1) = sc.battery_capacity;
-    battery_readings(2) = state(19+sc.num_RWs+3);
+    battery_readings(2) = new_state(19+sc.num_RWs+3);
     battery_readings(3) = sc.max_pack_voltage;
     battery_readings(4) = 7.4;
-    battery_readings(5) = (state(19+sc.num_RWs+3) < 0) ? 0.01*state(19+sc.num_RWs)*sc.battery_capacity/(-state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTE
-    battery_readings(6) = (state(19+sc.num_RWs+3) > 0) ? 0.01*(100-state(19+sc.num_RWs))*sc.battery_capacity/(state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTF
-    battery_readings(7) = state(19+sc.num_RWs+1);
+    battery_readings(5) = (new_state(19+sc.num_RWs+3) < 0) ? 0.01*new_state(19+sc.num_RWs)*sc.battery_capacity/(-new_state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTE
+    battery_readings(6) = (new_state(19+sc.num_RWs+3) > 0) ? 0.01*(100-new_state(19+sc.num_RWs))*sc.battery_capacity/(new_state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTF
+    battery_readings(7) = new_state(19+sc.num_RWs+1);
 
-    return battery_readings;
+    return result {battery_readings, new_state};
 }
 
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysensors, m) {
-    m.doc() = "pybind11 sensors plugin";   // module docstring    
+    m.doc() = "pybind11 sensors plugin";   // module docstring 
+
+    // Define result datatype
+    pybind11::class_<result>(m, "result")
+        .def_readwrite("measurement", &result::retval)
+        .def_readwrite("state", &result::state);   
 
     m.def("readSensors", &ReadSensors, "Populate Sensor Measurement Vector");
 }

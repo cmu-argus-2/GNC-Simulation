@@ -140,7 +140,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     battery_capacity = params["initialization"]["battery_capacity"].as<double>();
     battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
     battery_internal_resistance = params["initialization"]["battery_internal_resistance"].as<double>();
-    battery_mass = params["initialization"]["battery_mass"].as<double>();
+    battery_thermal_mass = params["initialization"]["battery_thermal_mass"].as<double>();
     battery_radiative_loss = params["initialization"]["battery_radiative_loss"].as<double>();
     battery_initial_temp = params["initialization"]["battery_initial_temp"].as<double>();
     max_pack_voltage = params["initialization"]["max_pack_voltage"].as<double>();

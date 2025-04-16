@@ -182,7 +182,7 @@ initialization:
      battery_capacity: 270000 # Joules
      battery_initial_soc: 80 # [%] soc
      battery_internal_resistance: 10 # Ohm
-     battery_mass: 0.4 # kg
-     battery_radiative_loss: 5e-11 # W/K^4
+     battery_thermal_mass: 0.25 # J/K 276 g pack and ~1000 J/kgK specific heat
+     battery_radiative_loss: 2.5e-10 # W/K^4
      battery_initial_temp: 273.16 # K
      max_pack_voltage : 8.4 # V at 100% SoC

@@ -96,7 +96,10 @@ class Simulator():
         '''
             Implements partial observability using sensor models
         '''
-        return readSensors(state, control_input, current_time, self.params)
+        result = readSensors(state, control_input, current_time, self.params)
+        measurement = np.array(result.measurement)
+        new_state = np.array(result.state)
+        return measurement, new_state
 
     def step(self, sim_time, dt):
         '''
@@ -113,7 +116,7 @@ class Simulator():
         self.state = rk4(self.state, control_input, self.params, current_time, dt)
         
         # Mask state through sensors
-        measurement = self.sensors(current_time, self.state, control_input)
+        measurement, self.state = self.sensors(current_time, self.state, control_input)
         
         # Log pertinent Quantities
         if self.log:

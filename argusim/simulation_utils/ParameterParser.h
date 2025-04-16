@@ -76,7 +76,7 @@ class Simulation_Parameters {
     double battery_capacity;
     double battery_initial_soc;
     double battery_internal_resistance;
-    double battery_mass;
+    double battery_thermal_mass;
     double battery_radiative_loss;
     double battery_initial_temp;
     double max_pack_voltage;
