@@ -144,6 +144,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     battery_radiative_loss = params["initialization"]["battery_radiative_loss"].as<double>();
     battery_initial_temp = params["initialization"]["battery_initial_temp"].as<double>();
     max_pack_voltage = params["initialization"]["max_pack_voltage"].as<double>();
+    solar_heat_factor = params["initialization"]["solar_heat_factor"].as<double>();
 
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);

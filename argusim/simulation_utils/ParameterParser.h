@@ -80,6 +80,7 @@ class Simulation_Parameters {
     double battery_radiative_loss;
     double battery_initial_temp;
     double max_pack_voltage;
+    double solar_heat_factor;
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]

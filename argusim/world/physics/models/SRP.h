@@ -4,6 +4,9 @@
 #include "SpiceUsr.h"
 #include "math/EigenWrapper.h"
 
+
+double shadow_factor(const Vector3 r_earth, const Vector3 r_sun);
+
 /**
  * @brief Compute SRP force on satellite in J2000 ECI frame
  * 
@@ -14,7 +17,7 @@
  * @param m : satellite mass [kg]
  * @return acceleration due to solar radiation pressure [m/s^2]
  */
-Vector3 SRP_acceleration(const Quaternion q, double t_J2000, double CR, double A, double m);
+Vector3 SRP_acceleration(const Vector3 r, const Quaternion q, double t_J2000, double CR, double A, double m);
 
 /**
  * @brief Computes area perpendicular to the velocity vector as a % of face area
