@@ -59,6 +59,19 @@ def attitude_plot(data_dict, save_dir):
     annotateMultiPlot(title="True attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
     save_figure(itm.gcf(), save_dir, "attitude_true.png", True)
 
+def omega_plot(data_dict, save_dir):
+    data_dict["omega_norm [rad/s]"] = np.array([np.sqrt(data_dict["omega_x [rad/s]"][i]**2 + data_dict["omega_y [rad/s]"][i]**2 + \
+                                       data_dict["omega_z [rad/s]"][i]**2) for i in range(len(data_dict["omega_x [rad/s]"]))])
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["omega_x [rad/s]"], data_dict["omega_y [rad/s]"], data_dict["omega_z [rad/s]"], data_dict["omega_norm [rad/s]"]],
+                linewidth=0.5
+            )
+    
+    annotateMultiPlot(title="True omega [rad/s]", ylabels=[r"$\omega_x$", r"$\omega_y$", r"$\omega_z$", r"$||\omega||$"])
+    save_figure(itm.gcf(), save_dir, "omega_true.png", True)
+
 def battery_diagnostics_plot(data_dict, save_dir):
     itm.figure()
     multiPlot(

@@ -14,6 +14,7 @@ def plot_all(result_folder_path: str):
 
     ground_track(data, result_folder_path)
     attitude_plot(data, result_folder_path)
+    omega_plot(data, result_folder_path)
     battery_diagnostics_plot(data, result_folder_path)
 
     
