@@ -133,6 +133,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         initial_angular_rate = Vector3::NullaryExpr([&](){return initial_angular_rate_dist(dev);});
     } else {
         initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
+        double omega_norm = initial_angular_rate.norm();
+        if (omega_norm > params["initialization"]["initial_angular_rate_bound"].as<double>()) {
+            initial_angular_rate = (params["initialization"]["initial_angular_rate_bound"].as<double>() / omega_norm)*initial_angular_rate;
+        }
     }
 
     // Battery Initialization
