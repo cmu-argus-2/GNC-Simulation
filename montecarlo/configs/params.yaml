@@ -90,8 +90,8 @@ photodiodes:
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
 
-     photodiode_std : 1000 # [UNITS: lux]
-     photodiode_std_dev : 20 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
+     photodiode_std : 500 # [UNITS: lux]
+     photodiode_std_dev : 40 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
      magnetometer_noise_std : 0.005 # [UNITS: T]
