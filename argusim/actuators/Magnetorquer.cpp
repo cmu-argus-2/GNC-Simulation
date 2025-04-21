@@ -44,6 +44,7 @@ Vector3 Magnetorquer::getTorque(VectorXd voltages, Quaternion q, Vector3 magneti
         dipole_moment = N_turns*currents(i)*A_cross*G_mtb_b.col(i);
         torque.col(i) = dipole_moment.cross(magnetic_field_b);
     }
+    Vector3 torque_net = torque.rowwise().sum();
 
-    return torque.rowwise().sum();
+    return torque_net;
 }

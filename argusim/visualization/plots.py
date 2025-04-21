@@ -72,6 +72,18 @@ def omega_plot(data_dict, save_dir):
     annotateMultiPlot(title="True omega [rad/s]", ylabels=[r"$\omega_x$", r"$\omega_y$", r"$\omega_z$", r"$||\omega||$"])
     save_figure(itm.gcf(), save_dir, "omega_true.png", True)
 
+def input_plot(data_dict, save_dir):
+    data_fields = [data_dict['V_MTB_' + str(i) + " [V]"] for i in range(6)]
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                data_fields,
+                linewidth=0.5
+            )
+    ylabels = ["$V_{XP}$", "$V_{XM}$", "$V_{YP}$", "$V_{YM}$", "$V_{ZP}$", "$V_{ZM}$"]
+    annotateMultiPlot(title="Control Input (V)", ylabels=ylabels)
+    save_figure(itm.gcf(), save_dir, "control_input.png", True)
+
 def battery_diagnostics_plot(data_dict, save_dir):
     itm.figure()
     multiPlot(
