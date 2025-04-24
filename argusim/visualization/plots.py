@@ -3,6 +3,8 @@ import time
 import numpy as np
 from mpl_toolkits.basemap import Basemap
 import os
+import yaml
+from scipy.spatial.transform import Rotation as R
 
 from argusim.visualization.plot_helper import (
     multiPlot,
@@ -91,13 +93,54 @@ def input_plot(data_dict, save_dir):
     annotateMultiPlot(title="Control Input (V)", ylabels=ylabels)
     save_figure(itm.gcf(), save_dir, "control_input.png", True)
 
-def battery_diagnostics_plot(data_dict, save_dir):
+def sun_point_plot(result_folder, data_dict, save_dir):
+    
+    # Load params
+    with open(os.path.join(result_folder, 'trial_params.yaml')) as f:
+        params = yaml.safe_load(f)
+    
+    J = np.array(params[params.index('inertia')+1]).reshape((3,3))
+
+    q_w = np.array(data_dict["q_w"])
+    q_x = np.array(data_dict["q_x"])
+    q_y = np.array(data_dict["q_y"])
+    q_z = np.array(data_dict["q_z"])
+
+    sun_error = np.zeros((len(q_w), 3))
+    sun_body = np.zeros((len(q_w), 3))
+    for i in range(len(q_w)):
+        sun_eci = np.array([data_dict["rSun_x ECI [m]"][i], data_dict["rSun_y ECI [m]"][i], data_dict["rSun_z ECI [m]"][i]])
+        sun_eci = sun_eci / np.linalg.norm(sun_eci)
+        sun_body[i,:] = R.from_quat([q_x[i], q_y[i], q_z[i], q_w[i]]).as_matrix().T@sun_eci
+        h = J@np.array([data_dict["omega_x [rad/s]"][i], data_dict["omega_y [rad/s]"][i], data_dict["omega_z [rad/s]"][i]])
+        h = h / np.linalg.norm(h)
+        sun_error[i,:] = sun_body[i,:] - h
+    
+    x = np.column_stack((data_dict["Time [s]"]- data_dict["Time [s]"][0], sun_body))
+    np.savetxt(os.path.join(result_folder, 'test.txt'), x, delimiter=',')
+    
     itm.figure()
     multiPlot(
                 data_dict["Time [s]"]- data_dict["Time [s]"][0],
-                [data_dict["Battery SoC [%]"], data_dict["Battery Temperature [K]"]],
+                [sun_error[:,0], sun_error[:,1], sun_error[:,2], np.linalg.norm(sun_error, axis=1)],
+                linewidth=0.5
+            )
+
+    ylabels = ["$X$", "$Y$", "$Z$", "||"]
+    annotateMultiPlot(title="Sun vs Angular Momentum", ylabels=ylabels)
+    itm.ylim([0,2])
+    save_figure(itm.gcf(), save_dir, "sun_point.png", True)
+
+
+def battery_diagnostics_plot(data_dict, save_dir):
+    itm.figure()
+    net_power = np.zeros_like(data_dict["Battery SoC [%]"])
+    net_power[1:] = 270000 * 0.01* (data_dict["Battery SoC [%]"][1:] - data_dict["Battery SoC [%]"][0:len(data_dict["Battery SoC [%]"])-1]) / (data_dict["Time [s]"][1]- data_dict["Time [s]"][0])
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["Battery SoC [%]"], data_dict["Battery Temperature [K]"], net_power],
                 linewidth=0.5
             )
     
-    annotateMultiPlot(title="Battery Diagnostics", ylabels=["SoC", "temperature"])
+    annotateMultiPlot(title="Battery Diagnostics", ylabels=["SoC", "temperature", "net power"])
     save_figure(itm.gcf(), save_dir, "battery.png", True)

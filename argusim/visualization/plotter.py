@@ -16,6 +16,7 @@ def plot_all(result_folder_path: str):
     attitude_plot(data, result_folder_path)
     omega_plot(data, result_folder_path)
     input_plot(data, result_folder_path)
+    sun_point_plot(result_folder_path, data, result_folder_path)
     battery_diagnostics_plot(data, result_folder_path)
 
     
