@@ -65,7 +65,10 @@ class Simulator():
                                        "gps_velz ECEF [m/s]",
                                        "gyro_x [rad/s]", 
                                        "gyro_y [rad/s]", 
-                                       "gyro_z [rad/s]", 
+                                       "gyro_z [rad/s]",
+                                       "bias_x [rad/s]",
+                                       "bias_y [rad/s]",
+                                       "bias_z [rad/s]", 
                                        "mag_x_body [T]", 
                                        "mag_y_body [T]", 
                                        "mag_z_body [T]"] + \

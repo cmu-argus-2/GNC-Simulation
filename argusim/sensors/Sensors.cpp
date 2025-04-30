@@ -20,22 +20,22 @@
 result ReadSensors(const VectorXd state, const VectorXd control_input, double t_J2000, Simulation_Parameters sc)
 {
     /* Measurement Vector: [GPS state          (6x1),
-                            IMU reading        (3x1),
+                            IMU reading        (9x1),
                             Lux Readings       (9x1),
                             solar power        (14x1),  
                             Power Diagnostics ((6+8)x1),
                             Jetson Power       (1x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
+    int measurement_vec_size = 6 + 9 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
-    measurement(Eigen::seqN(6,6)) = IMU(state, sc);
-    measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
+    measurement(Eigen::seqN(6,9)) = IMU(state, sc);
+    measurement(Eigen::seqN(15, sc.num_photodiodes)) = SunSensor(state, sc);
 
     auto retval = PowerConsumption(state, control_input, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = retval.retval;
-    measurement(12+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
+    measurement(Eigen::seqN(15+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = retval.retval;
+    measurement(15+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
     VectorXd new_state = retval.state;
 
     return {measurement, new_state};
@@ -69,7 +69,7 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
 {
-    VectorXd imu_reading = VectorXd::Zero(6);
+    VectorXd imu_reading = VectorXd::Zero(9);
 
     /* Gyroscope */ 
     static Vector3 bias = Vector3::Zero();
@@ -80,7 +80,7 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
 
     // Update Bias
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
-    bias = bias + sc.dt*(bias_noise - bias/sc.gyro_correlation_time);
+    bias = bias + sc.dt*(bias_noise); // - bias/sc.gyro_correlation_time);
 
     // Random white noise
     Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
@@ -89,6 +89,7 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(Eigen::seqN(10,3)) + bias + white_noise;
     
     imu_reading(Eigen::seqN(0,3)) = omega_meas;
+    imu_reading(Eigen::seqN(3,3)) = bias;
 
     /* Magnetometer */
     
@@ -103,7 +104,7 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     // Noisy Measurement
     Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
 
-    imu_reading(Eigen::seqN(3,3)) = B_body;
+    imu_reading(Eigen::seqN(6,3)) = B_body;
 
     return imu_reading;
 }

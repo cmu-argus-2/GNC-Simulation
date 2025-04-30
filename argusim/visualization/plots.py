@@ -80,6 +80,17 @@ def omega_plot(data_dict, save_dir):
     
     annotateMultiPlot(title="Angular Velocity [rad/s]", ylabels=[r"$\omega_x$", r"$\omega_y$", r"$\omega_z$", r"$||\omega||$"])
     save_figure(itm.gcf(), save_dir, "omega.png", True)
+    
+def bias_plot(data_dict, save_dir):
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["bias_x [rad/s]"], data_dict["bias_y [rad/s]"], data_dict["bias_z [rad/s]"]],
+                linewidth=0.5
+            )
+    
+    annotateMultiPlot(title="Bias [rad/s]", ylabels=[r"$b_x$", r"$b_y$", r"$b_z$"])
+    save_figure(itm.gcf(), save_dir, "bias.png", True)
 
 def input_plot(data_dict, save_dir):
     data_fields = [data_dict['V_MTB_' + str(i) + " [V]"] for i in range(6)]
