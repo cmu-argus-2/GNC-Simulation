@@ -28,6 +28,7 @@ class Simulator():
 
         # Initialization
         self.state = np.array(self.params.initial_state)
+        self.fsw_state = np.zeros((28,))
         self.J2000_start_time = self.params.sim_start_time
         self.current_time = self.J2000_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
@@ -78,6 +79,35 @@ class Simulator():
                                        ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
                                         "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
                                         "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
+            
+            self.fsw_labels = ["fsw_gps_posx ECI [m]", 
+                                "fsw_gps_posy ECI [m]", 
+                                "fsw_gps_posz ECI [m]", 
+                                "fsw_gps_velx ECI [m/s]", 
+                                "fsw_gps_vely ECI [m/s]", 
+                                "fsw_gps_velz ECI [m/s]",
+                                "fsw_qw",
+                                "fsw_qx",
+                                "fsw_qy",
+                                "fsw_qz",
+                                "fsw_gyro_x [rad/s]", 
+                                "fsw_gyro_y [rad/s]", 
+                                "fsw_gyro_z [rad/s]",
+                                "fsw_bias_x [rad/s]",
+                                "fsw_bias_y [rad/s]",
+                                "fsw_bias_z [rad/s]", 
+                                "fsw_mag_x_body [T]", 
+                                "fsw_mag_y_body [T]", 
+                                "fsw_mag_z_body [T]",
+                                "fsw_sun_x",
+                                "fsw_sun_y",
+                                "fsw_sun_z",
+                                "fsw_sun_eci_x",
+                                "fsw_sun_eci_y",
+                                "fsw_sun_eci_z",
+                                "fsw_mag_eci_x",
+                                "fsw_mag_eci_y",
+                                "fsw_mag_eci_z"]
             
             self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + \
                                 ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
@@ -132,8 +162,8 @@ class Simulator():
         if self.log:
             self.logr.log_v(
                 "state_true.bin",
-                [self.current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist(),
-                ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels
+                [self.current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist() + self.fsw_state.tolist(),
+                ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels + self.fsw_labels
             )
 
         return measurement

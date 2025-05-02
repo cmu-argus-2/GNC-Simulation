@@ -58,8 +58,11 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
     Vector3 vel_noise = Vector3::NullaryExpr([&](){return vel_noise_dist(gen);});
 
     // GPS returns measurements in ECEF
+    Vector3 OMEGA {0, 0, 7.292115E-5};
     y(Eigen::seqN(0,3)) = R_ECI2ECEF*state(Eigen::seqN(0,3)) + sc.gps_pos_std*pos_noise; // Add noise to the measurements
-    y(Eigen::seqN(3,3)) = R_ECI2ECEF*state(Eigen::seqN(3,3)) + sc.gps_vel_std*vel_noise;
+
+    Vector3 r_ecef = R_ECI2ECEF*state(Eigen::seqN(0,3));
+    y(Eigen::seqN(3,3)) = R_ECI2ECEF*state(Eigen::seqN(3,3)) - OMEGA.cross(r_ecef) + sc.gps_vel_std*vel_noise;
 
     return y;
 }
@@ -75,8 +78,8 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     static Vector3 bias = Vector3::Zero();
 
     // Gyro Noise Models
-    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w*sqrt(sc.dt));
-    static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v/sqrt(sc.dt));
+    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w);
+    static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v);
 
     // Update Bias
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});

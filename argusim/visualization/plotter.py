@@ -13,11 +13,14 @@ def plot_all(result_folder_path: str):
     data = parse_bin_file(os.path.join(result_folder_path, 'state_true.bin'))
 
     ground_track(data, result_folder_path)
+    pos_plot(data, result_folder_path)
     attitude_plot(data, result_folder_path)
     omega_plot(data, result_folder_path)
     bias_plot(data, result_folder_path)
     input_plot(data, result_folder_path)
     sun_point_plot(result_folder_path, data, result_folder_path)
+    true_sun_plot(data, result_folder_path)
+    true_mag_plot(data, result_folder_path)
     battery_diagnostics_plot(data, result_folder_path)
 
     

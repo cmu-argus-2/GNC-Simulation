@@ -272,11 +272,11 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // Gyroscope
     double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
     double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
-    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
+    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal/sqrt(dt), gyro_sigma_w_std);
 
     double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
     double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
-    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
+    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal/sqrt(dt), gyro_sigma_v_std);
 
     // Solar Panels
     solar_panel_orientation_dist = std::normal_distribution<double>(0, params["solar_panels"]["panel_orientation_dev"].as<double>());

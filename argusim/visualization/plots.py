@@ -50,16 +50,55 @@ def ground_track(data_dict, save_dir):
 
     save_figure(ground_track, save_dir, "ground_track.png", True)
 
+def pos_plot(data_dict, save_dir):
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["r_x ECI [m]"], data_dict["r_y ECI [m]"], data_dict["r_z ECI [m]"]],
+                linewidth=0.5, seriesLabel="True ECI Position"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_gps_posx ECI [m]"], data_dict["fsw_gps_posy ECI [m]"], data_dict["fsw_gps_posz ECI [m]"]],
+                linewidth=0.5, seriesLabel="FSW ECI Position"
+            )
+    
+    annotateMultiPlot(title="ECI Position [m]", ylabels=["$r_x$", "$r_y$", "$r_z$"])
+    save_figure(itm.gcf(), save_dir, "eci_pos.png", True)
+    
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["v_x ECI [m/s]"], data_dict["v_y ECI [m/s]"], data_dict["v_z ECI [m/s]"]],
+                linewidth=0.5, seriesLabel="True ECI Velocity"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_gps_velx ECI [m/s]"], data_dict["fsw_gps_vely ECI [m/s]"], data_dict["fsw_gps_velz ECI [m/s]"]],
+                linewidth=0.5, seriesLabel="FSW ECI Velocitu"
+            )
+    
+    annotateMultiPlot(title="ECI Velocity [m/s]", ylabels=["$r_x$", "$r_y$", "$r_z$"])
+    save_figure(itm.gcf(), save_dir, "eci_vel.png", True)
+
 def attitude_plot(data_dict, save_dir):
     itm.figure()
     multiPlot(
                 data_dict["Time [s]"]- data_dict["Time [s]"][0],
                 [data_dict["q_w"], data_dict["q_x"], data_dict["q_y"], data_dict["q_z"]],
-                linewidth=0.5
+                linewidth=0.5, seriesLabel="True Attitude"
             )
     
-    annotateMultiPlot(title="True attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
-    save_figure(itm.gcf(), save_dir, "attitude_true.png", True)
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_qw"], data_dict["fsw_qx"], data_dict["fsw_qy"], data_dict["fsw_qz"]],
+                linewidth=0.5, seriesLabel="FSW Attitude"
+            )
+    
+    annotateMultiPlot(title="Attitude [-]", ylabels=["$q_w$", "$q_x$", "$q_y$", "$q_z$"])
+    save_figure(itm.gcf(), save_dir, "attitude.png", True)
 
 def omega_plot(data_dict, save_dir):
     data_dict["omega_norm [rad/s]"] = np.array([np.sqrt(data_dict["omega_x [rad/s]"][i]**2 + data_dict["omega_y [rad/s]"][i]**2 + \
@@ -86,7 +125,13 @@ def bias_plot(data_dict, save_dir):
     multiPlot(
                 data_dict["Time [s]"]- data_dict["Time [s]"][0],
                 [data_dict["bias_x [rad/s]"], data_dict["bias_y [rad/s]"], data_dict["bias_z [rad/s]"]],
-                linewidth=0.5
+                linewidth=0.5, seriesLabel="True Bias"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_bias_x [rad/s]"], data_dict["fsw_bias_y [rad/s]"], data_dict["fsw_bias_z [rad/s]"]],
+                linewidth=0.5, seriesLabel="FSW Bias"
             )
     
     annotateMultiPlot(title="Bias [rad/s]", ylabels=[r"$b_x$", r"$b_y$", r"$b_z$"])
@@ -155,3 +200,68 @@ def battery_diagnostics_plot(data_dict, save_dir):
     
     annotateMultiPlot(title="Battery Diagnostics", ylabels=["SoC", "temperature", "net power"])
     save_figure(itm.gcf(), save_dir, "battery.png", True)
+    
+def true_sun_plot(data_dict, save_dir):
+    sun_eci = np.zeros((len(data_dict["rSun_x ECI [m]"]), 3))
+    
+    for i in range(len(data_dict["rSun_x ECI [m]"])):
+        sun_eci[i,:] = np.array([data_dict["rSun_x ECI [m]"][i], data_dict["rSun_y ECI [m]"][i], data_dict["rSun_z ECI [m]"][i]])
+        sun_eci[i,:] = sun_eci[i,:] / np.linalg.norm(sun_eci[i,:])
+    
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [sun_eci[:,0], sun_eci[:,1], sun_eci[:,2]],
+                linewidth=0.5, seriesLabel="True ECI Sun Pos"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_sun_eci_x"], data_dict["fsw_sun_eci_y"], data_dict["fsw_sun_eci_z"]],
+                linewidth=0.5, seriesLabel="FSW ECI Sun Pos"
+            )
+
+    ylabels = ["$X$", "$Y$", "$Z$",]
+    annotateMultiPlot(title="Sun Position Sim vs FSW", ylabels=ylabels)
+    save_figure(itm.gcf(), save_dir, "sun_eci.png", True)
+    
+def true_mag_plot(data_dict, save_dir):
+    mag_eci = np.zeros((len(data_dict["xMag ECI [T]"]), 3))
+    
+    for i in range(len(data_dict["xMag ECI [T]"])):
+        mag_eci[i,:] = np.array([data_dict["xMag ECI [T]"][i], data_dict["yMag ECI [T]"][i], data_dict["yMag ECI [T]"][i]])
+        mag_eci[i,:] = mag_eci[i,:] / np.linalg.norm(mag_eci[i,:])
+    
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [mag_eci[:,0], mag_eci[:,1], mag_eci[:,2]],
+                linewidth=0.5, seriesLabel="True ECI Mag field"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_mag_eci_x"], data_dict["fsw_mag_eci_y"], data_dict["fsw_mag_eci_z"]],
+                linewidth=0.5, seriesLabel="FSW ECI Mag Field"
+            )
+
+    ylabels = ["$X$", "$Y$", "$Z$",]
+    annotateMultiPlot(title="ECI Mag Field Sim vs FSW", ylabels=ylabels)
+    save_figure(itm.gcf(), save_dir, "mag_eci.png", True)
+    
+    itm.figure()
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["mag_x_body [T]"], data_dict["mag_y_body [T]"], data_dict["mag_z_body [T]"]],
+                linewidth=0.5, seriesLabel="True Body Mag field"
+            )
+    
+    multiPlot(
+                data_dict["Time [s]"]- data_dict["Time [s]"][0],
+                [data_dict["fsw_mag_x_body [T]"], data_dict["fsw_mag_y_body [T]"], data_dict["fsw_mag_z_body [T]"]],
+                linewidth=0.5, seriesLabel="FSW Body Mag Field"
+            )
+
+    ylabels = ["$X$", "$Y$", "$Z$",]
+    annotateMultiPlot(title="Body Mag Field Sim vs FSW", ylabels=ylabels)
+    save_figure(itm.gcf(), save_dir, "mag_body.png", True)

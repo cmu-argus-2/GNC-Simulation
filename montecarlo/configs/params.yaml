@@ -101,11 +101,11 @@ gyroscope:
      gyro_correlation_time : 500000.0 # [UNITS: s]
      gyro_scale_factor_err : 1.0e-5
 
-     gyro_sigma_w : 2.66e-05 # Bias dynamics [UNITS: rad/s^2/√Hz]
-     gyro_sigma_w_dev : 20 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
+     gyro_sigma_w : 1.9673214867507325e-06 # Bias dynamics [UNITS: rad/s^2/sqrt(Hz)]
+     gyro_sigma_w_dev : 3 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
 
-     gyro_sigma_v : 1.87e-04 # Additive white noise [UNITS: rad/s/√Hz]
-     gyro_sigma_v_dev : 20 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
+     gyro_sigma_v : 0.0006449930361213116 # Additive white noise [UNITS: rad/s/sqrt(Hz)]
+     gyro_sigma_v_dev : 3 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
 
 solar_panels:
      num_panels : 13
