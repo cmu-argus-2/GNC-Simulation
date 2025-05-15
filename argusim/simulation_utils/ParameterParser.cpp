@@ -94,15 +94,30 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
 
     // Magnetometer
-    sigma_magnetometer = sigma_magnetometer_dist(dev);
-    magnetometer_dt = params["magnetometer"]["magnetometer_dt"].as<double>();
-    gyro_dt = params["gyroscope"]["gyro_dt"].as<double>();
-    
+    magnetometer_noise_std =magnetometer_dist(dev);
+
+    // Gyroscope
+    gyro_sigma_w = gyro_bias_dist(dev);
+    gyro_sigma_v = gyro_white_noise_dist(dev);
+    gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
+    gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
+
+    // Solar panels
+    num_panels = params["solar_panels"]["num_panels"].as<int>();
+    G_sp_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["solar_panels"]["panel_normals"].as<std::vector<double>>().data(), 3, num_panels);
+    for (int i=0; i<num_panels; i++) {
+        G_sp_b.col(i) = random_SO3_rotation(solar_panel_orientation_dist, dev)*G_sp_b.col(i);
+    }
+    solar_panel_efficiency = params["solar_panels"]["efficiency"].as<double>();
+    solar_panel_area = params["solar_panels"]["area"].as<double>();
+
+    // Static power consumption
+    mb_power = params["static_power_consumption"]["mainboard"].as<double>();
+    jetson_power = params["static_power_consumption"]["jetson"].as<double>();
+
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
-    controller_dt = params["controller_dt"].as<double>();
-    estimator_dt  = params["estimator_dt"].as<double>();
     
     // Satellite Orbit Initialization
     semimajor_axis = sma_dist(dev);
@@ -137,9 +152,24 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     bool disperse_initial_angular_rate = params["initialization"]["disperse_initial_angular_rate"].as<bool>();
     if (disperse_initial_angular_rate) {
         initial_angular_rate = Vector3::NullaryExpr([&](){return initial_angular_rate_dist(dev);});
+        double omega_norm = initial_angular_rate.norm();
+        if (omega_norm > params["initialization"]["initial_angular_rate_bound"].as<double>()) {
+            initial_angular_rate = (params["initialization"]["initial_angular_rate_bound"].as<double>() / omega_norm)*initial_angular_rate;
+        }
     } else {
         initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
     }
+
+    // Battery Initialization
+    double battery_state_size = 4;
+    battery_capacity = params["initialization"]["battery_capacity"].as<double>();
+    battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
+    battery_internal_resistance = params["initialization"]["battery_internal_resistance"].as<double>();
+    battery_thermal_mass = params["initialization"]["battery_thermal_mass"].as<double>();
+    battery_radiative_loss = params["initialization"]["battery_radiative_loss"].as<double>();
+    battery_initial_temp = params["initialization"]["battery_initial_temp"].as<double>();
+    max_pack_voltage = params["initialization"]["max_pack_voltage"].as<double>();
+    solar_heat_factor = params["initialization"]["solar_heat_factor"].as<double>();
 
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
@@ -149,30 +179,13 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     initial_gyro_bias = Vector3::NullaryExpr([&](){return gyro_bias_dist(dev);});
     
     // Populate State Vector
-    initial_true_state = initializeSatellite(sim_start_time);
-    
-    bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
-    bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
-    auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
-    
-    // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
-    if (start_spin_stabilized) {
-        auto tgt_ss_ang_vel = params["tgt_ss_ang_vel"].as<double>();
-        initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
-        initial_true_state(Eigen::seqN(10,3)) = initial_angular_rate;
-    }
+    initial_state = VectorXd::Zero(19+num_RWs+battery_state_size);
+    initial_state(Eigen::seqN(0,19+num_RWs)) = initializeSatellite(sim_start_time);
+    initial_state(19+num_RWs) = battery_initial_soc;
+    initial_state(19+num_RWs+1) = battery_initial_temp;
+    initial_state(19+num_RWs+2) = max_pack_voltage;
+    initial_state(19+num_RWs+3) = 0;    
 
-    if (start_ss_pointed) {
-        if (start_ss_pointing == "Nadir") {
-            initial_attitude = nadirPointingAttitude(initial_true_state, dev);
-        } else if (start_ss_pointing == "Sun") {
-            initial_attitude = sunPointingAttitude(initial_true_state, dev);
-        } else {
-            throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
-        }
-        initial_true_state(Eigen::seqN(6,4)) = initial_attitude;
-    }
-    
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
 }
@@ -406,11 +419,16 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
     // Gyroscope
-    initial_bias_range = params["gyroscope"]["initial_bias_range"].as<double>();
-    gyro_scale_factor_err_range : [-0.01, 0.01]
-     gyro_sigma_w_range : [0.00011, 0.00113] # [rad/sqrt(s)]
-     gyro_sigma_v_range : [0.0011, 0.0113] # [rad/sqrt(s)]
-     initial_bias_range : [-0.0873, 0.0873]  # [(rad/s)/sqrt(s))]
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
+    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
+    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal/sqrt(dt), gyro_sigma_w_std);
+
+    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
+    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
+    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal/sqrt(dt), gyro_sigma_v_std);
+
+    // Solar Panels
+    solar_panel_orientation_dist = std::normal_distribution<double>(0, params["solar_panels"]["panel_orientation_dev"].as<double>());
 
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
@@ -591,10 +609,9 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
         //
-        .def_readonly("magnetometer_dt", &Simulation_Parameters::magnetometer_dt)
-        .def_readonly("sigma_magnetometer", &Simulation_Parameters::sigma_magnetometer)
+        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         //
-        .def_readonly("gyro_dt", &Simulation_Parameters::gyro_dt)
+        .def_readonly("num_panels", &Simulation_Parameters::num_panels)
         //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)

@@ -72,7 +72,26 @@ class Simulation_Parameters {
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
-    double gyro_dt; // sampling period of the gyrometer
+
+    // Solar Panels
+    int num_panels;
+    MatrixXd G_sp_b;
+    double solar_panel_efficiency;
+    double solar_panel_area;
+
+    // Static power consumption
+    double mb_power;
+    double jetson_power;
+
+    // Batteries
+    double battery_capacity;
+    double battery_initial_soc;
+    double battery_internal_resistance;
+    double battery_thermal_mass;
+    double battery_radiative_loss;
+    double battery_initial_temp;
+    double max_pack_voltage;
+    double solar_heat_factor;
     
     /* Simulation Settings */ 
     double MAX_TIME;                   // [s]
@@ -94,22 +113,7 @@ class Simulation_Parameters {
     double LTDN; // [hours]
     Vector4 initial_attitude; 
     Vector3 initial_angular_rate; // [rad/s]
-    Vector3 initial_gyro_bias; // [rad/s]
-    VectorXd initial_true_state;
-
-    double controller_dt; // [s]
-    double estimator_dt;  // [s]
-
-    // Lookup tables
-    int NElev;
-    int NAzim;
-    int NSS;
-    MatrixXd sc_area_LUT;
-    MatrixXd sp_area_LUT;
-    MatrixXd ss_visib_sum_LUT;
-    //std::vector<MatrixXd> ss_visib_LUT;
-    std::vector<MatrixXd> aero_torque_fac_LUT;
-    std::vector<MatrixXd> aero_force_fac_LUT;
+    VectorXd initial_state;
 
     // Satellite Parameetr Dispersion distributions
 
@@ -133,8 +137,10 @@ class Simulation_Parameters {
     std::normal_distribution<double> gps_vel_dist;
     std::normal_distribution<double> photodiode_orientation_dist;
     std::normal_distribution<double> photodiode_dist;
-    std::uniform_real_distribution<> sigma_sunsensor_dist;
-    std::uniform_real_distribution<> sigma_magnetometer_dist;
+    std::normal_distribution<double> magnetometer_dist;
+    std::normal_distribution<double> gyro_bias_dist;
+    std::normal_distribution<double> gyro_white_noise_dist;
+    std::normal_distribution<double> solar_panel_orientation_dist;
 
     // Initialization
     std::normal_distribution<double> sma_dist;
