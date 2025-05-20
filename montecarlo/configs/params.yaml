@@ -13,54 +13,6 @@ useGravityGradient : False
 useLUTs : False
 
 # -----------------------------------------------------------------------------------------------------------
-# Initialization
-# -----------------------------------------------------------------------------------------------------------
-# All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
-# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
-initialization:
-     semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 20000 #  [m]
-
-     eccentricity : 0.007 
-     eccentricity_dev : 0.0040 # [-] 
-
-     inclination : 97.75 # [deg]
-     inclination_dev : 0.1 # [deg]
-
-     RAAN : 171 # [deg]
-     RAAN_dev : 20 # [%]
-
-     disperse_LTDN : False
-     LTDN : 10:30:00 # [HH:MM:SS]
-     LTDN_min : 10:00:00 # [HH:MM:SS]
-     LTDN_max : 14:00:00 # [HH:MM:SS]
-
-     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
-     disperse_AOP : True 
-     AOP : 63 # [deg]
-     AOP_dev : 20 # [%]
-
-     # If disperse_true_anomaly is True, true anomaly is randomly sampled between 0 and 360
-     # If False, the nominal_true_anomaly is chosen across trials
-     disperse_true_anomaly : True
-     true_anomaly : 0 # [deg] # Only accessed iff disperse_true_anomaly is False
-
-     # If disperse_initial_attitude is True, initial attitude is randomly sampled
-     # If False, the nominal_initial_attitude is chosen across trials
-     disperse_initial_attitude : True
-     initial_attitude : [1,0,0,0] # only accessed iff disperse_initial_attitude is False
-
-     # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
-     # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : False
-     initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
-     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
-
-     start_spin_stabilized: False
-     start_ss_pointed: False
-     start_ss_pointing: "Sun" # "Nadir" or "Sun"
-
-# -----------------------------------------------------------------------------------------------------------
 # physical properties
 # -----------------------------------------------------------------------------------------------------------
 mass : 
@@ -80,6 +32,8 @@ inertia :
                         -5.2467e-06, 1.9134e-05, 4.120e-03]
      principal_axis_dev : [0.4,0.4,0.4] # stddev of principal axis inertias about nominal as a % of nominal [%]
 
+CoPM : [0.005,-0.005,-0.005] # center of pressure with respect to center of mass of CubeSat
+CoPM_dev : 0.001 # stddev from nominal of CoPM [m]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
@@ -151,14 +105,17 @@ photodiodes:
                            0,-0.7071,0.7071, 
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
-
+     photodiodes_dt : 1 # [UNITS: s]
      photodiode_std : 500 # [UNITS: lux]
      photodiode_std_dev : 40 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
      magnetometer_dt : 1 # [UNITS: s]
-     min_sigma_magnetometer: 0.0523 # [rad] [Angular error in Bfield direction]
-     max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
+     # [TODO:] check if this makes sense
+     magnetometer_noise_std : 0.005 # [UNITS: T]
+     magnetometer_std_dev : 0 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
+     # min_sigma_magnetometer: 0.0523 # [rad] [Angular error in Bfield direction]
+     # max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
 
 gyroscope:
      gyro_correlation_time : 500000.0 # [UNITS: s]
@@ -209,19 +166,32 @@ useSRP : False
 # Initialization
 # -----------------------------------------------------------------------------------------------------------
 # All orbital elements in this section are expressed as the stddev from nominal parameter value as a % of nominal parameter value
+# source for orbit dispersion values: https://storage.googleapis.com/rideshare-static/Cake_Topper_Payload_Users_Guide.pdf
 initialization:
      semimajor_axis : 6908000 # [m]
-     semimajor_axis_dev : 1 #  [%]
+     semimajor_axis_dev : 20000 #  [m]
 
-     eccentricity : 0.007 
-     eccentricity_dev : 20 # [%]
+     # eccentricity : 0.007 
+     # eccentricity_dev : 0.0040 # [-] 
+     eccentricity : 0.000 # [-]
+     eccentricity_min : 0.000 # [-] 
+     eccentricity_max : 0.004 # [-] 
+     # value needs to be positive
 
-     inclination : 97.75 # [deg]
-     inclination_dev : 1 # [%]
+     inclination : 97.5 # 97.75 # [deg]
+     inclination_dev : 0.33 # 0.1 # [deg]
+     # value is 1/3 of the max allowed dispersion from launch data so 3sigma = max 
 
      RAAN : 171 # [deg]
      RAAN_dev : 20 # [%]
 
+     disperse_LTDN : False
+     LTDN : 10:30:00 # [HH:MM:SS]
+     LTDN_min : 10:00:00 # [HH:MM:SS]
+     LTDN_max : 14:00:00 # [HH:MM:SS]
+
+     # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
+     disperse_AOP : True 
      AOP : 63 # [deg]
      AOP_dev : 20 # [%]
 
@@ -237,9 +207,15 @@ initialization:
 
      # If disperse_initial_angular_rate is True, initial angular rate is randomly sampled
      # If False, the nominal_initial_angular_rate is chosen across trials
-     disperse_initial_angular_rate : True
-     initial_angular_rate : [0.2,0.3,0.2] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     disperse_initial_angular_rate : False
+     initial_angular_rate : [0.05,0.05,0.05] # [rad/s] accessed iff disperse_initial_angular_rate is True
+     initial_angular_rate_dev : 0.175 # Max initial angular rate about any axis [rad/s]
      initial_angular_rate_bound : 0.35 # Max initial angular rate norm [rad/s]
+     
+     start_spin_stabilized: False
+     start_ss_pointed: False
+     start_ss_pointing: "Sun" # "Nadir" or "Sun"
+     tgt_ss_ang_vel: 2.0 # [deg/s]
 
      # Battery Settings (no deviations in battery capacity)
      battery_capacity: 270000 # Joules
@@ -250,3 +226,17 @@ initialization:
      battery_initial_temp: 273.16 # K
      max_pack_voltage : 8.4 # V at 100% SoC
      solar_heat_factor: 0.5 # % of incident solar heat passed to the batteries
+
+
+# -----------------------------------------------------------------------------------------------------------
+# Plotting and Debugging
+# -----------------------------------------------------------------------------------------------------------
+PlotFlags:
+     sensor_measurements: True 
+     true_state_plots: True
+     pointing_plots: True
+     actuator_plots: True
+     att_animation : False
+debugFlags:
+     perfect_sensors: True  # Perfect measurements
+# [TODO:] flag for orbital perturbations

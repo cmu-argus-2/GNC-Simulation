@@ -60,11 +60,11 @@ class Simulation_Parameters {
     int num_photodiodes;
     MatrixXd G_pd_b; // orientation matrix for photodiodes
     double photodiode_std;
-    double sigma_sunsensor;
+    // double sigma_sunsensor;
     double photodiode_dt; // sampling period of the photodiodes
 
     // Magnetometer
-    double sigma_magnetometer;
+    double magnetometer_noise_std;
     double magnetometer_dt; // sampling period of the magnetometer
 
     // Gyroscope
@@ -72,6 +72,8 @@ class Simulation_Parameters {
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
+    //double gyro_bias_std; 
+    Vector3 initial_gyro_bias;
 
     // Solar Panels
     int num_panels;
@@ -115,6 +117,16 @@ class Simulation_Parameters {
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
 
+    // Lookup tables
+    int NElev;
+    int NAzim;
+    MatrixXd sc_area_LUT;
+    MatrixXd sp_area_LUT;
+    MatrixXd ss_visib_sum_LUT;
+    //std::vector<MatrixXd> ss_visib_LUT;
+    std::vector<MatrixXd> aero_torque_fac_LUT;
+    std::vector<MatrixXd> aero_force_fac_LUT;
+
     // Satellite Parameetr Dispersion distributions
 
     // Physical
@@ -144,7 +156,7 @@ class Simulation_Parameters {
 
     // Initialization
     std::normal_distribution<double> sma_dist;
-    std::normal_distribution<double> eccentricity_dist;
+    std::uniform_real_distribution<double> eccentricity_dist;
     std::normal_distribution<double> inclination_dist;
     std::normal_distribution<double> RAAN_dist;
     //std::normal_distribution<double> AOP_dist;
@@ -159,7 +171,7 @@ class Simulation_Parameters {
     private:
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
     void defineDistributions(std::string filename);
-    void defineLUTs(std::string filename);
+    void defineLUTs(std::string data_folder);
     std::mt19937 loadSeed(int trial_number);
 };
 

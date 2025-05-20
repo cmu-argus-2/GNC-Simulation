@@ -149,10 +149,10 @@ def input_plot(data_dict, save_dir):
     annotateMultiPlot(title="Control Input (V)", ylabels=ylabels)
     save_figure(itm.gcf(), save_dir, "control_input.png", True)
 
-def sun_point_plot(result_folder, data_dict, save_dir):
+def sun_point_plot(data_dict, save_dir):
     
     # Load params
-    with open(os.path.join(result_folder, 'trial_params.yaml')) as f:
+    with open(os.path.join(save_dir, 'trial_params.yaml')) as f:
         params = yaml.safe_load(f)
     
     J = np.array(params[params.index('inertia')+1]).reshape((3,3))
@@ -173,7 +173,7 @@ def sun_point_plot(result_folder, data_dict, save_dir):
         sun_error[i,:] = sun_body[i,:] - h
     
     x = np.column_stack((data_dict["Time [s]"]- data_dict["Time [s]"][0], sun_body))
-    np.savetxt(os.path.join(result_folder, 'test.txt'), x, delimiter=',')
+    np.savetxt(os.path.join(save_dir, 'test.txt'), x, delimiter=',')
     
     itm.figure()
     multiPlot(

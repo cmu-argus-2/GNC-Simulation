@@ -6,8 +6,11 @@ from argusim.build.simulation_utils.pysim_utils import Simulation_Parameters as 
 from argusim.build.sensors.pysensors import readSensors
 
 # Python Imports
+import os
 from argusim.simulation_manager import MultiFileLogger
 import numpy as np
+from argusim.world.LUT_generator import generate_lookup_tables
+import yaml
 
 class Simulator():
     def __init__(self, trial_number, log_directory, config_path, log=True) -> None:
@@ -18,6 +21,18 @@ class Simulator():
         self.config_path   = config_path
         self.log_directory = log_directory
         self.log = log
+
+        # [TODO:] remove the next ~10 lines 
+        with open(config_path, "r") as f:
+            self.obsw_params = yaml.safe_load(f)
+
+        # if data_path does not, 
+        if self.obsw_params["useLUTs"]:
+            data_path = os.path.realpath("./argusim/data/lookup_tables.yaml")
+            if not os.path.exists(data_path):
+                generate_lookup_tables()
+        else:
+            data_path = ""
         
         # Spacecraft Config
         self.params = SimParams(self.config_path, self.trial_number, self.log_directory, data_path)

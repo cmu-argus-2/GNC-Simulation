@@ -5,9 +5,19 @@ import os
 import math
 
 from argusim.visualization.plots import *
+from argusim.visualization.parse_bin_file import parse_bin_file
 import argparse
 
 PERCENTAGE_TO_PLOT = 1
+
+""" removed when interfacing with the fsw. Try to work this back into the simulation
+# Create a dictionary to hold method names and their corresponding functions
+all_plotting_task_names = []
+for name, func in inspect.getmembers(MontecarloPlots, predicate=inspect.isfunction):
+    if not name.startswith("_"):
+        all_plotting_task_names.append(name)
+all_plotting_task_names = sorted(all_plotting_task_names)
+"""
 
 def plot_all(result_folder_path: str):
     data = parse_bin_file(os.path.join(result_folder_path, 'state_true.bin'))
@@ -18,68 +28,11 @@ def plot_all(result_folder_path: str):
     omega_plot(data, result_folder_path)
     bias_plot(data, result_folder_path)
     input_plot(data, result_folder_path)
-    sun_point_plot(result_folder_path, data, result_folder_path)
+    sun_point_plot(data, result_folder_path)
     true_sun_plot(data, result_folder_path)
     true_mag_plot(data, result_folder_path)
     battery_diagnostics_plot(data, result_folder_path)
 
-    
-
-def parse_bin_file(filepath):
-    assert 0 < PERCENTAGE_TO_PLOT and PERCENTAGE_TO_PLOT <= 100
-
-    file_size = os.path.getsize(filepath)
-    # print(f"{filepath} size: {file_size}")
-    with open(filepath, "rb") as file:
-        # read in the header
-        header = file.readline().decode("utf-8")
-        header = header.strip()  # remove leading and trailling whitespace
-        header = header.strip(",")  # remove possible trailing comma
-        column_labels = header.split(",")
-        num_columns = len(column_labels)
-
-        # Compute the number of rows
-        byte_position_of_start_of_data_section = file.tell()
-        number_of_data_bytes = file_size - byte_position_of_start_of_data_section
-        bytes_per_row = 8 * num_columns
-        num_rows = int(number_of_data_bytes / bytes_per_row)
-
-        percentage_of_data_to_skip = 100 - PERCENTAGE_TO_PLOT
-        rows_to_skip_for_every_row_kept = percentage_of_data_to_skip // PERCENTAGE_TO_PLOT
-
-        start = time.time()
-        if rows_to_skip_for_every_row_kept == 0:  # Don't skip any rows
-            A = np.zeros((num_rows, num_columns))
-
-            # Read the floating-point data
-            for i in range(num_rows):
-                data_bytes = file.read(num_columns * 8)  # Assuming double size is 8 bytes
-                A[i] = struct.unpack(f"{num_columns}d", data_bytes)
-        else:
-            num_rows_to_keep = math.ceil(num_rows * PERCENTAGE_TO_PLOT / 100.0)
-            A = np.zeros((num_rows_to_keep, num_columns))
-
-            bytes_to_skip_between_kept_rows = rows_to_skip_for_every_row_kept * bytes_per_row
-
-            # Read the floating-point data
-            for i in range(num_rows_to_keep):
-                data_bytes = file.read(num_columns * 8)  # Assuming double size is 8 bytes
-                A[i] = struct.unpack(f"{num_columns}d", data_bytes)
-                file.seek(bytes_to_skip_between_kept_rows, 1)
-        end = time.time()
-
-        if PERCENTAGE_TO_PLOT == 100:
-            print(f"Took {(end - start):.2g} seconds to parse {filepath} ({(number_of_data_bytes/(1024.0**2)):.2g} MB)")
-        else:
-            print(
-                f"Took {(end - start):.2g} seconds to parse every {1+rows_to_skip_for_every_row_kept} rows from {filepath} (kept {((num_rows_to_keep*bytes_per_row)/(1024.0**2)):.2g}/{(number_of_data_bytes/(1024.0**2)):.2g} MB)"
-            )
-
-        data_dictionary = {}
-        for col, label in zip(A.T, column_labels):
-            data_dictionary[label] = col
-
-        return data_dictionary
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -88,7 +41,63 @@ if __name__ == '__main__':
         epilog="=" * 80,
     )
     parser.add_argument("job_directory", metavar="job_directory")
+    parser.add_argument("-t", "--trials", type=int, nargs="+")
 
     args = parser.parse_args()
 
+    job_directory = os.path.realpath(args.job_directory)
+    trials_directory = os.path.join(job_directory, "trials")
+    plot_directory = os.path.join(job_directory, "plots")
+
+    assert os.path.exists(job_directory), job_directory
+    assert os.path.exists(trials_directory), trials_directory
+
+    trials = sorted(
+        [
+            int(name.strip("trial"))
+            for name in os.listdir(trials_directory)
+            if os.path.isdir(os.path.join(trials_directory, name)) and name.startswith("trial")
+        ]
+    )
+
+    if args.trials:
+        for trial in args.trials:
+            assert 1 <= trial
+        trials = sorted(args.trials)
+        plot_directory = os.path.join(job_directory + "_" + "_".join([str(x) for x in trials]), "plots")
+
+    os.system(f"mkdir -p {plot_directory}")
+    assert os.path.exists(plot_directory), plot_directory
+
+    if not args.trials and os.path.exists(plot_directory) and os.listdir(plot_directory) != []:
+        np.random.seed()
+        passkey = np.random.randint(100, 1000)
+        user_input = input(
+            f'****WARNING****: Found exisitng plot folder for job "{args.job_directory}" at "{plot_directory}". Are you sure you want to risk overwriting existing plots? [Type {passkey} to continue] '
+        )
+        if user_input != str(passkey):
+            print("exiting without plotting")
+            exit(0)
+
     plot_all(args.job_directory)
+    
+    """
+    show_plots = args.interactive and input("View plots? [y/n]") == "y"
+    mcp = MontecarloPlots(
+        trials,
+        trials_directory,
+        plot_directory,
+        PERCENTAGE_OF_DATA_TO_PLOT=PERCENTAGE_OF_DATA_TO_PLOT,
+        close_after_saving=not show_plots,
+    )
+
+    for plotting_task_name in plotting_task_names:
+        try:
+            plotting_task = getattr(mcp, plotting_task_name)
+            plotting_task()
+        except:
+            traceback.print_exc()
+        print()
+    if show_plots:
+        plt.show()
+    """

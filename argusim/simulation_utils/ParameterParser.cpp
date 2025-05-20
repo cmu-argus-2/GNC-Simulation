@@ -39,6 +39,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
                                     dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
+    std::cout << "Parsing parameters from file: " << filename << std::endl;
     YAML::Node params = YAML::LoadFile(filename);
     defineDistributions(filename);
     useLUTs = params["useLUTs"].as<bool>();
@@ -89,7 +90,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
     photodiode_std = photodiode_dist(dev);
-    sigma_sunsensor = sigma_sunsensor_dist(dev);
+    // sigma_sunsensor = sigma_sunsensor_dist(dev);
     photodiode_dt = params["photodiodes"]["photodiodes_dt"].as<double>();
 
 
@@ -185,6 +186,28 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     initial_state(19+num_RWs+1) = battery_initial_temp;
     initial_state(19+num_RWs+2) = max_pack_voltage;
     initial_state(19+num_RWs+3) = 0;    
+
+    bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
+    bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
+    auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
+    
+    // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
+    if (start_spin_stabilized) {
+        auto tgt_ss_ang_vel = params["initialization"]["tgt_ss_ang_vel"].as<double>();
+        initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
+        initial_state(Eigen::seqN(10,3)) = initial_angular_rate;
+    }
+
+    if (start_ss_pointed) {
+        if (start_ss_pointing == "Nadir") {
+            initial_attitude = nadirPointingAttitude(initial_state, dev);
+        } else if (start_ss_pointing == "Sun") {
+            initial_attitude = sunPointingAttitude(initial_state, dev);
+        } else {
+            throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
+        }
+        initial_state(Eigen::seqN(6,4)) = initial_attitude;
+    }
 
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
@@ -398,7 +421,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // GPS
     double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
     double gps_pos_std_std = gps_pos_std_nominal*(params["gps"]["gps_pos_std_dev"].as<double>()/100);
-    std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
+    gps_pos_dist = std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
     
     double gps_vel_std_nominal = params["gps"]["gps_vel_std"].as<double>();
     double gps_vel_std_std = gps_vel_std_nominal*(params["gps"]["gps_vel_std_dev"].as<double>()/100);
@@ -408,15 +431,18 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     photodiode_orientation_dist = std::normal_distribution<double>(0, params["photodiodes"]["photodiode_orientation_dev"].as<double>());
     double photodiode_std_nominal = params["photodiodes"]["photodiode_std"].as<double>();
     double photodiode_std_std = photodiode_std_nominal*(params["photodiodes"]["photodiode_std_dev"].as<double>()/100);
-    double min_sigma_sunsensor = params["photodiodes"]["min_sigma_sunsensor"].as<double>();
-    double max_sigma_sunsensor = params["photodiodes"]["max_sigma_sunsensor"].as<double>();
-    sigma_sunsensor_dist = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
+    // double min_sigma_sunsensor = params["photodiodes"]["min_sigma_sunsensor"].as<double>();
+    // double max_sigma_sunsensor = params["photodiodes"]["max_sigma_sunsensor"].as<double>();
+    // sigma_sunsensor_dist = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
     photodiode_dist = std::normal_distribution<double>(photodiode_std_nominal, photodiode_std_std);
 
     // Magnetometer
-    double min_sigma_magnetometer = params["magnetometer"]["min_sigma_magnetometer"].as<double>();
-    double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
-    sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
+    double magnetometer_noise_std_nominal = params["magnetometer"]["magnetometer_noise_std"].as<double>();
+    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer"]["magnetometer_std_dev"].as<double>()/100);
+    magnetometer_dist = std::normal_distribution<double>(magnetometer_noise_std_nominal, magnetometer_noise_std_std);
+    // double min_sigma_magnetometer = params["magnetometer"]["min_sigma_magnetometer"].as<double>();
+    // double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
+    // sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
     // Gyroscope
     double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
@@ -435,12 +461,15 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
-    double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
-    double ecc_std = ecc_nominal*(params["initialization"]["eccentricity_dev"].as<double>()/100);
-    eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
+    // double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
+    // double ecc_std = ecc_nominal*(params["initialization"]["eccentricity_dev"].as<double>()/100);
+    // eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
+    double ecc_min = params["initialization"]["eccentricity_min"].as<double>();
+    double ecc_max = params["initialization"]["eccentricity_max"].as<double>();
+    eccentricity_dist = std::uniform_real_distribution<double>(ecc_min, ecc_max);
 
     double incl_nominal = params["initialization"]["inclination"].as<double>();
-    double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
+    double incl_std = params["initialization"]["inclination_dev"].as<double>(); //incl_nominal*(/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
     double LTDN_min = UTCStringtoHours(params["initialization"]["LTDN_min"].as<std::string>());
@@ -465,7 +494,6 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double angular_rate_std = params["initialization"]["initial_angular_rate_dev"].as<double>();
     initial_angular_rate_dist = std::normal_distribution<double>(0, angular_rate_std);
     
-    double gyro_bias_std = params["initialization"]["gyro_bias_dev"].as<double>();
     //double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     //double sma_std = 0.01*sma_nominal*params["initialization"]["semimajor_axis_dev"].as<double>();
     //sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
@@ -482,7 +510,7 @@ void Simulation_Parameters::defineLUTs(std::string data_folder)
         // Load dummy variables into LUTs
         NElev = 0;
         NAzim = 0;
-        NSS   = 0;
+        //NSS   = 0;
         sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
         sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
         ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
@@ -496,7 +524,7 @@ void Simulation_Parameters::defineLUTs(std::string data_folder)
 
         NElev = data_params["NE"].as<int>();
         NAzim = data_params["NA"].as<int>();
-        NSS   = data_params["NS"].as<int>();
+        // NSS   = data_params["NS"].as<int>();
 
         sc_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
         sp_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
@@ -560,7 +588,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     vec.assign(G_pd_b.data(), G_pd_b.data() + G_pd_b.rows()*G_pd_b.cols());
     out<<YAML::Key << "photodiode_orientation" << YAML::Flow << vec;
 
-    out<<YAML::Key << "magnetometer_std" << sigma_magnetometer;
+    out<<YAML::Key << "magnetometer_std" << magnetometer_noise_std;
 
     out<<YAML::Key << "gyro_sigma_w" <<gyro_sigma_w;
     out<< YAML::Key << "gyro_sigma_v" << gyro_sigma_v;
@@ -604,12 +632,10 @@ PYBIND11_MODULE(pysim_utils, m) {
         //
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
-        .def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
+        //.def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
         //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
-        //
-        .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         //
         .def_readonly("num_panels", &Simulation_Parameters::num_panels)
         //
@@ -621,7 +647,7 @@ PYBIND11_MODULE(pysim_utils, m) {
         //
         .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //
-        .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
+        .def_readonly("initial_state", &Simulation_Parameters::initial_state);
 }
 
 #endif
