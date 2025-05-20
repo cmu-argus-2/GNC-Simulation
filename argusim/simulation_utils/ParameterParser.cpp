@@ -39,7 +39,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
                                     dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
-    std::cout << "Parsing parameters from file: " << filename << std::endl;
     YAML::Node params = YAML::LoadFile(filename);
     defineDistributions(filename);
     useLUTs = params["useLUTs"].as<bool>();
@@ -132,7 +131,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     } else {
         LTDN = UTCStringtoHours(params["initialization"]["LTDN"].as<std::string>());
     }
-    std::cout << "LTDN: " << LTDN << std::endl;
 
     bool disperse_true_anomaly = params["initialization"]["disperse_true_anomaly"].as<bool>();
     if (disperse_true_anomaly) {
@@ -178,14 +176,14 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
 
     initial_gyro_bias = Vector3::NullaryExpr([&](){return gyro_bias_dist(dev);});
-    
+
     // Populate State Vector
-    initial_state = VectorXd::Zero(19+num_RWs+battery_state_size);
-    initial_state(Eigen::seqN(0,19+num_RWs)) = initializeSatellite(sim_start_time);
-    initial_state(19+num_RWs) = battery_initial_soc;
-    initial_state(19+num_RWs+1) = battery_initial_temp;
-    initial_state(19+num_RWs+2) = max_pack_voltage;
-    initial_state(19+num_RWs+3) = 0;    
+    initial_state = VectorXd::Zero(22+num_RWs+battery_state_size);
+    initial_state(Eigen::seqN(0,22+num_RWs)) = initializeSatellite(sim_start_time);
+    initial_state(22+num_RWs) = battery_initial_soc;
+    initial_state(22+num_RWs+1) = battery_initial_temp;
+    initial_state(22+num_RWs+2) = max_pack_voltage;
+    initial_state(22+num_RWs+3) = 0;    
 
     bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
     bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
@@ -353,16 +351,14 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
 
     return init_att;
 }
-
-
-
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
-    VectorXd State(19+num_RWs);
+    VectorXd State(22+num_RWs);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
 
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
+
     State(Eigen::seqN(0,6)) = CartesianState;
     State(Eigen::seqN(6,4)) = initial_attitude;
     State(Eigen::seqN(10,3)) = initial_angular_rate;
@@ -372,7 +368,6 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     State(Eigen::seqN(19+num_RWs, 3)) = initial_gyro_bias;
 
     return State;
-
 }
 
 void Simulation_Parameters::defineDistributions(std::string filename) 

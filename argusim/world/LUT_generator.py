@@ -4,7 +4,7 @@ from copy import deepcopy
 import yaml
 
 
-def generate_lookup_tables():
+def generate_lookup_tables(data_path):
     # Define the surfaces of a 1U CubeSat
     X_DIM = 0.1
     Y_DIM = 0.1
@@ -148,7 +148,7 @@ def generate_lookup_tables():
         "NS": NS
     }
 
-    with open('./lookup_tables.yaml', 'w') as f:
+    with open(data_path, 'w') as f:
         yaml.dump(data_to_save, f)
 
 

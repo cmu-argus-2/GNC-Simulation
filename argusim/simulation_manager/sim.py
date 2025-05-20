@@ -30,7 +30,7 @@ class Simulator():
         if self.obsw_params["useLUTs"]:
             data_path = os.path.realpath("./argusim/data/lookup_tables.yaml")
             if not os.path.exists(data_path):
-                generate_lookup_tables()
+                generate_lookup_tables(data_path)
         else:
             data_path = ""
         
