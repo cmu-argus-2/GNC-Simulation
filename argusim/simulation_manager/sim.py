@@ -48,9 +48,12 @@ class Simulator():
         self.current_time = self.J2000_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
 
+        self.define_indexes()
+
         # Logging
         if self.log:
             self.logr = MultiFileLogger(log_directory)
+            # [TODO:] remove redundant definition, already in the logger class
             self.state_labels = ["r_x ECI [m]", 
                                  "r_y ECI [m]", 
                                  "r_z ECI [m]", 
@@ -71,6 +74,9 @@ class Simulator():
                                  "yMag ECI [T]",
                                  "zMag ECI [T]"] + \
                                 ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)] + \
+                                ["bias_x [rad/s]",
+                                "bias_y [rad/s]",
+                                "bias_z [rad/s]"]    + \
                                 ["Battery SoC", "Battery temperature [K]", "Pack Voltage [V]", "Pack Current [A]"]
             
             self.measurement_labels = ["gps_posx ECEF [m]", 
@@ -82,9 +88,6 @@ class Simulator():
                                        "gyro_x [rad/s]", 
                                        "gyro_y [rad/s]", 
                                        "gyro_z [rad/s]",
-                                       "bias_x [rad/s]",
-                                       "bias_y [rad/s]",
-                                       "bias_z [rad/s]", 
                                        "mag_x_body [T]", 
                                        "mag_y_body [T]", 
                                        "mag_z_body [T]"] + \
@@ -127,16 +130,76 @@ class Simulator():
             self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + \
                                 ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
 
+    def define_indexes(self):
+        # # Indexing
+        # State
+        self.Idx = {}
+        self.Idx["NX"] = 22 + self.num_RWs
+        self.Idx["X"] = dict()
+        self.Idx["X"]["ECI_POS"] = slice(0, 3)
+        self.Idx["X"]["ECI_VEL"] = slice(3, 6)
+        self.Idx["X"]["TRANS"] = slice(0, 6)
+        self.Idx["X"]["QUAT"] = slice(6, 10)
+        self.Idx["X"]["ANG_VEL"] = slice(10, 13)
+        self.Idx["X"]["ROT"] = slice(6, 13)
+        self.Idx["X"]["SUN_POS"] = slice(13, 16)
+        self.Idx["X"]["MAG_FIELD"] = slice(16, 19)
+        self.Idx["X"]["GYRO_BIAS"] = slice(19,22)
+        self.Idx["X"]["RW_SPEED"] = slice(22, 22 + self.num_RWs)
+        self.Idx["X"]["BAT"] = slice(22 + self.num_RWs, 26 + self.num_RWs)
+        self.Idx["X"]["BAT_SOC"] = slice(22 + self.num_RWs, 23 + self.num_RWs)
+        self.Idx["X"]["BAT_TEMP"] = slice(23 + self.num_RWs, 24 + self.num_RWs)
+        self.Idx["X"]["BAT_VOLT"] = slice(24 + self.num_RWs, 25 + self.num_RWs)
+        self.Idx["X"]["BAT_CUR"] = slice(25 + self.num_RWs, 26 + self.num_RWs)
+
+        # Control Input
+        self.num_RWs = self.obsw_params["reaction_wheels"]["N_rw"]
+        self.num_MTBs = self.obsw_params["magnetorquers"]["N_mtb"]
+        self.Idx["NU"] = self.num_RWs + self.num_MTBs
+        self.Idx["N_rw"] = self.num_RWs
+        self.Idx["N_mtb"] = self.num_MTBs
+        self.Idx["U"] = dict()
+        self.Idx["U"]["MTB_TORQUE"] = slice(0, self.num_MTBs)
+        self.Idx["U"]["RW_TORQUE"] = slice(self.num_MTBs, self.num_RWs + self.num_MTBs)        
+
+        # Measurements
+        self.Idx["Y"] = dict()
+        self.Idx["Y"]["GPS"] = slice(0, 6)
+        self.Idx["Y"]["GPS_POS"] = slice(0, 3)
+        self.Idx["Y"]["GPS_VEL"] = slice(3, 6)
+        self.Idx["Y"]["GYRO"] = slice(6, 9)
+        self.Idx["Y"]["MAG"] = slice(9, 12)
+        ny = 12
+        self.Idx["Y"]["SUN"] = slice(ny, ny+self.num_photodiodes)
+        ny = ny+self.num_photodiodes
+        self.Idx["Y"]["RW_OMEGA"] = slice(ny, ny+self.num_RWs)
+        ny = ny+self.num_RWs
+        self.Idx["Y"]["MTB_POW"] = slice(ny, ny+self.num_MTBs)
+        ny = ny+self.num_MTBs
+        self.Idx["Y"]["SOL_POW"] = slice(ny, ny+self.num_panels)
+        ny = ny+self.num_panels
+        self.Idx["Y"]["BATTERY"] = slice(ny, ny + 8)
+        self.Idx["Y"]["BAT_SOC"] = slice(ny, ny + 1)
+        self.Idx["Y"]["BAT_CAP"] = slice(ny + 1, ny + 2)
+        self.Idx["Y"]["BAT_CUR"] = slice(ny + 2, ny + 3)
+        self.Idx["Y"]["BAT_VOL"] = slice(ny + 3, ny +4)
+        self.Idx["Y"]["BAT_MIDVOL"] = slice(ny + 4, ny + 5)
+        self.Idx["Y"]["BAT_TTE"] = slice(ny + 5, ny + 6)
+        self.Idx["Y"]["BAT_TTF"] = slice(ny + 6, ny + 7)
+        self.Idx["Y"]["BAT_TEMP"] = slice(ny + 7, ny + 8)
+        self.Idx["Y"]["JET_POW"] = slice(ny + 8, ny + 9)
+        self.Idx["NY"] = ny + 9
+
     def set_control_input(self, u):
         '''
             Sets the control input field of the class
             Exists for FSW to provide control inputs
         '''
-        if len(u) < len(self.control_input) - 2:
+        if len(u) < self.num_MTBs:
             raise Exception("Control Input not provided to all Magnetorquers")
-        elif len(u) == len(self.control_input)-2:
+        elif len(u) == self.num_MTBs:
             self.control_input[0:len(u)] = u # Only magnetorquers
-        elif len(u) == len(self.control_input)-1:
+        elif len(u) == self.num_MTBs + self.num_RWs:
             self.control_input[0:len(u)] = u # Only magnetorquers + RW
         else:
             self.control_input = u # magnetorquers + RWs + Jetson
@@ -175,6 +238,7 @@ class Simulator():
         measurement, self.state = self.sensors(self.current_time, self.state, control_input)
         
         # Log pertinent Quantities
+        # [TODO:] use logging class functions
         if self.log:
             self.logr.log_v(
                 "state_true.bin",

@@ -117,6 +117,11 @@ class Simulation_Parameters {
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
 
+    // Index maps
+    std::map<std::string, Eigen::seqN> x_idx_map; // State Vector index map
+    std::map<std::string, Eigen::seqN> u_idx_map; // Control Vector index map
+    std::map<std::string, Eigen::seqN> y_idx_map; // Measurement Vector index map
+
     // Lookup tables
     int NElev;
     int NAzim;

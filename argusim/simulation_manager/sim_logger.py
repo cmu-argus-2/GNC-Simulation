@@ -100,6 +100,7 @@ class SimLogger(MultiFileLogger):
             ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels,
         )
 
+    # [TODO:] remove this. All FSW code will be removed from this repo
     def log_estimation(self, current_time, attitude_ekf_state, attitude_estimate_error, gyro_bias_error, EKF_sigmas):
 
         self.log_v(
