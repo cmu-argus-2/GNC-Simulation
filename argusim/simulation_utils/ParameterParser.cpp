@@ -160,7 +160,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     }
 
     // Battery Initialization
-    double battery_state_size = 4;
     battery_capacity = params["initialization"]["battery_capacity"].as<double>();
     battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
     battery_internal_resistance = params["initialization"]["battery_internal_resistance"].as<double>();
@@ -179,24 +178,26 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Index maps
     // State Vector index map
-    x_idx_map["position"]        = Eigen::seqN(0, 3);
-    x_idx_map["velocity"]        = Eigen::seqN(3, 3);
-    x_idx_map["translation"]     = Eigen::seqN(0, 6);
-    x_idx_map["quaternion"]      = Eigen::seqN(6, 4);
-    x_idx_map["angular_rate"]    = Eigen::seqN(10, 3);
-    x_idx_map["rotation"]        = Eigen::seqN(6, 7);
-    x_idx_map["sun_position"]    = Eigen::seqN(13, 3);
-    x_idx_map["magnetic_field"]  = Eigen::seqN(16, 3);
-    x_idx_map["rw_speeds"]       = Eigen::seqN(19, num_RWs);
-    x_idx_map["gyro_bias"]       = Eigen::seqN(19+num_RWs, 3);
-    x_idx_map["battery_soc"]     = Eigen::seqN(22+num_RWs, 1);
-    x_idx_map["battery_temp"]    = Eigen::seqN(22+num_RWs+1, 1);
-    x_idx_map["battery_voltage"] = Eigen::seqN(22+num_RWs+2, 1);
-    x_idx_map["battery_current"] = Eigen::seqN(22+num_RWs+3, 1);
+    x_idx_map["position"]        = {0, 3};
+    x_idx_map["velocity"]        = {3, 3};
+    x_idx_map["translation"]     = {0, 6};
+    x_idx_map["quaternion"]      = {6, 4};
+    x_idx_map["angular_rate"]    = {10, 3};
+    x_idx_map["rotation"]        = {6, 7};
+    x_idx_map["sun_position"]    = {13, 3};
+    x_idx_map["magnetic_field"]  = {16, 3};
+    x_idx_map["rw_speeds"]       = {19, num_RWs};
+    x_idx_map["gyro_bias"]       = {19+num_RWs, 3};
+    x_idx_map["battery"]         = {22+num_RWs, 4};
+    x_idx_map["battery_soc"]     = {22+num_RWs, 1};
+    x_idx_map["battery_temp"]    = {22+num_RWs+1, 1};
+    x_idx_map["battery_voltage"] = {22+num_RWs+2, 1};
+    x_idx_map["battery_current"] = {22+num_RWs+3, 1};
 
     // Control Vector index map
-    u_idx_map["rw_torques"]       = Eigen::seqN(0, num_MTBs);
-    u_idx_map["mtb_torques"]      = Eigen::seqN(num_MTBs, num_RWs);
+    u_idx_map["mtb_torques"]     = {0, num_MTBs};
+    u_idx_map["rw_torques"]      = {num_MTBs, num_RWs};
+    u_idx_map["jet_power"]       = {num_MTBs+num_RWs, 1};
 
     // Measurement Vector index map
     // std::map<std::string, Eigen::seqN> y_idx_map;
@@ -213,7 +214,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     if (start_spin_stabilized) {
         auto tgt_ss_ang_vel = params["initialization"]["tgt_ss_ang_vel"].as<double>();
         initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
-        initial_state(Eigen::seqN(10,3)) = initial_angular_rate;
+        initial_state(x_idx_map["angular_rate"].to_seq()) = initial_angular_rate;
     }
 
     if (start_ss_pointed) {
@@ -224,7 +225,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         } else {
             throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
         }
-        initial_state(Eigen::seqN(6,4)) = initial_attitude;
+        initial_state(x_idx_map["quaternion"].to_seq()) = initial_attitude;
     }
 
     // Dump Dispersed Parameters to YAML
@@ -294,7 +295,7 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
 Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
-    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"]);
+    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"].to_seq());
     std::uniform_real_distribution<> dis(-1, 1);
     auto uni = [&](){ return dis(gen); };
     Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
@@ -309,8 +310,8 @@ Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt1993
 
     // sun direction in inertial frame 
     //Eigen::Vector3d s = State(Eigen::seqN(13, 3));
-    Eigen::Vector3d init_pos = State(x_idx_map["position"]);
-    Eigen::Vector3d init_vel = State(x_idx_map["velocity"]);
+    Eigen::Vector3d init_pos = State(x_idx_map["position"].to_seq());
+    Eigen::Vector3d init_vel = State(x_idx_map["velocity"].to_seq());
     Eigen::Vector3d s = init_pos.cross(init_vel);
     std::uniform_real_distribution<> dis2(-1, 1);
     auto uni2 = [&](){ return dis2(gen); };
@@ -336,7 +337,7 @@ Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt1993
 Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
-    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"]);
+    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"].to_seq());
     std::uniform_real_distribution<> dis(-1, 1);
     auto uni = [&](){ return dis(gen); };
     Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
@@ -350,7 +351,7 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
     Rb << h_normalized, v1, v2;
 
     // sun direction in inertial frame 
-    Eigen::Vector3d s = State(x_idx_map["sun_position"]);
+    Eigen::Vector3d s = State(x_idx_map["sun_position"].to_seq());
     std::uniform_real_distribution<> dis2(-1, 1);
     auto uni2 = [&](){ return dis2(gen); };
     Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
@@ -374,23 +375,22 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
+    int battery_state_size = 4;
     VectorXd State(22+num_RWs+battery_state_size);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
 
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
 
-    State(x_idx_map["translation"]) = CartesianState;
-    State(x_idx_map["quaternion"]) = initial_attitude;
-    State(x_idx_map["angular_rate"]) = initial_angular_rate;
-    State(x_idx_map["sun_position"]) = sun_position_eci(epoch);
-    State(x_idx_map["magnetic_field"]) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
-    State(x_idx_map["rw_speeds"]).setZero();
-    State(x_idx_map["gyro_bias"]) = initial_gyro_bias;
-    State(x_idx_map["battery_soc"]) = battery_initial_soc;
-    State(x_idx_map["battery_temp"]) = battery_initial_temp;
-    State(x_idx_map["battery_voltage"]) = max_pack_voltage;
-    State(x_idx_map["battery_current"]) = 0; 
+    State(x_idx_map["translation"].to_seq()) = CartesianState;
+    State(x_idx_map["quaternion"].to_seq()) = initial_attitude;
+    State(x_idx_map["angular_rate"].to_seq()) = initial_angular_rate;
+    State(x_idx_map["sun_position"].to_seq()) = sun_position_eci(epoch);
+    State(x_idx_map["magnetic_field"].to_seq()) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
+    State(x_idx_map["rw_speeds"].to_seq()).setZero();
+    State(x_idx_map["gyro_bias"].to_seq()) = initial_gyro_bias;
+    Vector4 battery {battery_initial_soc, battery_initial_temp, max_pack_voltage, 0};
+    State(x_idx_map["battery"].to_seq()) = battery;
 
     return State;
 }

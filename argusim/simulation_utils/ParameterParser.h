@@ -8,6 +8,15 @@
 #include "Magnetorquer.h"
 #include "yaml-cpp/yaml.h"
 
+struct SliceDef {
+    int start;
+    int length;
+
+    auto to_seq() const {
+        return Eigen::seqN(start, length); // Otherwise, return Eigen sequence
+    }
+};
+
 class Simulation_Parameters {
    public:
     Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename);
@@ -118,9 +127,10 @@ class Simulation_Parameters {
     VectorXd initial_state;
 
     // Index maps
-    std::map<std::string, Eigen::seqN> x_idx_map; // State Vector index map
-    std::map<std::string, Eigen::seqN> u_idx_map; // Control Vector index map
-    std::map<std::string, Eigen::seqN> y_idx_map; // Measurement Vector index map
+    // using Seq = decltype(Eigen::seqN(0, 0)); // type alias for Eigen::seqN
+    std::unordered_map<std::string, SliceDef> x_idx_map; // State Vector index map
+    std::unordered_map<std::string, SliceDef> u_idx_map; // Control Vector index map
+    std::unordered_map<std::string, SliceDef> y_idx_map; // Measurement Vector index map
 
     // Lookup tables
     int NElev;
