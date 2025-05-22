@@ -195,7 +195,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     x_idx_map["battery_current"] = {22+num_RWs+3, 1};
 
     // Control Vector index map
-    u_idx_map["mtb_torques"]     = {0, num_MTBs};
+    u_idx_map["mtb_volt"]        = {0, num_MTBs};
     u_idx_map["rw_torques"]      = {num_MTBs, num_RWs};
     u_idx_map["jet_power"]       = {num_MTBs+num_RWs, 1};
 

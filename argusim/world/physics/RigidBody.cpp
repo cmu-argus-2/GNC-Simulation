@@ -11,6 +11,7 @@
 #include "drag.h"
 #include "SRP.h"
 #include "MagneticField.h"
+#include "power.h"
 
 
 #ifdef USE_PYBIND_TO_COMPILE
@@ -151,8 +152,10 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w);
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
     x_new(SC.x_idx_map["gyro_bias"].to_seq()) = x_new(SC.x_idx_map["gyro_bias"].to_seq()) + dt*(bias_noise); // - bias/sc.gyro_correlation_time);
-    
-
+    // battery
+    x_new(SC.x_idx_map["battery"].to_seq()) = x + dt * PowerConsumption(x, u, SC)
+    // enforce SOC limit
+    x_new(SC.x_idx_map["battery_soc"].to_seq()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_seq())));
 
     return x_new;
 }
