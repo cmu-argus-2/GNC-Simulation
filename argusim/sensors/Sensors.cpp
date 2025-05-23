@@ -31,13 +31,13 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
     
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
-    measurement(Eigen::seqN(0,6)) = GPS(state, t_J2000, sc);
-    measurement(Eigen::seqN(6,6)) = IMU(state, sc);
-    measurement(Eigen::seqN(12, sc.num_photodiodes)) = SunSensor(state, sc);
+    measurement(sc.y_idx_map["gps"].to_seq()) = GPS(state, t_J2000, sc);
+    measurement(sc.y_idx_map["imu"].to_seq()) = IMU(state, sc);
+    measurement(sc.y_idx_map["photodiode"].to_seq()) = SunSensor(state, sc);
 
     VectorXd power_readings = PowerReadings(state, control_input, sc);
-    measurement(Eigen::seqN(12+sc.num_photodiodes, sc.num_MTBs + sc.num_panels + 8)) = power_readings;
-    measurement(12+sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8) = control_input(sc.num_MTBs+sc.num_RWs)*sc.jetson_power; 
+    measurement(sc.y_idx_map["power_readings"].to_seq()) = power_readings;
+    measurement(sc.y_idx_map["jetson_power"].to_idx()) = control_input(sc.u_idx_map["jet_power"].to_idx())*sc.jetson_power; 
 
     return measurement;
 }
@@ -60,6 +60,7 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
     
     // GPS returns measurements in ECEF 
     Vector3 OMEGA {0, 0, 7.292115E-5};
+    // [TODO:] bug of double multiplication with GPS sigma 
     y(Eigen::seqN(0,3)) = R_ECI2ECEF*state(sc.x_idx_map["position"].to_seq()) + sc.gps_pos_std*pos_noise; // Add noise to the measurements
 
     Vector3 r_ecef = R_ECI2ECEF*state(sc.x_idx_map["position"].to_seq());
@@ -144,8 +145,8 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simulation_Parameters sc)
 {
-    int reading_size = sc.num_MTBs + sc.num_panels + 8; // power consumptions for each MTB and 8 battery diagnostics
-
+    int reading_size = sc.y_idx_map["power_readings"].get_length(); // power consumptions for each MTB and 8 battery diagnostics
+    
     VectorXd power_readings = VectorXd::Zero(reading_size);
     
     /* Magnetorquer Power Consumption */ 
@@ -169,14 +170,19 @@ VectorXd BatteryReadings(const VectorXd state, Simulation_Parameters sc)
     VectorXd battery_readings = VectorXd::Zero(8);
    
     // Populate battery readings
-    battery_readings(0) = state(19+sc.num_RWs);
+    int idx_bat_soc  = sc.x_idx_map["battery_soc"].to_idx();
+    int idx_bat_temp = sc.x_idx_map["battery_temp"].to_idx();
+    // int idx_bat_volt = sc.x_idx_map["battery_voltage"].to_idx();
+    int idx_bat_cur  = sc.x_idx_map["battery_current"].to_idx();
+
+    battery_readings(0) = state(idx_bat_soc);
     battery_readings(1) = sc.battery_capacity;
-    battery_readings(2) = state(19+sc.num_RWs+3);
+    battery_readings(2) = state(idx_bat_cur);
     battery_readings(3) = sc.max_pack_voltage;
     battery_readings(4) = 7.4;
-    battery_readings(5) = (state(19+sc.num_RWs+3) < 0) ? 0.01*state(19+sc.num_RWs)*sc.battery_capacity/(-state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTE
-    battery_readings(6) = (state(19+sc.num_RWs+3) > 0) ? 0.01*(100-state(19+sc.num_RWs))*sc.battery_capacity/(state(19+sc.num_RWs+3)*sc.max_pack_voltage) : 1.0e10; // TTF
-    battery_readings(7) = state(19+sc.num_RWs+1);
+    battery_readings(5) = (state(idx_bat_cur) < 0) ? 0.01*state(idx_bat_soc)*sc.battery_capacity/(-state(idx_bat_cur)*sc.max_pack_voltage) : 1.0e10; // TTE
+    battery_readings(6) = (state(idx_bat_cur) > 0) ? 0.01*(100-state(idx_bat_soc))*sc.battery_capacity/(state(idx_bat_cur)*sc.max_pack_voltage) : 1.0e10; // TTF
+    battery_readings(7) = state(idx_bat_temp);
 
     return battery_readings;
 }

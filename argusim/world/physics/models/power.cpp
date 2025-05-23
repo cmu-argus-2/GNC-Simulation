@@ -75,17 +75,19 @@
    VectorXd Battery(const VectorXd state, double net_power_consumption, double solar_heat, double battery_capacity,
                     double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage,
                 double battery_internal_resistance, std::unordered_map<std::string, SliceDef> x_idx_map)
-   {
-       VectorXd new_state = state;
+    {
+        VectorXd state_dot       = VectorXd::Zero(x_idx_map["battery"].get_length());
+        int idx_bat_soc          = x_idx_map["battery_soc"].to_idx() - x_idx_map["battery"].get_start();
+        int idx_bat_cur          = x_idx_map["battery_current"].to_idx() - x_idx_map["battery"].get_start();
+        int idx_bat_temp         = x_idx_map["battery_temp"].to_idx() - x_idx_map["battery"].get_start();
+        // int idx_bat_volt      = x_idx_map["battery_voltage"].to_idx() - x_idx_map["battery"].get_start();
 
-       
-       new_state(x_idx_map["battery_soc"].to_idx()) -= 100*net_power_consumption/battery_capacity; // Change in SoC
-       new_state(x_idx_map["battery_soc"].to_idx()) = fmax(0,fmin(100, new_state(x_idx_map["battery_soc"].to_idx())));
-       new_state(x_idx_map["battery_current"].to_idx()) = -net_power_consumption/new_state(x_idx_map["battery_voltage"].to_idx()); // Current in A
-       new_state(x_idx_map["battery_temp"].to_idx()) += (solar_heat*solar_heat_factor + 
-                                      pow(net_power_consumption/max_pack_voltage,2)*battery_internal_resistance - 
-                                      battery_radiative_loss*pow(new_state(x_idx_map["battery_temp"].to_idx()),4))/battery_thermal_mass;
-   
-       return new_state;
-   }
+        state_dot(idx_bat_soc)   = -100 * net_power_consumption / battery_capacity; // Change in SoC
+        state_dot(idx_bat_cur)   = -net_power_consumption / state(x_idx_map["battery_voltage"].to_idx()); // Current in A
+        state_dot(idx_bat_temp)  = (solar_heat * solar_heat_factor + 
+                                    pow(net_power_consumption / max_pack_voltage, 2) * battery_internal_resistance - 
+                                    battery_radiative_loss * pow(state(x_idx_map["battery_temp"].to_idx()), 4)) / battery_thermal_mass;
+
+        return state_dot;
+    }
    

@@ -195,13 +195,24 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     x_idx_map["battery_current"] = {22+num_RWs+3, 1};
 
     // Control Vector index map
-    u_idx_map["mtb_volt"]        = {0, num_MTBs};
-    u_idx_map["rw_torques"]      = {num_MTBs, num_RWs};
+    u_idx_map["mtb_volt"]        = {0,              num_MTBs};
+    u_idx_map["rw_torques"]      = {num_MTBs,       num_RWs};
     u_idx_map["jet_power"]       = {num_MTBs+num_RWs, 1};
 
     // Measurement Vector index map
     // std::map<std::string, Eigen::seqN> y_idx_map;
-    // y_idx_map["position"] = Eigen::seqN(0, 3);
+    y_idx_map["gps"]             = {0,              6};
+    y_idx_map["gps_pos"]         = {0,              3};
+    y_idx_map["gps_vel"]         = {3,              3};
+    y_idx_map["imu"]             = {6,              6};
+    y_idx_map["gyro"]            = {6,              3};
+    y_idx_map["magnetometer"]    = {9,              3};
+    y_idx_map["photodiode"]      = {12,             num_photodiodes};
+    y_idx_map["power_readings"]  = {12+num_photodiodes, num_MTBs + num_panels + 8};
+    y_idx_map["mtb_power"]       = {12+num_photodiodes, num_MTBs};
+    y_idx_map["solar_power"]     = {12+num_photodiodes+num_MTBs, num_panels};
+    y_idx_map["bat_readings"]    = {12+num_photodiodes+num_MTBs+num_panels, 8};
+    y_idx_map["jetson_power"]    = {12+num_photodiodes+num_MTBs+num_panels+8, 1};
 
     // Populate State Vector
     initial_state = initializeSatellite(sim_start_time);

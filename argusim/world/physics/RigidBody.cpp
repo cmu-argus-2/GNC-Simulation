@@ -154,7 +154,7 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
     x_new(SC.x_idx_map["gyro_bias"].to_seq()) = x_new(SC.x_idx_map["gyro_bias"].to_seq()) + dt*(bias_noise); // - bias/sc.gyro_correlation_time);
     // battery
-    x_new(SC.x_idx_map["battery"].to_seq()) = x + dt * PowerConsumptionWrapper(x, u, SC);
+    x_new(SC.x_idx_map["battery"].to_seq()) = x(SC.x_idx_map["battery"].to_seq()) + dt * PowerConsumptionWrapper(x, u, SC);
     // enforce SOC limit
     x_new(SC.x_idx_map["battery_soc"].to_idx()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_idx())));
 

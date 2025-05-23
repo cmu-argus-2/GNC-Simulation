@@ -29,6 +29,13 @@ struct SliceDef {
         }
         return start;
     }
+    int get_start() const {
+        return start;
+    }
+
+    int get_length() const {
+        return length;
+    }
 };
 
 /**
