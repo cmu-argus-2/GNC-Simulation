@@ -28,16 +28,20 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
                             Power Diagnostics ((6+8)x1),
                             Jetson Power       (1x1)]*/
     int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
-    
+
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(sc.y_idx_map["gps"].to_seq()) = GPS(state, t_J2000, sc);
+
     measurement(sc.y_idx_map["imu"].to_seq()) = IMU(state, sc);
+
     measurement(sc.y_idx_map["photodiode"].to_seq()) = SunSensor(state, sc);
 
     VectorXd power_readings = PowerReadings(state, control_input, sc);
+
     measurement(sc.y_idx_map["power_readings"].to_seq()) = power_readings;
-    measurement(sc.y_idx_map["jetson_power"].to_idx()) = control_input(sc.u_idx_map["jet_power"].to_idx())*sc.jetson_power; 
+
+    measurement(sc.y_idx_map["jetson_power"].to_idx()) = control_input(sc.u_idx_map["jet_power"].to_idx())*sc.jetson_power;
 
     return measurement;
 }
@@ -74,10 +78,9 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
 {
-    VectorXd imu_reading = VectorXd::Zero(9);
+    VectorXd imu_reading = VectorXd::Zero(6);
 
     /* Gyroscope */ 
-
     // Gyro Noise Models
     static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v);
 
@@ -93,13 +96,11 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     imu_reading(Eigen::seqN(0,3)) = omega_meas;
 
     /* Magnetometer */
-    
     // Magnetometer Noise Distribution
     static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
 
     Quaternion quat_BtoECI = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
-    // Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
-    
+
     // True Magnetic Field
     Vector3 B_eci = state(sc.x_idx_map["magnetic_field"].to_seq());
 

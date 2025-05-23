@@ -144,8 +144,8 @@ class Simulator():
         self.Idx["X"]["ROT"] = slice(6, 13)
         self.Idx["X"]["SUN_POS"] = slice(13, 16)
         self.Idx["X"]["MAG_FIELD"] = slice(16, 19)
-        self.Idx["X"]["GYRO_BIAS"] = slice(19,22)
-        self.Idx["X"]["RW_SPEED"] = slice(22, 22 + self.num_RWs)
+        self.Idx["X"]["RW_SPEED"] = slice(19, 19 + self.num_RWs)
+        self.Idx["X"]["GYRO_BIAS"] = slice(19 + self.num_RWs,22 + self.num_RWs)
         self.Idx["X"]["BAT"] = slice(22 + self.num_RWs, 26 + self.num_RWs)
         self.Idx["X"]["BAT_SOC"] = slice(22 + self.num_RWs, 23 + self.num_RWs)
         self.Idx["X"]["BAT_TEMP"] = slice(23 + self.num_RWs, 24 + self.num_RWs)
@@ -208,10 +208,9 @@ class Simulator():
         '''
             Implements partial observability using sensor models
         '''
-        result = readSensors(state, control_input, current_time, self.params)
-        measurement = np.array(result.measurement)
-        new_state = np.array(result.state)
-        return measurement, new_state
+        measurement = readSensors(state, control_input, current_time, self.params)
+        measurement = np.array(measurement)
+        return measurement
     
     def get_time(self):
         '''
@@ -235,7 +234,7 @@ class Simulator():
         self.state = rk4(self.state, control_input, self.params, self.current_time, dt)
         
         # Mask state through sensors
-        measurement, self.state = self.sensors(self.current_time, self.state, control_input)
+        measurement = self.sensors(self.current_time, self.state, control_input)
         
         # Log pertinent Quantities
         # [TODO:] use logging class functions

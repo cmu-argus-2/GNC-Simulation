@@ -27,6 +27,7 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
      
     auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, 
         t_J2000, sc.x_idx_map);
+
     xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
                                 sc.I_rw, sc.I_sat, sc.MTB, t_J2000, sc.mass,  sc.Cd, sc.A, 
                                 sc.CoPM, sc.useDT, sc.useGG, sc.x_idx_map, sc.u_idx_map);
@@ -84,7 +85,6 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 
     // Extract elements of state vector
     Vector3 r = x(x_idx_map["position"].to_seq());
-    // Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
     Quaternion q = vectorToQuaternion(x(x_idx_map["quaternion"].to_seq()));
     q.normalize();
     Vector3 omega = x(x_idx_map["angular_rate"].to_seq());
@@ -92,21 +92,19 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     omega_rw = x(x_idx_map["rw_speeds"].to_seq());
 
     Vector3 tau;
-    
+
     /* Attitude Dynamics */
     Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
-    Quaternion qdot_quat = 0.5*q*omega_quat;
+    Quaternion qdot_quat = 0.5 * q * omega_quat;
     Vector4 qdot{qdot_quat.w(), qdot_quat.x(), qdot_quat.y(), qdot_quat.z()};
 
     // Reaction Wheels
-    auto h_rw = I_rw*omega_rw;
-    u_idx_map["rw_torques"].to_seq();
+    auto h_rw = I_rw * omega_rw;
     auto tau_rw = u(u_idx_map["rw_torques"].to_seq());
-    tau = -G_rw_b*tau_rw;
-    
+    tau = -G_rw_b * tau_rw;
+
     // Magnetorquers
-    tau += MTB.getTorque(u(u_idx_map["mtb_torques"].to_seq()), q, MagneticField(r, t_J2000));
-    // Vector3 tau_mtb = MTB.getTorque(u(Eigen::seqN(0,num_MTBs)), q, MagneticField(r, t_J2000));
+    tau += MTB.getTorque(u(u_idx_map["mtb_volt"].to_seq()), q, MagneticField(r, t_J2000));
 
     /* Perturbations */
     if (useDT) {
@@ -118,11 +116,11 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     }
 
     // Gyrostat Equation
-    Vector3 h_sc = I_sat*omega + G_rw_b*h_rw;
-    Vector3 omega_dot = I_sat.inverse()*(-omega.cross(h_sc) + tau);
-    
+    Vector3 h_sc = I_sat * omega + G_rw_b * h_rw;
+    Vector3 omega_dot = I_sat.inverse() * (-omega.cross(h_sc) + tau);
+
     // Reaction wheel speeds
-    auto omega_dot_rw = tau_rw/I_rw;
+    auto omega_dot_rw = tau_rw / I_rw;
 
     // Pack into state derivative vector
     xdot(x_idx_map["quaternion"].to_seq()) = qdot;
@@ -145,16 +143,21 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
 
     // renormalize the attitude quaternion
     x_new(SC.x_idx_map["quaternion"].to_seq()) = x_new(SC.x_idx_map["quaternion"].to_seq())/x_new(SC.x_idx_map["quaternion"].to_seq()).norm();
+    
     // sun position
     x_new(SC.x_idx_map["sun_position"].to_seq()) = sun_position_eci(t_J2000 + dt);
+    
     // magnetic field 
     x_new(SC.x_idx_map["magnetic_field"].to_seq()) = MagneticField( x_new(SC.x_idx_map["position"].to_seq()), t_J2000 + dt);
+    
     // bias 
     static std::normal_distribution<double> bias_noise_dist(0, SC.gyro_sigma_w);
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
     x_new(SC.x_idx_map["gyro_bias"].to_seq()) = x_new(SC.x_idx_map["gyro_bias"].to_seq()) + dt*(bias_noise); // - bias/sc.gyro_correlation_time);
+    
     // battery
     x_new(SC.x_idx_map["battery"].to_seq()) = x(SC.x_idx_map["battery"].to_seq()) + dt * PowerConsumptionWrapper(x, u, SC);
+    
     // enforce SOC limit
     x_new(SC.x_idx_map["battery_soc"].to_idx()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_idx())));
 
