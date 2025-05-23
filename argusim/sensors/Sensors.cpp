@@ -96,7 +96,7 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     // Magnetometer Noise Distribution
     static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
 
-    Quaternion quat_BtoECI = state(sc.x_idx_map["quaternion"].to_seq());
+    Quaternion quat_BtoECI = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
     // Quaternion quat_BtoECI {state(6), state(7), state(8), state(9)};
     
     // True Magnetic Field
@@ -118,7 +118,7 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
     // Photodiodes noise distribution
     static std::normal_distribution<double> pd_noise_dist(0, sc.photodiode_std);
     
-    Quaternion quat = state(sc.x_idx_map["quaternion"].to_seq());
+    Quaternion quat = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
     // Quaternion quat {state(6), state(7), state(8), state(9)};
     Vector3 r_eci = state(sc.x_idx_map["position"].to_seq());
 
@@ -149,11 +149,11 @@ VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simul
     VectorXd power_readings = VectorXd::Zero(reading_size);
     
     /* Magnetorquer Power Consumption */ 
-    VectorXd mtb_power = MagnetorquerPower(control_input, sc);
+    VectorXd mtb_power = MagnetorquerPower(control_input, sc.resistances, sc.u_idx_map);
     power_readings(Eigen::seqN(0,sc.num_MTBs)) = mtb_power;
 
     /* Solar power generation */
-    VectorXd solar_power = SolarPanels(state, sc);
+    VectorXd solar_power = SolarPanels(state, sc.G_sp_b, sc.solar_panel_efficiency, sc.solar_panel_area, sc.x_idx_map);
     power_readings(Eigen::seqN(sc.num_MTBs, sc.num_panels)) = solar_power;
     
     /* Get Battery State */

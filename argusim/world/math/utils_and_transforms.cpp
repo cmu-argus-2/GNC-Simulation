@@ -50,6 +50,12 @@ Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist, std::mt199
     return W_so3;
 }
 
+Quaternion vectorToQuaternion(const Eigen::VectorXd& vec) 
+{
+    if (vec.size() != 4) throw std::invalid_argument("Quaternion vector must have 4 elements");
+    return Quaternion(vec(0), vec(1), vec(2), vec(3));
+}
+
 Matrix_3x3 get_ECEF_R_ENU(double latitude_deg, double longitude_deg) {
     double latitude_rad  = DEG_2_RAD(latitude_deg);
     double longitude_rad = DEG_2_RAD(longitude_deg);

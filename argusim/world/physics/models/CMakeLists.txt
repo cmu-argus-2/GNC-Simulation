@@ -1,4 +1,4 @@
-add_library(models_p1 OBJECT gravity.cpp SRP.cpp drag.cpp MagneticField.cpp)
+add_library(models_p1 OBJECT gravity.cpp SRP.cpp drag.cpp power.cpp MagneticField.cpp)
 target_link_libraries(models_p1 OBJECT math Eigen3::Eigen tjLib spice)
 
 # Fortran compile

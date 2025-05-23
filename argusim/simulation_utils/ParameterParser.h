@@ -7,15 +7,8 @@
 #include "math/EigenWrapper.h"
 #include "Magnetorquer.h"
 #include "yaml-cpp/yaml.h"
+#include "utils_and_transforms.h"
 
-struct SliceDef {
-    int start;
-    int length;
-
-    auto to_seq() const {
-        return Eigen::seqN(start, length); // Otherwise, return Eigen sequence
-    }
-};
 
 class Simulation_Parameters {
    public:

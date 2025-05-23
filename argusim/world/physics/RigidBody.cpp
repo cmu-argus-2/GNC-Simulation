@@ -12,6 +12,7 @@
 #include "SRP.h"
 #include "MagneticField.h"
 #include "power.h"
+#include <random>
 
 
 #ifdef USE_PYBIND_TO_COMPILE
@@ -44,7 +45,7 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
     // Extract elements from state vector
     Vector3 r = x(x_idx_map["position"].to_seq());
     Vector3 v = x(x_idx_map["velocity"].to_seq());
-    Quaternion q = x(x_idx_map["quaternion"].to_seq());
+    Quaternion q = vectorToQuaternion(x(x_idx_map["quaternion"].to_seq()));
 
     // Physics Models
     Vector3 vdot = gravitational_acceleration(r);
@@ -84,7 +85,7 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     // Extract elements of state vector
     Vector3 r = x(x_idx_map["position"].to_seq());
     // Quaternion q{x(6), x(7), x(8), x(9)}; // initialize attitude quaternion
-    Quaternion q = x(x_idx_map["quaternion"].to_seq());
+    Quaternion q = vectorToQuaternion(x(x_idx_map["quaternion"].to_seq()));
     q.normalize();
     Vector3 omega = x(x_idx_map["angular_rate"].to_seq());
     VectorXd omega_rw(num_RWs);
@@ -149,15 +150,24 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     // magnetic field 
     x_new(SC.x_idx_map["magnetic_field"].to_seq()) = MagneticField( x_new(SC.x_idx_map["position"].to_seq()), t_J2000 + dt);
     // bias 
-    static std::normal_distribution<double> bias_noise_dist(0, sc.gyro_sigma_w);
+    static std::normal_distribution<double> bias_noise_dist(0, SC.gyro_sigma_w);
     Vector3 bias_noise = Vector3::NullaryExpr([&](){return bias_noise_dist(gen);});
     x_new(SC.x_idx_map["gyro_bias"].to_seq()) = x_new(SC.x_idx_map["gyro_bias"].to_seq()) + dt*(bias_noise); // - bias/sc.gyro_correlation_time);
     // battery
-    x_new(SC.x_idx_map["battery"].to_seq()) = x + dt * PowerConsumption(x, u, SC)
+    x_new(SC.x_idx_map["battery"].to_seq()) = x + dt * PowerConsumptionWrapper(x, u, SC);
     // enforce SOC limit
-    x_new(SC.x_idx_map["battery_soc"].to_seq()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_seq())));
+    x_new(SC.x_idx_map["battery_soc"].to_idx()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_idx())));
 
     return x_new;
+}
+
+VectorXd PowerConsumptionWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC) 
+{
+    return PowerConsumption(x, u, SC.resistances, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, 
+                            SC.solar_panel_area, SC.x_idx_map, SC.battery_capacity, SC.battery_thermal_mass, 
+                            SC.battery_radiative_loss, SC.solar_heat_factor, SC.max_pack_voltage, SC.battery_internal_resistance,
+                            SC.mb_power, SC.num_MTBs, SC.num_RWs, SC.jetson_power);
+
 }
 
 

@@ -15,6 +15,22 @@ static constexpr double DIVIDE_BY_ZERO_TOLERANCE = 1E-5;
 #define DEG_2_RAD(x) ((x) * (M_PI / 180.0))
 #define RAD_2_DEG(x) ((x) * (180.0 / M_PI))
 
+struct SliceDef {
+    int start;
+    int length;
+    // Return Eigen sequence for slices (length > 1)
+    auto to_seq() const {
+        return Eigen::seqN(start, length); // Otherwise, return Eigen sequence
+    }
+    // Return single index for scalar access (length == 1)
+    int to_idx() const {
+        if (length != 1) {
+            throw std::logic_error("Slice length is not 1; cannot use to_idx().");
+        }
+        return start;
+    }
+};
+
 /**
  * @brief Converts seconds since the unix epoch to seconds since J2000 epoch
  *
@@ -60,6 +76,9 @@ Matrix_3x3 cleanRotMatrix(Matrix_3x3 R);
  * @return 3x3 matrix represnting a random rotation
  */
 Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist, std::mt19937 gen);
+
+// [TODO:] add a docstring
+Quaternion vectorToQuaternion(const Eigen::VectorXd& vec);
 
 /**
  * @brief Get the ENU to ECEF transform based on latitude and longitude of the
