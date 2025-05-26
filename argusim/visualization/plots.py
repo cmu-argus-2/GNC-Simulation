@@ -21,7 +21,159 @@ YELLOW = "\033[33m"
 WHITE = "\033[37m"
 RESET = "\033[0m"  # Resets all attributes
 
+from multiprocessing import Pool
+import time
+import numpy as np
+from mpl_toolkits.basemap import Basemap
+import os
 
+from argusim.visualization.plot_helper import (
+    multiPlot,
+    annotateMultiPlot,
+    save_figure,
+)
+from argusim.visualization.isolated_trace import itm
+from argusim.visualization.parse_bin_file import parse_bin_file_wrapper
+from argusim.visualization.plot_pointing import pointing_plots
+from argusim.visualization.actuator_plots import actuator_plots
+from argusim.visualization.sensor_plots import gyro_plots, sunsensor_plots, magsensor_plots
+from argusim.visualization.att_animation import att_animation
+from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias
+import yaml
+
+# ANSI escape sequences for colored terminal output  (from ChatGPT)
+RED = "\033[31m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+WHITE = "\033[37m"
+RESET = "\033[0m"  # Resets all attributes
+
+
+class MontecarloPlots:
+    def __init__(
+        self,
+        trials,
+        trials_directory,
+        plot_directory,
+        PERCENTAGE_OF_DATA_TO_PLOT,
+        close_after_saving=True,
+    ):
+        self.trials = trials
+        self.trials_dir = trials_directory
+        self.plot_dir = plot_directory
+        self.PERCENTAGE_OF_DATA_TO_PLOT = PERCENTAGE_OF_DATA_TO_PLOT
+        self.close_after_saving = close_after_saving
+        self.NUM_TRIALS = len(self.trials)
+
+    def _get_files_across_trials(self, filename):
+        filepaths = []
+        for trial_number in self.trials:
+            filepath = os.path.join(self.trials_dir, f"trial{trial_number}/{filename}")
+            if os.path.exists(filepath):
+                filepaths.append((trial_number, filepath))
+            else:
+                print(RED + f"Trial {trial_number} is missing {filename}" + RESET)
+        return filepaths
+
+    def true_state_plots(self):
+
+
+        with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
+            pyparams = yaml.safe_load(f)  
+        pyparams["trials"]             = self.trials
+        pyparams["trials_dir"]         = self.trials_dir
+        pyparams["plot_dir"]           = self.plot_dir
+        pyparams["close_after_saving"] = self.close_after_saving
+        if (pyparams["PlotFlags"]["true_state_plots"] or 
+            pyparams["PlotFlags"]["pointing_plots"] or 
+            pyparams["PlotFlags"]["actuator_plots"]):
+            # ==========================================================================
+            filepaths = self._get_files_across_trials("state_true.bin")
+
+            START = time.time()
+            args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
+            with Pool() as pool:
+                data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
+            print(f"Elapsed time to read in data: {END-START:.2f} s")
+            # ==========================================================================
+            if pyparams["PlotFlags"]["true_state_plots"]:
+                plot_true_st(pyparams, data_dicts, filepaths)
+            
+            # ==========================================================================
+            # Pointing Plots: Controller target versus real attitude
+            if pyparams["PlotFlags"]["pointing_plots"]:
+                pointing_plots(pyparams, data_dicts, filepaths)
+
+            # ==========================================================================
+            # Actuator Plots: Reaction Wheel Speed and Torque, Magnetorquer Torque
+            if pyparams["PlotFlags"]["actuator_plots"]:
+                actuator_plots(pyparams, data_dicts, filepaths)
+
+            # ==========================================================================
+            # Attitude Animation
+            if pyparams["PlotFlags"]["att_animation"]:
+                att_animation(pyparams, data_dicts)
+        
+        # ========================= True gyro bias plots =========================
+        if pyparams["PlotFlags"]["true_state_plots"]:
+            # filepaths = self._get_files_across_trials("gyro_bias_true.bin")
+
+            START = time.time()
+            args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in filepaths]
+            with Pool() as pool:
+                data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
+            print(f"Elapsed time to read in data: {END-START:.2f} s")
+            # --------------------------------------------------------------------------
+            plot_true_gyro_bias(pyparams, data_dicts, filepaths)
+
+
+    def sensor_measurement_plots(self):
+        with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
+                pyparams = yaml.safe_load(f)       
+        
+        if pyparams["PlotFlags"]["sensor_measurements"]:
+            # ======================= Gyro measurement plots =======================
+            filepaths = self._get_files_across_trials("measurements.bin")
+
+            START = time.time()
+            args = [(filepath, 100) for (_, filepath) in filepaths]
+            with Pool() as pool:
+                data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
+            print(f"Elapsed time to read in data: {END-START:.2f} s")
+            
+            pyparams["plot_dir"]           = self.plot_dir
+            pyparams["close_after_saving"] = self.close_after_saving
+            # --------------------------------------------------------------------------
+            gyro_plots(pyparams, data_dicts, filepaths)
+
+            # ====================== Sun Sensor measurement plots ======================
+            # filepaths = self._get_files_across_trials("sun_sensor_measurement.bin")
+
+            START = time.time()
+            args = [(filepath, 100) for (_, filepath) in filepaths]
+            with Pool() as pool:
+                data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
+            print(f"Elapsed time to read in data: {END-START:.2f} s")
+            # --------------------------------------------------------------------------
+            sunsensor_plots(pyparams, data_dicts, filepaths)
+
+            # ====================== Magnetometer measurement plots ======================
+            # filepaths = self._get_files_across_trials("magnetometer_measurement.bin")
+
+            START = time.time()
+            args = [(filepath, 100) for (_, filepath) in filepaths]
+            with Pool() as pool:
+                data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
+            print(f"Elapsed time to read in data: {END-START:.2f} s")
+            # --------------------------------------------------------------------------
+            magsensor_plots(pyparams, data_dicts, filepaths)
+
+"""
 def ground_track(data_dict, save_dir):
     ground_track = itm.figure()
     m = Basemap()  # cylindrical projection by default
@@ -265,3 +417,4 @@ def true_mag_plot(data_dict, save_dir):
     ylabels = ["$X$", "$Y$", "$Z$",]
     annotateMultiPlot(title="Body Mag Field Sim vs FSW", ylabels=ylabels)
     save_figure(itm.gcf(), save_dir, "mag_body.png", True)
+"""

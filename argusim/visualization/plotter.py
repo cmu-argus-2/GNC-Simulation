@@ -1,8 +1,7 @@
-import time
 import numpy as np
-import struct
 import os
-import math
+import traceback
+import inspect
 
 from argusim.visualization.plots import *
 from argusim.visualization.parse_bin_file import parse_bin_file
@@ -10,16 +9,16 @@ import argparse
 
 PERCENTAGE_TO_PLOT = 1
 
-""" removed when interfacing with the fsw. Try to work this back into the simulation
 # Create a dictionary to hold method names and their corresponding functions
 all_plotting_task_names = []
 for name, func in inspect.getmembers(MontecarloPlots, predicate=inspect.isfunction):
     if not name.startswith("_"):
         all_plotting_task_names.append(name)
 all_plotting_task_names = sorted(all_plotting_task_names)
-"""
 
+"""
 def plot_all(result_folder_path: str):
+    # needs to pick the trial
     data = parse_bin_file(os.path.join(result_folder_path, 'state_true.bin'))
 
     ground_track(data, result_folder_path)
@@ -32,7 +31,7 @@ def plot_all(result_folder_path: str):
     true_sun_plot(data, result_folder_path)
     true_mag_plot(data, result_folder_path)
     battery_diagnostics_plot(data, result_folder_path)
-
+"""
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -79,7 +78,22 @@ if __name__ == '__main__':
             print("exiting without plotting")
             exit(0)
 
-    plot_all(args.job_directory)
+    # plot_all(args.job_directory)
+    mcp = MontecarloPlots(
+        trials,
+        trials_directory,
+        plot_directory,
+        PERCENTAGE_OF_DATA_TO_PLOT=PERCENTAGE_OF_DATA_TO_PLOT,
+        close_after_saving=not show_plots,
+    )
+
+    for plotting_task_name in plotting_task_names:
+        try:
+            plotting_task = getattr(mcp, plotting_task_name)
+            plotting_task()
+        except:
+            traceback.print_exc()
+        print()
     
     """
     show_plots = args.interactive and input("View plots? [y/n]") == "y"

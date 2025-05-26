@@ -7,7 +7,7 @@ from argusim.build.sensors.pysensors import readSensors
 
 # Python Imports
 import os
-from argusim.simulation_manager import MultiFileLogger
+from argusim.simulation_manager import SimLogger
 import numpy as np
 from argusim.world.LUT_generator import generate_lookup_tables
 import yaml
@@ -43,7 +43,6 @@ class Simulator():
 
         # Initialization
         self.state = np.array(self.params.initial_state)
-        self.fsw_state = np.zeros((28,))
         self.J2000_start_time = self.params.sim_start_time
         self.current_time = self.J2000_start_time
         self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
@@ -52,84 +51,8 @@ class Simulator():
 
         # Logging
         if self.log:
-            self.logr = MultiFileLogger(log_directory)
-            # [TODO:] remove redundant definition, already in the logger class
-            self.state_labels = ["r_x ECI [m]", 
-                                 "r_y ECI [m]", 
-                                 "r_z ECI [m]", 
-                                 "v_x ECI [m/s]", 
-                                 "v_y ECI [m/s]", 
-                                 "v_z ECI [m/s]",
-                                 "q_w", 
-                                 "q_x", 
-                                 "q_y", 
-                                 "q_z", 
-                                 "omega_x [rad/s]", 
-                                 "omega_y [rad/s]", 
-                                 "omega_z [rad/s]", 
-                                 "rSun_x ECI [m]",
-                                 "rSun_y ECI [m]",
-                                 "rSun_z ECI [m]",
-                                 "xMag ECI [T]",
-                                 "yMag ECI [T]",
-                                 "zMag ECI [T]"] + \
-                                ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)] + \
-                                ["bias_x [rad/s]",
-                                "bias_y [rad/s]",
-                                "bias_z [rad/s]"]    + \
-                                ["Battery SoC", "Battery temperature [K]", "Pack Voltage [V]", "Pack Current [A]"]
+            self.logr = SimLogger(log_directory, self.num_RWs, self.num_photodiodes, self.num_MTBs, self.num_panels, self.J2000_start_time)
             
-            self.measurement_labels = ["gps_posx ECEF [m]", 
-                                       "gps_posy ECEF [m]", 
-                                       "gps_posz ECEF [m]", 
-                                       "gps_velx ECEF [m/s]", 
-                                       "gps_vely ECEF [m/s]", 
-                                       "gps_velz ECEF [m/s]",
-                                       "gyro_x [rad/s]", 
-                                       "gyro_y [rad/s]", 
-                                       "gyro_z [rad/s]",
-                                       "mag_x_body [T]", 
-                                       "mag_y_body [T]", 
-                                       "mag_z_body [T]"] + \
-                                       ['light_sensor_lux ' + str(i) for i in range(self.num_photodiodes)] + \
-                                       ['mtb_power ' + str(i) for i in range(self.num_MTBs)] +\
-                                       ['solar_power' + str(i) for i in range(self.num_panels)] +\
-                                       ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
-                                        "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
-                                        "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
-            
-            self.fsw_labels = ["fsw_gps_posx ECI [m]", 
-                                "fsw_gps_posy ECI [m]", 
-                                "fsw_gps_posz ECI [m]", 
-                                "fsw_gps_velx ECI [m/s]", 
-                                "fsw_gps_vely ECI [m/s]", 
-                                "fsw_gps_velz ECI [m/s]",
-                                "fsw_qw",
-                                "fsw_qx",
-                                "fsw_qy",
-                                "fsw_qz",
-                                "fsw_gyro_x [rad/s]", 
-                                "fsw_gyro_y [rad/s]", 
-                                "fsw_gyro_z [rad/s]",
-                                "fsw_bias_x [rad/s]",
-                                "fsw_bias_y [rad/s]",
-                                "fsw_bias_z [rad/s]", 
-                                "fsw_mag_x_body [T]", 
-                                "fsw_mag_y_body [T]", 
-                                "fsw_mag_z_body [T]",
-                                "fsw_sun_x",
-                                "fsw_sun_y",
-                                "fsw_sun_z",
-                                "fsw_sun_eci_x",
-                                "fsw_sun_eci_y",
-                                "fsw_sun_eci_z",
-                                "fsw_mag_eci_x",
-                                "fsw_mag_eci_y",
-                                "fsw_mag_eci_z"]
-            
-            self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] + \
-                                ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
-
     def define_indexes(self):
         # # Indexing
         # State
@@ -239,10 +162,10 @@ class Simulator():
         # Log pertinent Quantities
         # [TODO:] use logging class functions
         if self.log:
-            self.logr.log_v(
-                "state_true.bin",
-                [self.current_time] + self.state.tolist() + measurement.tolist() + control_input.tolist() + self.fsw_state.tolist(),
-                ["Time [s]"] + self.state_labels + self.measurement_labels + self.input_labels + self.fsw_labels
-            )
+            # Log true state
+            self.logr.log_true_state(self.current_time, self.state, control_input)
+            # measurement data logging
+            self.logr.log_measurements(self.current_time, measurement)
+            
 
         return measurement
