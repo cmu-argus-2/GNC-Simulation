@@ -7,7 +7,7 @@ from argusim.visualization.plots import *
 from argusim.visualization.parse_bin_file import parse_bin_file
 import argparse
 
-PERCENTAGE_TO_PLOT = 1
+PERCENTAGE_TO_PLOT = 100
 
 # Create a dictionary to hold method names and their corresponding functions
 all_plotting_task_names = []
@@ -83,11 +83,11 @@ if __name__ == '__main__':
         trials,
         trials_directory,
         plot_directory,
-        PERCENTAGE_OF_DATA_TO_PLOT=PERCENTAGE_OF_DATA_TO_PLOT,
-        close_after_saving=not show_plots,
+        PERCENTAGE_OF_DATA_TO_PLOT=PERCENTAGE_TO_PLOT,
+        close_after_saving=True,
     )
 
-    for plotting_task_name in plotting_task_names:
+    for plotting_task_name in all_plotting_task_names:
         try:
             plotting_task = getattr(mcp, plotting_task_name)
             plotting_task()

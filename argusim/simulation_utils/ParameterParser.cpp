@@ -595,20 +595,25 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     YAML::Emitter out;
     std::string outpath = results_folder.append("/trial_params.yaml");
     
-    out << YAML::BeginSeq;
-    out << YAML::Key << "mass" << mass;
-    out << YAML::Key << "area" << A;
+    out << YAML::BeginMap;
+    out << YAML::Key << "mass";
+    out << YAML::Value << mass;
+    out << YAML::Key << "area";
+    out << YAML::Value << A;
 
     std::vector<double> vec;
     vec.assign(I_sat.data(), I_sat.data() + 9);
-    out << YAML::Key << "inertia" << YAML::Flow << vec;
+    out << YAML::Key << "inertia";
+    out << YAML::Value << vec;
 
     vec.assign(G_rw_b.data(), G_rw_b.data() + G_rw_b.rows()*G_rw_b.cols());
-    out << YAML::Key << "rw_orientation" << YAML::Flow << vec;
-    out << YAML::Key << "I_rw" <<  I_rw;
+    out << YAML::Key << "rw_orientation";
+    out << YAML::Value << vec;
+    out << YAML::Key << "I_rw";
+    out << YAML::Value <<  I_rw;
     
     vec.assign(G_mtb_b.data(), G_mtb_b.data() + G_mtb_b.rows()*G_mtb_b.cols());
-    out << YAML::Key << "mtb_orientation" << YAML::Flow << vec;
+    out << YAML::Key << "mtb_orientation" << YAML::Value << vec;
 
     vec.assign(resistances.data(), resistances.data() + resistances.size());
     out << YAML::Key << "mtb_resistances" << YAML::Flow << vec;
@@ -638,7 +643,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     out<<YAML::Key << "sim_start_time" << TJ2000toUTCString(sim_start_time);
 
-    out<<YAML::EndSeq;
+    out<<YAML::EndMap;
 
     std::ofstream fout(outpath);
     fout << out.c_str();

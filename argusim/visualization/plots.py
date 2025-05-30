@@ -76,14 +76,25 @@ class MontecarloPlots:
         return filepaths
 
     def true_state_plots(self):
-
-
-        with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
+        # with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
+        with open(os.path.join(self.trials_dir, "../params.yaml"), "r") as f:
             pyparams = yaml.safe_load(f)  
         pyparams["trials"]             = self.trials
         pyparams["trials_dir"]         = self.trials_dir
         pyparams["plot_dir"]           = self.plot_dir
         pyparams["close_after_saving"] = self.close_after_saving
+
+        # [TODO:] load array of trial_params
+        trial_params = []
+        for trial_number in self.trials:
+            trial_param_path = os.path.join(self.trials_dir, f"trial{trial_number}/trial_params.yaml")
+            if os.path.exists(trial_param_path):
+                with open(trial_param_path, "r") as f:
+                    trial_params.append(yaml.safe_load(f))
+            else:
+                print(RED + f"Trial {trial_number} is missing trial_params.yaml" + RESET)
+        # [TODO:] process the trial_params
+
         if (pyparams["PlotFlags"]["true_state_plots"] or 
             pyparams["PlotFlags"]["pointing_plots"] or 
             pyparams["PlotFlags"]["actuator_plots"]):
