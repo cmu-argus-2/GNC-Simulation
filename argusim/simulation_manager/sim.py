@@ -140,6 +140,12 @@ class Simulator():
             Get current simulation time
         '''
         return self.current_time
+    
+    def get_indexes(self):
+        """
+        Returns the index dictionary for state, control input, and measurement vectors.
+        """
+        return self.Idx
 
     def step(self, sim_time, dt):
         """
