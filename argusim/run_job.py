@@ -31,11 +31,10 @@ montecarlo_rel = "montecarlo/"
 repo_root_abs = os.path.realpath(repo_root_rel)
 parameter_file_abs = os.path.join(os.path.realpath(montecarlo_rel), "configs/", parameter_file_name)
 results_directory_abs = os.path.join(os.path.realpath(montecarlo_rel), "results/")
-plot_script_abs = os.path.join(repo_root_abs, "visualization/plotter/plot.py")
+plot_script_abs = os.path.join(repo_root_abs, "visualization/plotter.py")
 
-# trial_command = "./main"
-# trial_command_dir = f"{repo_root_abs}/build/simulation_manager"
-trial_command = "'python3 argusim/simulation_manager/sim.py'"
+# trial_command = "'python3 argusim/simulation_manager/sim.py'"
+trial_command = "'python3 argusim/simulation_manager/test_open_loop.py'"
 trial_command_dir = repo_root_abs
 
 # ensure paths exist

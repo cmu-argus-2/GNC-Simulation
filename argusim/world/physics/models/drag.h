@@ -18,6 +18,18 @@
 Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, double t_J2000, double Cd, double A, double m);
 
 /**
+ * @brief Compute drag torque on satellite in body frame
+ * 
+ * This function calculates the torque due to aerodynamic drag acting on the satellite.
+ * The drag torque is computed based on the satellite's orientation, velocity, and 
+ * atmospheric conditions. The resulting torque is expressed in the body frame.
+ * 
+ * @return drag torque in body frame [Nm]
+ */
+Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q, 
+                    double t_J2000, double Cd, double A, double m, const Vector3 CoPM);
+
+/**
  * @brief Compute atmospheric density at current time
  * 
  * @param r : position vector in ECI frame [UNITS : m]

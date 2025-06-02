@@ -17,6 +17,18 @@
             ]
         },
         {
+            "name": "Python: run_job",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${fileDirname}/../",
+            "purpose": [
+                "debug-in-terminal"
+            ]
+        },
+        {
             "name": "C/C++: debug active file",
             "type": "cppdbg",
             "request": "launch",

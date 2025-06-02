@@ -1,14 +1,13 @@
-import inspect
-import traceback
 import numpy as np
 import os
+import traceback
+import inspect
 
-from argusim.visualization.plotter.plots import MontecarloPlots
-from argusim.visualization.plotter.plot_menu import get_user_selections
-from matplotlib import pyplot as plt
+from argusim.visualization.plots import *
+from argusim.visualization.parse_bin_file import parse_bin_file
 import argparse
 
-PERCENTAGE_OF_DATA_TO_PLOT = 1
+PERCENTAGE_TO_PLOT = 100
 
 # Create a dictionary to hold method names and their corresponding functions
 all_plotting_task_names = []
@@ -17,7 +16,24 @@ for name, func in inspect.getmembers(MontecarloPlots, predicate=inspect.isfuncti
         all_plotting_task_names.append(name)
 all_plotting_task_names = sorted(all_plotting_task_names)
 
-if __name__ == "__main__":
+"""
+def plot_all(result_folder_path: str):
+    # needs to pick the trial
+    data = parse_bin_file(os.path.join(result_folder_path, 'state_true.bin'))
+
+    ground_track(data, result_folder_path)
+    pos_plot(data, result_folder_path)
+    attitude_plot(data, result_folder_path)
+    omega_plot(data, result_folder_path)
+    bias_plot(data, result_folder_path)
+    input_plot(data, result_folder_path)
+    sun_point_plot(data, result_folder_path)
+    true_sun_plot(data, result_folder_path)
+    true_mag_plot(data, result_folder_path)
+    battery_diagnostics_plot(data, result_folder_path)
+"""
+    
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         prog="plot.py",
         description="This program generates plots from data produced by a montecarlo job",
@@ -25,7 +41,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("job_directory", metavar="job_directory")
     parser.add_argument("-t", "--trials", type=int, nargs="+")
-    parser.add_argument("-i", "--interactive", action="store_true")
 
     args = parser.parse_args()
 
@@ -50,10 +65,6 @@ if __name__ == "__main__":
         trials = sorted(args.trials)
         plot_directory = os.path.join(job_directory + "_" + "_".join([str(x) for x in trials]), "plots")
 
-    plotting_task_names = all_plotting_task_names
-    if args.interactive:
-        plotting_task_names = get_user_selections(all_plotting_task_names)
-
     os.system(f"mkdir -p {plot_directory}")
     assert os.path.exists(plot_directory), plot_directory
 
@@ -67,6 +78,24 @@ if __name__ == "__main__":
             print("exiting without plotting")
             exit(0)
 
+    # plot_all(args.job_directory)
+    mcp = MontecarloPlots(
+        trials,
+        trials_directory,
+        plot_directory,
+        PERCENTAGE_OF_DATA_TO_PLOT=PERCENTAGE_TO_PLOT,
+        close_after_saving=True,
+    )
+
+    for plotting_task_name in all_plotting_task_names:
+        try:
+            plotting_task = getattr(mcp, plotting_task_name)
+            plotting_task()
+        except:
+            traceback.print_exc()
+        print()
+    
+    """
     show_plots = args.interactive and input("View plots? [y/n]") == "y"
     mcp = MontecarloPlots(
         trials,
@@ -85,3 +114,4 @@ if __name__ == "__main__":
         print()
     if show_plots:
         plt.show()
+    """

@@ -5,16 +5,18 @@
 #include "math/EigenWrapper.h"
 #include "utils_and_transforms.h"
 
-
 const double R_EARTH = 6371000.0; // Earth radius in meters
 const double R_SUN = 696340000.0; // Sun radius in meters
 
-double partial_illumination_rel(const Vector3& r_earth, const Vector3& r_sun) {
-    double r_mag = r_earth.norm();
+double shadow_factor(const Vector3 r_sat, const Vector3 r_sun) 
+{
+    Vector3 r_rel = r_sun - r_sat;
+
+    double r_mag = r_sat.norm();
     double R_sun = R_SUN;
     double R_earth = R_EARTH;
-    double dmag = r_sun.norm();
-    double sd = r_earth.dot(r_sun);
+    double dmag = r_rel.norm();
+    double sd = -r_sat.dot(r_rel);
     double a = asin(R_sun / dmag);
     if (R_earth > r_mag) {
         std::cerr << "Error! Collision detected with Earth." << std::endl;
@@ -35,14 +37,7 @@ double partial_illumination_rel(const Vector3& r_earth, const Vector3& r_sun) {
     }
 }
 
-double partial_illumination(const Vector3& r, const Vector3& r_Sun) {
-    Vector3 d = r - r_Sun;
-    return partial_illumination_rel(r, d);
-}
-
-
-// TODO : Compute shadow function
-Vector3 SRP_acceleration(const Quaternion q, const Vector3 r, double t_J2000, double CR, double A, double m)
+Vector3 SRP_acceleration(const Vector3 r, const Quaternion q, double t_J2000, double CR, double A, double m)
 {
     // Constants
     double solar_constant = 1367; // W/m^2
@@ -51,15 +46,15 @@ Vector3 SRP_acceleration(const Quaternion q, const Vector3 r, double t_J2000, do
     // Get sun position
     Vector3 r_sun = sun_position_eci(t_J2000);
 
+    // Shadow Factor
+    double shadow = shadow_factor(r, r_sun);
+
     // Frontal Area
     double A_f = A*FrontalAreaFactor(q, r_sun);
 
-    // Shadow factor
-    double shadow_factor = partial_illumination_rel(r, r_sun);
-
     //Drag acceleration
     Vector3 acceleration;
-    acceleration = (shadow_factor*CR*(solar_constant/c)*A_f/(r_sun.norm()*m))*r_sun;
+    acceleration = shadow*(CR*(solar_constant/c)*A_f/(r_sun.norm()*m))*r_sun;
 
     return acceleration;
 }

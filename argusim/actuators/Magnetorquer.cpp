@@ -5,6 +5,13 @@
 #include <utility>
 #include <iostream>
 
+#ifdef USE_PYBIND_TO_COMPILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
+#include "pybind11/eigen.h"
+#pragma GCC diagnostic pop
+#endif
+
 Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, double Nturns,
                            double maxVolt, double maxCurrentRating, double maxPower, MatrixXd mtb_orientation)  
 {
@@ -19,31 +26,55 @@ Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, d
     G_mtb_b = std::move(mtb_orientation);
 }
 
+
+Vector3 Magnetorquer::getSingleDipoleMoment(int index, double voltage)
+{
+    double current = voltage / resistance(index);
+    Vector3 dipole_moment = N_turns * current * A_cross * G_mtb_b.col(index);
+    return dipole_moment;
+}
+
+Vector3 Magnetorquer::getSingleTorque(int index, double voltage, Vector3 magnetic_field_b)
+{
+    Vector3 dipole_moment = getSingleDipoleMoment(index, voltage);
+    Vector3 torque = dipole_moment.cross(magnetic_field_b);
+    return torque;
+}
+
 Vector3 Magnetorquer::getTorque(VectorXd voltages, Quaternion q, Vector3 magnetic_field)
 {
     
     Vector3 magnetic_field_b = q.toRotationMatrix().transpose()*magnetic_field; // quaternion rotates vector in body frame to ECI. We need the inverse rotation
 
-    Eigen::VectorXd currents = voltages.cwiseProduct(resistance.cwiseInverse());
-    Eigen::VectorXd power = voltages.cwiseProduct(currents);
+    Vector3 torque_net = getTorqueb(voltages, magnetic_field_b);
 
-    Eigen::VectorXd max_current = currents.cwiseAbs();
-    Eigen::VectorXd max_applied_voltage = voltages.cwiseAbs();
-    Eigen::VectorXd max_applied_power = power.cwiseAbs();
-
-    for (int i=0; i<num_MTBs; i++) {
-        assert(max_current(i) <= max_current_rating);
-        assert(max_applied_voltage(i) <= max_voltage);
-        assert(max_applied_power(i) <= max_power);
-    }
-
-    //auto dipole_moments = N_per_face*A_cross*
-    Vector3 dipole_moment;
-    MatrixXd torque = MatrixXd::Zero(3, num_MTBs);
-    for (int i=0; i<num_MTBs; i++) {
-        dipole_moment = N_turns*currents(i)*A_cross*G_mtb_b.col(i);
-        torque.col(i) = dipole_moment.cross(magnetic_field_b);
-    }
-
-    return torque.rowwise().sum();
+    return torque_net;
 }
+
+Vector3 Magnetorquer::getTorqueb(VectorXd voltages, Vector3 magnetic_field_b)
+{
+    
+    //auto dipole_moments = N_per_face*A_cross*
+    MatrixXd torque = MatrixXd::Zero(3, num_MTBs);
+    for (int i = 0; i < num_MTBs; i++) {
+        torque.col(i) = getSingleTorque(i, voltages(i), magnetic_field_b);
+    }
+    Vector3 torque_net = torque.rowwise().sum();
+
+    return torque_net;
+}
+
+#ifdef USE_PYBIND_TO_COMPILE
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
+
+PYBIND11_MODULE(pymagnetorquers, m) {
+    py::class_<Magnetorquer>(m, "Magnetorquer")
+        .def(py::init<int, VectorXd, double, double, double, double, double, MatrixXd>())
+        .def("getTorque", &Magnetorquer::getTorque, "Compute and return the net torque produced by the magnetorquers given input voltages, attitude quaternion, and magnetic field vector.")
+        .def("getTorqueb", &Magnetorquer::getTorqueb, "Compute and return the net torque produced by the magnetorquers given input voltages, and magnetic field vector in the body frame.")
+        .def("getSingleDipoleMoment", &Magnetorquer::getSingleDipoleMoment, "Compute the dipole moment for a single magnetorquer given its index and applied voltage.")
+        .def("getSingleTorque", &Magnetorquer::getSingleTorque, "Compute the torque for a single magnetorquer given its index, applied voltage, attitude quaternion, and magnetic field vector.");
+}
+#endif

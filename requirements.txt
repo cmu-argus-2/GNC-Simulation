@@ -1,9 +1,12 @@
 numpy
+scipy
 matplotlib
 basemap
 psutil
 pyigrf
 flask
+argcomplete==1.9.4
 scipy
 pyyaml
 pytest
+shapely

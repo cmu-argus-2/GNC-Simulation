@@ -157,6 +157,7 @@ class Attitude_EKF:
         return H
 
     def sun_sensor_update(self, measured_sun_ray_in_body, true_sun_ray_ECI, t):
+        measured_sun_ray_in_body = measured_sun_ray_in_body.copy() # to not alter its value outside the function
         measured_sun_ray_in_body /= np.linalg.norm(measured_sun_ray_in_body)
         true_sun_ray_ECI /= np.linalg.norm(true_sun_ray_ECI)
         if not self.initialized:
@@ -173,6 +174,7 @@ class Attitude_EKF:
         self.EKF_update(H, innovation, Cov_sunsensor)
 
     def Bfield_update(self, measured_Bfield_in_body, true_Bfield_ECI, t):
+        measured_Bfield_in_body = measured_Bfield_in_body.copy() # to not alter its value outside the function
         measured_Bfield_in_body /= np.linalg.norm(measured_Bfield_in_body)
         true_Bfield_ECI /= np.linalg.norm(true_Bfield_ECI)
         if not self.initialized:

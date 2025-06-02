@@ -35,12 +35,14 @@
 // ==========================================================================
 // ==========================================================================
 
-Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder) : 
+Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename) : 
                                     dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
     YAML::Node params = YAML::LoadFile(filename);
     defineDistributions(filename);
+    useLUTs = params["useLUTs"].as<bool>();
+    defineLUTs(data_filename);
 
     results_folder = results_folder; // PLACEHOLDER
 
@@ -54,11 +56,18 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
 
+    // Center of Pressure/Mass arm
+    CoPM = Vector3::NullaryExpr([&](){return CoPM_dist(dev);});
+
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
     CR = params["CR"].as<double>();
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
+
+    // Attitude perturbation properties
+    useDT = params["useDragTorque"].as<bool>();
+    useGG = params["useGravityGradient"].as<bool>();
 
     // Reaction Wheel
     num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
@@ -69,6 +78,7 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_rw = I_rw_dist(dev);
 
     // GPS
+    gps_dt = params["gps"]["gps_dt"].as<double>();
     gps_pos_std = params["gps"]["gps_pos_std"].as<double>(); // gps_pos_dist(dev);
     gps_vel_std = params["gps"]["gps_vel_std"].as<double>(); // gps_vel_dist(dev);
 
@@ -79,20 +89,35 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         G_pd_b.col(i) = random_SO3_rotation(photodiode_orientation_dist, dev)*G_pd_b.col(i);
     }
     photodiode_std = photodiode_dist(dev);
-    sigma_sunsensor = sigma_sunsensor_dist(dev);
+    // sigma_sunsensor = sigma_sunsensor_dist(dev);
     photodiode_dt = params["photodiodes"]["photodiodes_dt"].as<double>();
 
 
     // Magnetometer
-    sigma_magnetometer = sigma_magnetometer_dist(dev);
-    magnetometer_dt = params["magnetometer"]["magnetometer_dt"].as<double>();
-    gyro_dt = params["gyroscope"]["gyro_dt"].as<double>();
-    
+    magnetometer_noise_std =magnetometer_dist(dev);
+
+    // Gyroscope
+    gyro_sigma_w = gyro_bias_dist(dev);
+    gyro_sigma_v = gyro_white_noise_dist(dev);
+    gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
+    gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
+
+    // Solar panels
+    num_panels = params["solar_panels"]["num_panels"].as<int>();
+    G_sp_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["solar_panels"]["panel_normals"].as<std::vector<double>>().data(), 3, num_panels);
+    for (int i=0; i<num_panels; i++) {
+        G_sp_b.col(i) = random_SO3_rotation(solar_panel_orientation_dist, dev)*G_sp_b.col(i);
+    }
+    solar_panel_efficiency = params["solar_panels"]["efficiency"].as<double>();
+    solar_panel_area = params["solar_panels"]["area"].as<double>();
+
+    // Static power consumption
+    mb_power = params["static_power_consumption"]["mainboard"].as<double>();
+    jetson_power = params["static_power_consumption"]["jetson"].as<double>();
+
     // Sim Settings
     MAX_TIME = params["MAX_TIME"].as<double>();
     dt = params["dt"].as<double>();
-    controller_dt = params["controller_dt"].as<double>();
-    estimator_dt  = params["estimator_dt"].as<double>();
     
     // Satellite Orbit Initialization
     semimajor_axis = sma_dist(dev);
@@ -106,7 +131,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     } else {
         LTDN = UTCStringtoHours(params["initialization"]["LTDN"].as<std::string>());
     }
-    std::cout << "LTDN: " << LTDN << std::endl;
 
     bool disperse_true_anomaly = params["initialization"]["disperse_true_anomaly"].as<bool>();
     if (disperse_true_anomaly) {
@@ -127,40 +151,94 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     bool disperse_initial_angular_rate = params["initialization"]["disperse_initial_angular_rate"].as<bool>();
     if (disperse_initial_angular_rate) {
         initial_angular_rate = Vector3::NullaryExpr([&](){return initial_angular_rate_dist(dev);});
+        double omega_norm = initial_angular_rate.norm();
+        if (omega_norm > params["initialization"]["initial_angular_rate_bound"].as<double>()) {
+            initial_angular_rate = (params["initialization"]["initial_angular_rate_bound"].as<double>() / omega_norm)*initial_angular_rate;
+        }
     } else {
         initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
     }
+
+    // Battery Initialization
+    battery_capacity = params["initialization"]["battery_capacity"].as<double>();
+    battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
+    battery_internal_resistance = params["initialization"]["battery_internal_resistance"].as<double>();
+    battery_thermal_mass = params["initialization"]["battery_thermal_mass"].as<double>();
+    battery_radiative_loss = params["initialization"]["battery_radiative_loss"].as<double>();
+    battery_initial_temp = params["initialization"]["battery_initial_temp"].as<double>();
+    max_pack_voltage = params["initialization"]["max_pack_voltage"].as<double>();
+    solar_heat_factor = params["initialization"]["solar_heat_factor"].as<double>();
 
     // Sim Start Time
     sim_start_time = sim_start_time_dist(dev);
 
     RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
-    
+
+    initial_gyro_bias = Vector3::NullaryExpr([&](){return gyro_bias_dist(dev);});
+
+    // Index maps
+    // State Vector index map
+    x_idx_map["position"]        = {0, 3};
+    x_idx_map["velocity"]        = {3, 3};
+    x_idx_map["translation"]     = {0, 6};
+    x_idx_map["quaternion"]      = {6, 4};
+    x_idx_map["angular_rate"]    = {10, 3};
+    x_idx_map["rotation"]        = {6, 7};
+    x_idx_map["sun_position"]    = {13, 3};
+    x_idx_map["magnetic_field"]  = {16, 3};
+    x_idx_map["rw_speeds"]       = {19, num_RWs};
+    x_idx_map["gyro_bias"]       = {19+num_RWs, 3};
+    x_idx_map["battery"]         = {22+num_RWs, 4};
+    x_idx_map["battery_soc"]     = {22+num_RWs, 1};
+    x_idx_map["battery_temp"]    = {22+num_RWs+1, 1};
+    x_idx_map["battery_voltage"] = {22+num_RWs+2, 1};
+    x_idx_map["battery_current"] = {22+num_RWs+3, 1};
+
+    // Control Vector index map
+    u_idx_map["mtb_volt"]        = {0,              num_MTBs};
+    u_idx_map["rw_torques"]      = {num_MTBs,       num_RWs};
+    u_idx_map["jet_power"]       = {num_MTBs+num_RWs, 1};
+
+    // Measurement Vector index map
+    // std::map<std::string, Eigen::seqN> y_idx_map;
+    y_idx_map["gps"]             = {0,              6};
+    y_idx_map["gps_pos"]         = {0,              3};
+    y_idx_map["gps_vel"]         = {3,              3};
+    y_idx_map["imu"]             = {6,              6};
+    y_idx_map["gyro"]            = {6,              3};
+    y_idx_map["magnetometer"]    = {9,              3};
+    y_idx_map["photodiode"]      = {12,             num_photodiodes};
+    y_idx_map["power_readings"]  = {12+num_photodiodes, num_MTBs + num_panels + 8};
+    y_idx_map["mtb_power"]       = {12+num_photodiodes, num_MTBs};
+    y_idx_map["solar_power"]     = {12+num_photodiodes+num_MTBs, num_panels};
+    y_idx_map["bat_readings"]    = {12+num_photodiodes+num_MTBs+num_panels, 8};
+    y_idx_map["jetson_power"]    = {12+num_photodiodes+num_MTBs+num_panels+8, 1};
+
     // Populate State Vector
-    initial_true_state = initializeSatellite(sim_start_time);
-    
+    initial_state = initializeSatellite(sim_start_time);
+
     bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
     bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
     auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
     
     // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
     if (start_spin_stabilized) {
-        auto tgt_ss_ang_vel = params["tgt_ss_ang_vel"].as<double>();
+        auto tgt_ss_ang_vel = params["initialization"]["tgt_ss_ang_vel"].as<double>();
         initial_angular_rate = spinStabilizedRate(tgt_ss_ang_vel);
-        initial_true_state(Eigen::seqN(10,3)) = initial_angular_rate;
+        initial_state(x_idx_map["angular_rate"].to_seq()) = initial_angular_rate;
     }
 
     if (start_ss_pointed) {
         if (start_ss_pointing == "Nadir") {
-            initial_attitude = nadirPointingAttitude(initial_true_state, dev);
+            initial_attitude = nadirPointingAttitude(initial_state, dev);
         } else if (start_ss_pointing == "Sun") {
-            initial_attitude = sunPointingAttitude(initial_true_state, dev);
+            initial_attitude = sunPointingAttitude(initial_state, dev);
         } else {
             throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
         }
-        initial_true_state(Eigen::seqN(6,4)) = initial_attitude;
+        initial_state(x_idx_map["quaternion"].to_seq()) = initial_attitude;
     }
-    
+
     // Dump Dispersed Parameters to YAML
     dumpSampledParametersToYAML(results_folder);
 }
@@ -201,7 +279,7 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
     Eigen::VectorXd eigen_values = eigensolver.eigenvalues().real();
     Eigen::MatrixXd eigen_vectors = eigensolver.eigenvectors().real();
     double maxeigenval = 0;
-    Eigen::Vector3d I_max_dir;
+    Eigen::Vector3d I_max_dir = Eigen::Vector3d::Zero();
     for(int i=0; i<eigen_values.size(); i++){
         if (eigen_values[i] > maxeigenval) {
             maxeigenval = eigen_values[i];
@@ -228,7 +306,7 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
 Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
-    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"].to_seq());
     std::uniform_real_distribution<> dis(-1, 1);
     auto uni = [&](){ return dis(gen); };
     Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
@@ -243,8 +321,8 @@ Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt1993
 
     // sun direction in inertial frame 
     //Eigen::Vector3d s = State(Eigen::seqN(13, 3));
-    Eigen::Vector3d init_pos = State(Eigen::seqN(0, 3));
-    Eigen::Vector3d init_vel = State(Eigen::seqN(3, 3));
+    Eigen::Vector3d init_pos = State(x_idx_map["position"].to_seq());
+    Eigen::Vector3d init_vel = State(x_idx_map["velocity"].to_seq());
     Eigen::Vector3d s = init_pos.cross(init_vel);
     std::uniform_real_distribution<> dis2(-1, 1);
     auto uni2 = [&](){ return dis2(gen); };
@@ -270,7 +348,7 @@ Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt1993
 Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
-    Eigen::Vector3d h = I_sat * State(Eigen::seqN(10,3));
+    Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"].to_seq());
     std::uniform_real_distribution<> dis(-1, 1);
     auto uni = [&](){ return dis(gen); };
     Eigen::Vector3d v1 = Eigen::Vector3d::NullaryExpr(3,uni);
@@ -284,7 +362,7 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
     Rb << h_normalized, v1, v2;
 
     // sun direction in inertial frame 
-    Eigen::Vector3d s = State(Eigen::seqN(13, 3));
+    Eigen::Vector3d s = State(x_idx_map["sun_position"].to_seq());
     std::uniform_real_distribution<> dis2(-1, 1);
     auto uni2 = [&](){ return dis2(gen); };
     Eigen::Vector3d v3 = Eigen::Vector3d::NullaryExpr(3,uni2);
@@ -306,24 +384,26 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
     return init_att;
 }
 
-
-
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
-    VectorXd State(19+num_RWs);
+    int battery_state_size = 4;
+    VectorXd State(22+num_RWs+battery_state_size);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
 
     Vector6 CartesianState = KOE2ECI(KOE, epoch);
-    State(Eigen::seqN(0,6)) = CartesianState;
-    State(Eigen::seqN(6,4)) = initial_attitude;
-    State(Eigen::seqN(10,3)) = initial_angular_rate;
-    State(Eigen::seqN(13, 3)) = sun_position_eci(epoch);
-    State(Eigen::seqN(16, 3)) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
-    State(Eigen::seqN(19, num_RWs)).setZero();
+
+    State(x_idx_map["translation"].to_seq()) = CartesianState;
+    State(x_idx_map["quaternion"].to_seq()) = initial_attitude;
+    State(x_idx_map["angular_rate"].to_seq()) = initial_angular_rate;
+    State(x_idx_map["sun_position"].to_seq()) = sun_position_eci(epoch);
+    State(x_idx_map["magnetic_field"].to_seq()) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
+    State(x_idx_map["rw_speeds"].to_seq()).setZero();
+    State(x_idx_map["gyro_bias"].to_seq()) = initial_gyro_bias;
+    Vector4 battery {battery_initial_soc, battery_initial_temp, max_pack_voltage, 0};
+    State(x_idx_map["battery"].to_seq()) = battery;
 
     return State;
-
 }
 
 void Simulation_Parameters::defineDistributions(std::string filename) 
@@ -339,6 +419,10 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double area_nominal = params["area"]["nominal_area"].as<double>();
     double area_std = area_nominal*(params["area"]["area_dev"].as<double>()/100);
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
+
+    // Center of Pressure/Mass arm
+    double CoPM_std = params["CoPM_dev"].as<double>();
+    CoPM_dist = std::normal_distribution<double>(0, CoPM_std);
 
     // Inertia
     Vector3 inertia_dev = Eigen::Map<Vector3>(params["inertia"]["principal_axis_dev"].as<std::vector<double>>().data());
@@ -368,7 +452,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // GPS
     double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
     double gps_pos_std_std = gps_pos_std_nominal*(params["gps"]["gps_pos_std_dev"].as<double>()/100);
-    std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
+    gps_pos_dist = std::normal_distribution<double>(gps_pos_std_nominal, gps_pos_std_std);
     
     double gps_vel_std_nominal = params["gps"]["gps_vel_std"].as<double>();
     double gps_vel_std_std = gps_vel_std_nominal*(params["gps"]["gps_vel_std_dev"].as<double>()/100);
@@ -378,27 +462,45 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     photodiode_orientation_dist = std::normal_distribution<double>(0, params["photodiodes"]["photodiode_orientation_dev"].as<double>());
     double photodiode_std_nominal = params["photodiodes"]["photodiode_std"].as<double>();
     double photodiode_std_std = photodiode_std_nominal*(params["photodiodes"]["photodiode_std_dev"].as<double>()/100);
-    double min_sigma_sunsensor = params["photodiodes"]["min_sigma_sunsensor"].as<double>();
-    double max_sigma_sunsensor = params["photodiodes"]["max_sigma_sunsensor"].as<double>();
-    sigma_sunsensor_dist = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
+    // double min_sigma_sunsensor = params["photodiodes"]["min_sigma_sunsensor"].as<double>();
+    // double max_sigma_sunsensor = params["photodiodes"]["max_sigma_sunsensor"].as<double>();
+    // sigma_sunsensor_dist = std::uniform_real_distribution<>(min_sigma_sunsensor, max_sigma_sunsensor);
     photodiode_dist = std::normal_distribution<double>(photodiode_std_nominal, photodiode_std_std);
 
     // Magnetometer
-    double min_sigma_magnetometer = params["magnetometer"]["min_sigma_magnetometer"].as<double>();
-    double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
-    sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
+    double magnetometer_noise_std_nominal = params["magnetometer"]["magnetometer_noise_std"].as<double>();
+    double magnetometer_noise_std_std = magnetometer_noise_std_nominal*(params["magnetometer"]["magnetometer_std_dev"].as<double>()/100);
+    magnetometer_dist = std::normal_distribution<double>(magnetometer_noise_std_nominal, magnetometer_noise_std_std);
+    // double min_sigma_magnetometer = params["magnetometer"]["min_sigma_magnetometer"].as<double>();
+    // double max_sigma_magnetometer = params["magnetometer"]["max_sigma_magnetometer"].as<double>();
+    // sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
+
+    // Gyroscope
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
+    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
+    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal/sqrt(dt), gyro_sigma_w_std);
+
+    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
+    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
+    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal/sqrt(dt), gyro_sigma_v_std);
+
+    // Solar Panels
+    solar_panel_orientation_dist = std::normal_distribution<double>(0, params["solar_panels"]["panel_orientation_dev"].as<double>());
 
     // Initialization
     double sma_nominal = params["initialization"]["semimajor_axis"].as<double>();
     double sma_std = params["initialization"]["semimajor_axis_dev"].as<double>(); //0.01*sma_nominal*
     sma_dist = std::normal_distribution<double>(sma_nominal, sma_std);
 
-    double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
-    double ecc_std = ecc_nominal*(params["initialization"]["eccentricity_dev"].as<double>()/100);
-    eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
+    // double ecc_nominal = params["initialization"]["eccentricity"].as<double>();
+    // double ecc_std = ecc_nominal*(params["initialization"]["eccentricity_dev"].as<double>()/100);
+    // eccentricity_dist = std::normal_distribution<double>(ecc_nominal, ecc_std);
+    double ecc_min = params["initialization"]["eccentricity_min"].as<double>();
+    double ecc_max = params["initialization"]["eccentricity_max"].as<double>();
+    eccentricity_dist = std::uniform_real_distribution<double>(ecc_min, ecc_max);
 
     double incl_nominal = params["initialization"]["inclination"].as<double>();
-    double incl_std = incl_nominal*(params["initialization"]["inclination_dev"].as<double>()/100);
+    double incl_std = params["initialization"]["inclination_dev"].as<double>(); //incl_nominal*(/100);
     inclination_dist = std::normal_distribution<double>(incl_nominal, incl_std);
 
     double LTDN_min = UTCStringtoHours(params["initialization"]["LTDN_min"].as<std::string>());
@@ -432,6 +534,54 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     sim_start_time_dist = std::uniform_real_distribution<double>(earliest_sim_start_J2000, latest_sim_start_J2000);
 }
 
+void Simulation_Parameters::defineLUTs(std::string data_folder)
+{
+    // Load LUTs
+    if (data_folder.empty() || !useLUTs) {
+        // Load dummy variables into LUTs
+        NElev = 0;
+        NAzim = 0;
+        //NSS   = 0;
+        sc_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(3, 3);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(3, 3);
+        //ss_visib_LUT        = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(3, 3));
+
+    } else {
+        // Load actual LUTs from data_folder
+        YAML::Node data_params = YAML::LoadFile(data_folder);
+
+        NElev = data_params["NE"].as<int>();
+        NAzim = data_params["NA"].as<int>();
+        // NSS   = data_params["NS"].as<int>();
+
+        sc_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        sp_area_LUT         = Eigen::MatrixXd::Zero(NElev, NAzim);
+        ss_visib_sum_LUT    = Eigen::MatrixXd::Zero(NElev, NAzim);
+        // ss_visib_LUT        = std::vector<Eigen::MatrixXd>(NSS, Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_torque_fac_LUT = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
+        aero_force_fac_LUT  = std::vector<Eigen::MatrixXd>(3,   Eigen::MatrixXd::Zero(NElev, NAzim));
+        
+        for (int i = 0; i < NElev; ++i) {
+            for (int j = 0; j < NAzim; ++j) {
+                sc_area_LUT(i, j) = data_params["effective_sc_area"][i][j].as<double>();
+                sp_area_LUT(i, j) = data_params["effective_sp_area"][i][j].as<double>();
+                ss_visib_sum_LUT(i, j) = data_params["visibility_sum"][i][j].as<double>();
+
+                //for (int k = 0; k < NSS; ++k) {
+                //    ss_visib_LUT[k](i, j) = data_params["visibility"][k][i][j].as<double>();
+                //}
+                for (int k = 0; k < 3; ++k) {
+                    aero_torque_fac_LUT[k](i, j) = data_params["aero_torque_fac"][i][j][k].as<double>();
+                    aero_force_fac_LUT[k](i, j)  = data_params["aero_force_fac"][i][j][k].as<double>();
+                }
+            }
+        }
+    }
+}
+
 std::mt19937 Simulation_Parameters::loadSeed(int trial_number)
 {
     std::mt19937 gen;
@@ -445,20 +595,25 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     YAML::Emitter out;
     std::string outpath = results_folder.append("/trial_params.yaml");
     
-    out << YAML::BeginSeq;
-    out << YAML::Key << "mass" << mass;
-    out << YAML::Key << "area" << A;
+    out << YAML::BeginMap;
+    out << YAML::Key << "mass";
+    out << YAML::Value << mass;
+    out << YAML::Key << "area";
+    out << YAML::Value << A;
 
     std::vector<double> vec;
     vec.assign(I_sat.data(), I_sat.data() + 9);
-    out << YAML::Key << "inertia" << YAML::Flow << vec;
+    out << YAML::Key << "inertia";
+    out << YAML::Value << vec;
 
     vec.assign(G_rw_b.data(), G_rw_b.data() + G_rw_b.rows()*G_rw_b.cols());
-    out << YAML::Key << "rw_orientation" << YAML::Flow << vec;
-    out << YAML::Key << "I_rw" <<  I_rw;
+    out << YAML::Key << "rw_orientation";
+    out << YAML::Value << vec;
+    out << YAML::Key << "I_rw";
+    out << YAML::Value <<  I_rw;
     
     vec.assign(G_mtb_b.data(), G_mtb_b.data() + G_mtb_b.rows()*G_mtb_b.cols());
-    out << YAML::Key << "mtb_orientation" << YAML::Flow << vec;
+    out << YAML::Key << "mtb_orientation" << YAML::Value << vec;
 
     vec.assign(resistances.data(), resistances.data() + resistances.size());
     out << YAML::Key << "mtb_resistances" << YAML::Flow << vec;
@@ -469,7 +624,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     vec.assign(G_pd_b.data(), G_pd_b.data() + G_pd_b.rows()*G_pd_b.cols());
     out<<YAML::Key << "photodiode_orientation" << YAML::Flow << vec;
 
-    out<<YAML::Key << "magnetometer_std" << sigma_magnetometer;
+    out<<YAML::Key << "magnetometer_std" << magnetometer_noise_std;
 
     out<<YAML::Key << "gyro_sigma_w" <<gyro_sigma_w;
     out<< YAML::Key << "gyro_sigma_v" << gyro_sigma_v;
@@ -488,7 +643,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     out<<YAML::Key << "sim_start_time" << TJ2000toUTCString(sim_start_time);
 
-    out<<YAML::EndSeq;
+    out<<YAML::EndMap;
 
     std::ofstream fout(outpath);
     fout << out.c_str();
@@ -497,7 +652,7 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pysim_utils, m) {
     pybind11::class_<Simulation_Parameters>(m, "Simulation_Parameters")
-        .def(pybind11::init<std::string, int, std::string>())
+        .def(pybind11::init<std::string, int, std::string, std::string>())
         //.def("getParamsFromFileAndSample", &Simulation_Parameters::getParamsFromFileAndSample)
         //.def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
         .def_readonly("mass", &Simulation_Parameters::mass)
@@ -509,17 +664,16 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia_RW", &Simulation_Parameters::I_rw)
         //
+        .def_readonly("gps_dt", &Simulation_Parameters::gps_dt)
+        //
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
-        .def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
+        //.def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
         //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
         //
-        .def_readonly("magnetometer_dt", &Simulation_Parameters::magnetometer_dt)
-        .def_readonly("sigma_magnetometer", &Simulation_Parameters::sigma_magnetometer)
-        //
-        .def_readonly("gyro_dt", &Simulation_Parameters::gyro_dt)
+        .def_readonly("num_panels", &Simulation_Parameters::num_panels)
         //
         .def_readonly("MAX_TIME", &Simulation_Parameters::MAX_TIME)
         .def_readonly("dt", &Simulation_Parameters::dt)
@@ -527,7 +681,9 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         //
-        .def_readonly("initial_true_state", &Simulation_Parameters::initial_true_state);
+        .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
+        //
+        .def_readonly("initial_state", &Simulation_Parameters::initial_state);
 }
 
 #endif

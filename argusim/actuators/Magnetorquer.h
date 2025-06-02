@@ -9,6 +9,10 @@ class Magnetorquer {
         Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double A_cross, double N_turns,
                            double maxVolt, double maxCurrentRating, double maxPower, MatrixXd mtb_orientation);
 
+        Vector3 getSingleDipoleMoment(int index, double voltage);
+        
+        Vector3 getSingleTorque(int index, double voltage, Vector3 magnetic_field_b);
+
         /**
         * @brief Computes Torque on the body frame from input current 
         * 
@@ -18,6 +22,8 @@ class Magnetorquer {
         * @return torque due to the single magnetorquer on the satellite [UNITS: Nm]
         */
         Vector3 getTorque(VectorXd voltages, Quaternion q, Vector3 magnetic_field);
+        
+        Vector3 getTorqueb(VectorXd voltages, Vector3 magnetic_field_b);
 
     private:
         int num_MTBs; 
