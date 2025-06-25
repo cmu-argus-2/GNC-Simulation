@@ -1,7 +1,7 @@
 numpy
 scipy
 matplotlib
-basemap
+basemap==1.4.1
 psutil
 pyigrf
 flask
