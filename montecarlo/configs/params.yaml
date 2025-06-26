@@ -8,6 +8,8 @@ earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
 useSRP : False
+useSun : False
+useMoon : False
 useDragTorque : False
 useGravityGradient : False
 useLUTs : False

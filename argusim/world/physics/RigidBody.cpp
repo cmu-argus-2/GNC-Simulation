@@ -26,7 +26,7 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
 {
      
     auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, 
-        t_J2000, sc.x_idx_map);
+        sc.useSun, sc.useMoon, t_J2000, sc.x_idx_map);
 
     xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
                                 sc.I_rw, sc.I_sat, sc.MTB, t_J2000, sc.mass,  sc.Cd, sc.A, 
@@ -38,8 +38,8 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
 }
 
 VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, double A, 
-                                bool useDrag, bool useSRP, double t_J2000,
-                                std::unordered_map<std::string, SliceDef> x_idx_map)
+                                bool useDrag, bool useSRP, bool useSun, bool useMoon, 
+                                double t_J2000, std::unordered_map<std::string, SliceDef> x_idx_map)
 {
     VectorXd xdot = VectorXd::Zero(x.size());
 
@@ -50,6 +50,15 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
 
     // Physics Models
     Vector3 vdot = gravitational_acceleration(r);
+
+    if (useMoon) {
+        vdot = vdot + moon_gravity(r, t_J2000);
+    }
+
+    if (useSun) {
+        Vector3 rSun = x(x_idx_map["sun_position"].to_seq());
+        vdot = vdot + sun_gravity(r, rSun);
+    }
     
     if (useDrag){ 
         vdot = vdot + drag_acceleration(r, v, q, t_J2000, Cd, A, mass);

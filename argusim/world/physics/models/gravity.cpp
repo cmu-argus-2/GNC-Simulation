@@ -36,3 +36,48 @@ Vector3 J2_perturbation(const Vector3 r)
 
     return acceleration;
 }
+
+Vector3 sun_gravity(const Vector3 r, const Vector3 sun_position) 
+{
+    // Calculate the distance from the spacecraft to the Sun
+    Vector3 r_sun = sun_position - r;
+    double r_sun_norm = r_sun.norm();
+    double sun_pos_norm = sun_position.norm();
+
+    // Calculate the gravitational acceleration due to the Sun
+    Vector3 acceleration = (mu_sun / pow(r_sun_norm, 3.0)) * r_sun;
+    acceleration = acceleration - (mu_sun / pow(sun_pos_norm, 3.0)) * sun_position;
+
+    return acceleration;
+}
+
+Vector3 moon_gravity(const Vector3 r, double t_J2000) 
+{
+    // Get the Moon's position at the given time
+    Vector3 moon_position = moon_position_eci(t_J2000);
+    // Calculate the distance from the spacecraft to the Moon
+    Vector3 r_moon = moon_position - r;
+    double r_moon_norm = r_moon.norm();
+    double moon_pos_norm = moon_position.norm();
+
+    // Calculate the gravitational acceleration due to the Moon
+    Vector3 acceleration = (mu_moon / pow(r_moon_norm, 3.0)) * r_moon;
+    acceleration = acceleration - (mu_moon / pow(moon_pos_norm, 3.0)) * moon_position;
+
+    return acceleration;
+}
+
+
+Vector3 moon_position_eci(double t_J2000) {
+
+    //Load all kernels
+    loadAllKernels();
+
+    SpiceDouble state[3];
+    SpiceDouble lt;
+
+    spkpos_c("moon", t_J2000, "J2000", "NONE", "earth", state, &lt);
+    Vector3 moon_pos(1000.0 * state[0], 1000.0 * state[1],
+                    1000.0 * state[2]);   // convert km to m and cast SpiceDouble into Vector3
+    return moon_pos;
+}

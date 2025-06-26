@@ -65,6 +65,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     useDrag = params["useDrag"].as<bool>();
     useSRP = params["useSRP"].as<bool>();
 
+    // Orbital perturbation properties
+    useSun = params["useSun"].as<bool>();
+    useMoon = params["useMoon"].as<bool>();
+
     // Attitude perturbation properties
     useDT = params["useDragTorque"].as<bool>();
     useGG = params["useGravityGradient"].as<bool>();
@@ -680,6 +684,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("sim_start_time", &Simulation_Parameters::sim_start_time)
         .def_readonly("useDrag", &Simulation_Parameters::useDrag)
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
+        .def_readonly("useSun", &Simulation_Parameters::useSun)
+        .def_readonly("useMoon", &Simulation_Parameters::useMoon)
         //
         .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //

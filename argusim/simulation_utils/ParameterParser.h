@@ -103,6 +103,8 @@ class Simulation_Parameters {
     double sim_start_time;             // [s] measured relative to J2000
     bool useDrag; // set to False to deactivate drag calcs
     bool useSRP;  // set to False to deactivate SRP calcs
+    bool useSun;  // set to False to deactivate Sun calcs
+    bool useMoon; // set to False to deactivate Moon calcs
     bool useDT;   // set to False to deactivate Drag Torque calcs
     bool useGG;   // set to False to deactivate Gravity Gradient calcs
     bool useLUTs; // set to False to deactivate LUTs

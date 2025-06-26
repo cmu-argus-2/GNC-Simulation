@@ -7,6 +7,8 @@
 double mu = 3.98600435507e14;
 double J2 = 1.08262668e-3;
 double R_earth = 6.378137e6;
+double mu_sun = 1.32712440018e20; 
+double mu_moon = 4.902801e12;
 
 /**
  * @brief Computes gravitational acceleration given ECI position
@@ -41,5 +43,22 @@ Vector3 spherical_acceleration(const Vector3 r);
  */
 Vector3 J2_perturbation(const Vector3 r);
 
+/**
+ * @brief Computes gravitational acceleration due to the Sun given ECI position and Sun position
+ * 
+ * @param r : velocity vector in ECI [UNITS: m]
+ * @param sun_position : Sun position vector in ECI [UNITS: m]
+ * @return gravitaional acceleration due to the Sun [UNITS: m/s^2]
+ */
+Vector3 sun_gravity(const Vector3 r, const Vector3 sun_position);
+
+/**
+ * @brief Computes gravitational acceleration due to the Moon given ECI position and time
+ * 
+ * @param r : velocity vector in ECI [UNITS: m]
+ * @param t_J2000 : time in J2000 format
+ * @return gravitaional acceleration due to the Moon [UNITS: m/s^2]
+ */
+Vector3 moon_gravity(const Vector3 r, double t_J2000);
 
 #endif   // C___gravity_H
