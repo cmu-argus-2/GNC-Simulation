@@ -10,3 +10,4 @@
 [submodule "argusim/dependencies/geographiclib"]
 	path = argusim/dependencies/geographiclib
 	url = https://github.com/geographiclib/geographiclib.git
+	branch=release
