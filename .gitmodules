@@ -7,3 +7,6 @@
 [submodule "dependencies/yaml-cpp"]
 	path = argusim/dependencies/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
+[submodule "geographiclib"]
+	path = geographiclib
+	url = https://github.com/geographiclib/geographiclib.git
