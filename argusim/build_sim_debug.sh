@@ -19,6 +19,24 @@ curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck
 curl -O -C - --silent https://www.ngdc.noaa.gov/IAGA/vmod/igrf13.f --output-dir data
 curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls --output-dir data
 
+if [ ! -f ./dependencies/GeographicLib-2.5/BUILD/Makefile ]; then
+    cd dependencies
+    wget  -O GeographicLib-2.5.tar.gz https://sourceforge.net/projects/geographiclib/files/distrib-C++/GeographicLib-2.5.tar.gz/download
+    tar xfpz GeographicLib-2.5.tar.gz 
+    cd GeographicLib-2.5
+    mkdir BUILD
+    cd BUILD
+    cmake ..
+    make
+    make testprograms test
+    make install
+    make exampleprograms
+    geographiclib-get-gravity egm96
+    cd ../..
+    rm -f GeographicLib-2.5.tar.gz
+    cd ..
+fi
+
 mkdir -p build
 cd build/
 cmake -DCMAKE_BUILD_TYPE=Debug ..

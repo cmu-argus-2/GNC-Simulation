@@ -13,6 +13,8 @@ useMoon : False
 useDragTorque : False
 useGravityGradient : False
 useLUTs : False
+EarthGravDegMax : 2
+EarthGravOrdMax : 0
 
 # -----------------------------------------------------------------------------------------------------------
 # physical properties
@@ -152,17 +154,6 @@ solar_panels:
 static_power_consumption:
      mainboard: 0.6 # W
      jetson: 7.5 # W
-     
-
-# -----------------------------------------------------------------------------------------------------------
-# Sim settings
-# -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10800 # [s]
-dt: 0.01         # [s]
-earliest_sim_start_time_UTC: 2024-10-01 12:00:00
-latest_sim_start_time_UTC: 2024-10-28 23:59:59
-useDrag : False
-useSRP : False
 
 # -----------------------------------------------------------------------------------------------------------
 # Initialization

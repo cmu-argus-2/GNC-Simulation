@@ -25,8 +25,8 @@
 VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, double t_J2000) 
 {
      
-    auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.useDrag, sc.useSRP, 
-        sc.useSun, sc.useMoon, t_J2000, sc.x_idx_map);
+    auto xdot = OrbitalDynamics(x, sc.mass, sc.Cd, sc.CR, sc.A, sc.Nmax, sc.Mmax, sc.useDrag, 
+                                sc.useSRP, sc.useSun, sc.useMoon, t_J2000, sc.x_idx_map);
 
     xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
                                 sc.I_rw, sc.I_sat, sc.MTB, t_J2000, sc.mass,  sc.Cd, sc.A, 
@@ -37,8 +37,8 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
     return xdot;
 }
 
-VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, double A, 
-                                bool useDrag, bool useSRP, bool useSun, bool useMoon, 
+VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, double A, int Nmax, 
+                                int Mmax, bool useDrag, bool useSRP, bool useSun, bool useMoon, 
                                 double t_J2000, std::unordered_map<std::string, SliceDef> x_idx_map)
 {
     VectorXd xdot = VectorXd::Zero(x.size());
@@ -49,7 +49,7 @@ VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, d
     Quaternion q = vectorToQuaternion(x(x_idx_map["quaternion"].to_seq()));
 
     // Physics Models
-    Vector3 vdot = gravitational_acceleration(r);
+    Vector3 vdot = gravitational_acceleration(r, t_J2000, Nmax, Mmax);
 
     if (useMoon) {
         vdot = vdot + moon_gravity(r, t_J2000);

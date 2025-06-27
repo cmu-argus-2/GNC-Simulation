@@ -68,6 +68,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     // Orbital perturbation properties
     useSun = params["useSun"].as<bool>();
     useMoon = params["useMoon"].as<bool>();
+    Nmax = params["EarthGravDegMax"].as<int>();
+    Mmax = params["EarthGravOrdMax"].as<int>();
 
     // Attitude perturbation properties
     useDT = params["useDragTorque"].as<bool>();
@@ -686,6 +688,8 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         .def_readonly("useSun", &Simulation_Parameters::useSun)
         .def_readonly("useMoon", &Simulation_Parameters::useMoon)
+        .def_readonly("Nmax", &Simulation_Parameters::Nmax)
+        .def_readonly("Mmax", &Simulation_Parameters::Mmax)
         //
         .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //

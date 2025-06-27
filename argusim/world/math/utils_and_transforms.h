@@ -166,6 +166,14 @@ Matrix_3x3 ECEF2ECI(double t_J2000);
 Vector3 ECEF2GEOD(Vector3 v_ecef);
 
 /**
+ * @brief Transforms a vector in ECEF frame to Geocentric coordinates
+ *
+ * @param v_ecef - vector in ECEF frame [UNITS : m]
+ * @return vector in Geocentric coordinates (long, lat, r) [rad, rad, m]
+ */
+Vector3 ECEF2GEOC(Vector3 v_ecef);
+
+/**
  * @brief Transforms a vector in SEZ frame to ECEF
  *
  * @param r_sez - vector in ECEF frame

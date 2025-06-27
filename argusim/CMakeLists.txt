@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
+find_package(GeographicLib REQUIRED)
+include_directories(${GeographicLib_INCLUDE_DIRS})
 
 add_compile_options(
     -O3
@@ -15,8 +17,8 @@ add_compile_options(
     -Wextra                 # Even more warnings
     -Wwrite-strings         # Warn if not treating string literals as "const"
     -Wpointer-arith         # Warn about suspicious pointer operations
-    -Wshadow                # Warn about variable shadowing
-    -Wfloat-equal           # Warn about testing floats with ==
+   #  -Wshadow                # Warn about variable shadowing
+   # -Wfloat-equal           # Warn about testing floats with ==
     -Werror
     -Wparentheses
     -Wunused-variable

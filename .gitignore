@@ -37,3 +37,4 @@ data/
 montecarlo/results/
 argusim.egg-info/
 argusim/.cache/*
+argusim/dependencies/GeographicLib-2.5

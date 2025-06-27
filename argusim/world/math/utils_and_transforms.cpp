@@ -161,6 +161,17 @@ Vector3 ECEF2GEOD(Vector3 v_ecef) {
     return geod;
 }
 
+Vector3 ECEF2GEOC(Vector3 v_ecef) {
+    // Convert ECEF to Geocentric coordinates (lon, lat, alt)
+    
+    double lon = atan2(v_ecef(1), v_ecef(0)); // longitude
+    double lat = atan2(v_ecef(2), sqrt(pow(v_ecef(0), 2) + pow(v_ecef(1), 2))); // latitude
+    double r = v_ecef.norm(); // radius
+    Vector3 geocentric (lon, lat, r);
+    
+    return geocentric;
+}
+
 Vector3 ECI2GEOD(Vector3 v_eci, double t_J2000){
     Vector3 v_ecef = ECI2ECEF(t_J2000)*v_eci;
     Vector3 r_geod = ECEF2GEOD(v_ecef);

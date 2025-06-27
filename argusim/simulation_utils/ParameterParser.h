@@ -108,6 +108,8 @@ class Simulation_Parameters {
     bool useDT;   // set to False to deactivate Drag Torque calcs
     bool useGG;   // set to False to deactivate Gravity Gradient calcs
     bool useLUTs; // set to False to deactivate LUTs
+    int Nmax;     // maximum degree of the earth gravity model
+    int Mmax;     // maximum order of the earth gravity model
 
     /* Satellite Initialization */
     double semimajor_axis; // [m]

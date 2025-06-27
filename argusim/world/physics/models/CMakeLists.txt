@@ -1,5 +1,7 @@
+find_package (GeographicLib REQUIRED)
+include_directories (${GeographicLib_INCLUDE_DIRS})
 add_library(models_p1 OBJECT gravity.cpp SRP.cpp drag.cpp power.cpp MagneticField.cpp)
-target_link_libraries(models_p1 OBJECT math Eigen3::Eigen tjLib spice)
+target_link_libraries(models_p1 OBJECT math Eigen3::Eigen tjLib spice GeographicLib::GeographicLib) # ${GeographicLib_LIBRARIES})
 
 # Fortran compile
 SET (CMAKE_Fortran_COMPILER  gfortran)
