@@ -3,7 +3,7 @@
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
 MAX_TIME: 18000 # 96000 # [s]
-dt: 1 # 0.1         # [s]
+dt: 1.0 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
@@ -90,7 +90,7 @@ nadir_cam_dir: [-1,0, 0] # direction of payload camera(s) in the body frame
 # Sensors
 # -----------------------------------------------------------------------------------------------------------
 gps:
-     gps_dt : 1 # [UNITS: s] # assuming a GPS measurement every second is very optimistic, should be around every 30 minutes
+     gps_dt : 1.0 # [UNITS: s] # assuming a GPS measurement every second is very optimistic, should be around every 30 minutes
      gps_pos_std : 5 # [UNITS: m]
      gps_pos_std_dev : 0 # stddev of uncertainity in GPS position error estimation as a % of nominal error stddev [%] - Is an error of an error
 
@@ -109,12 +109,12 @@ photodiodes:
                            0,-0.7071,0.7071, 
                            0,0,-1] # Light diode normals in body frame
      photodiode_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector for each photodiode [rad]
-     photodiodes_dt : 1 # [UNITS: s]
+     photodiodes_dt : 1.0 # [UNITS: s]
      photodiode_std : 500 # [UNITS: lux]
      photodiode_std_dev : 40 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
 magnetometer:
-     magnetometer_dt : 1 # [UNITS: s]
+     magnetometer_dt : 1.0 # [UNITS: s]
      # [TODO:] check if this makes sense
      magnetometer_noise_std : 0.005 # [UNITS: T]
      magnetometer_std_dev : 0 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
