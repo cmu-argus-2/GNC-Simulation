@@ -178,7 +178,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     RAAN = LTDN_to_RAAN(LTDN, sim_start_time);
 
-    initial_gyro_bias = Vector3::NullaryExpr([&](){return gyro_bias_dist(dev);});
+    std::normal_distribution<double> bias_noise_dist(0, gyro_sigma_w);
+    initial_gyro_bias = Vector3::NullaryExpr([&](){return bias_noise_dist(dev);});
 
     // Index maps
     // State Vector index map
@@ -480,13 +481,13 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
     // Gyroscope
-    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>();
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>()/sqrt(dt);
     double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
-    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal/sqrt(dt), gyro_sigma_w_std);
+    gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
 
-    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>();
+    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>()/sqrt(dt);
     double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
-    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal/sqrt(dt), gyro_sigma_v_std);
+    gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
 
     // Solar Panels
     solar_panel_orientation_dist = std::normal_distribution<double>(0, params["solar_panels"]["panel_orientation_dev"].as<double>());
