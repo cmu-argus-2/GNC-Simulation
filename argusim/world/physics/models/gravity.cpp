@@ -3,7 +3,8 @@
 #include <iostream>
 #include "math/EigenWrapper.h"
 #include <math.h>
-
+#include "SpiceUsr.h"
+#include "utils_and_transforms.h"
 
 Vector3 gravitational_acceleration(const Vector3 r) 
 {
@@ -50,6 +51,8 @@ Vector3 sun_gravity(const Vector3 r, const Vector3 sun_position)
 
     return acceleration;
 }
+
+
 
 Vector3 moon_gravity(const Vector3 r, double t_J2000) 
 {

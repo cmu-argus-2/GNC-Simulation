@@ -2,6 +2,7 @@
 #define C___gravity_H
 
 #include "math/EigenWrapper.h"
+#include "SpiceUsr.h"
 
 /* CONSTANTS */
 double mu = 3.98600435507e14;
@@ -60,5 +61,13 @@ Vector3 sun_gravity(const Vector3 r, const Vector3 sun_position);
  * @return gravitaional acceleration due to the Moon [UNITS: m/s^2]
  */
 Vector3 moon_gravity(const Vector3 r, double t_J2000);
+
+/**
+ * @brief Computes the position of the Moon in ECI coordinates at a given time
+ * 
+ * @param t_J2000 : time in J2000 format
+ * @return Moon position vector in ECI [UNITS: m]
+ */
+Vector3 moon_position_eci(double t_J2000);
 
 #endif   // C___gravity_H

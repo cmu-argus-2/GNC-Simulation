@@ -49,6 +49,10 @@ class Simulator():
 
         self.define_indexes()
 
+        percent_to_log = self.obsw_params["PlotFlags"]["percent_to_log"]
+        self.log_counter = 0
+        self.log_interval = int(1 / percent_to_log) if percent_to_log > 0 else 1
+
         # Logging
         if self.log:
             self.logr = SimLogger(log_directory, self.num_RWs, self.num_photodiodes, self.num_MTBs, self.num_panels, self.J2000_start_time)
@@ -166,12 +170,13 @@ class Simulator():
         measurement = self.sensors(self.current_time, self.state, control_input)
         
         # Log pertinent Quantities
-        # [TODO:] use logging class functions
-        if self.log:
+        if self.log and self.log_counter % self.log_interval == 0:
             # Log true state
             self.logr.log_true_state(self.current_time, self.state, control_input)
             # measurement data logging
             self.logr.log_measurements(self.current_time, measurement)
-            
+            self.log_counter = 1
+        else:
+            self.log_counter += 1
 
         return measurement

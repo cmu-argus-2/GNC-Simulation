@@ -481,12 +481,17 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
     // Gyroscope
-    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>()/sqrt(dt);
-    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100);
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>() / sqrt(params["dt"].as<double>());
+    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
+    std::cout << "dt: " << params["dt"].as<double>() << std::endl;
+    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
+    double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100.0);
+    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
+    std::cout << "gyro_sigma_w_std: " << gyro_sigma_w_std << std::endl;
     gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
 
-    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>()/sqrt(dt);
-    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100);
+    double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>() / sqrt(params["dt"].as<double>());
+    double gyro_sigma_v_std = gyro_sigma_v_nominal*(params["gyroscope"]["gyro_sigma_v_dev"].as<double>()/100.0);
     gyro_white_noise_dist = std::normal_distribution<double>(gyro_sigma_v_nominal, gyro_sigma_v_std);
 
     // Solar Panels

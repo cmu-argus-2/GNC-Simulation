@@ -3,7 +3,7 @@
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
 MAX_TIME: 18000 # 96000 # [s]
-dt: 1.0 # 0.1         # [s]
+dt: 0.1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
 useDrag : False
@@ -47,7 +47,7 @@ reaction_wheels:
      m_rw: 0.002                # kg mass of each reaction wheel
      max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
      max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
-     nom_rw_ang_vel: 30        # rad/s nominal angular velocity of the reaction wheels
+     nom_rw_ang_vel: 0        # rad/s nominal angular velocity of the reaction wheels
 
      rw_orientation : [0,0,1] # spin axis of each reaction wheel in the body frame
      rw_orientation_dev : 0.001 # stddev of angular mounting error about nominal normal vector [rad]
@@ -152,17 +152,7 @@ solar_panels:
 static_power_consumption:
      mainboard: 0.6 # W
      jetson: 7.5 # W
-     
 
-# -----------------------------------------------------------------------------------------------------------
-# Sim settings
-# -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 10800 # [s]
-dt: 0.01         # [s]
-earliest_sim_start_time_UTC: 2024-10-01 12:00:00
-latest_sim_start_time_UTC: 2024-10-28 23:59:59
-useDrag : False
-useSRP : False
 
 # -----------------------------------------------------------------------------------------------------------
 # Initialization
@@ -189,8 +179,8 @@ initialization:
 
      disperse_LTDN : False
      LTDN : 10:30:00 # [HH:MM:SS]
-     LTDN_min : 10:00:00 # [HH:MM:SS]
-     LTDN_max : 14:00:00 # [HH:MM:SS]
+     LTDN_min : 10:20:00 # [HH:MM:SS]
+     LTDN_max : 10:40:00 # [HH:MM:SS]
 
      # Spacex doesnt share dispersion of AOP because orbit is near circular so AOP can be whatever
      disperse_AOP : True 
@@ -240,6 +230,7 @@ PlotFlags:
      pointing_plots: True
      actuator_plots: True
      att_animation : False
+     percent_to_log : 0.1 # [0,1] percent of the data to log for plotting
 debugFlags:
-     perfect_sensors: True  # Perfect measurements
+     perfect_sensors: False  # Perfect measurements
 # [TODO:] flag for orbital perturbations

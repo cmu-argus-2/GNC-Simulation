@@ -45,7 +45,7 @@ struct Spacecraft {
 VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, double t_J2000) ;
 
 VectorXd OrbitalDynamics(const VectorXd& x, double mass, double Cd, double CR, double A, 
-                                bool useDrag, bool useSRP, double t_J2000,
+                                bool useDrag, bool useSRP, bool useSun, bool useMoon, double t_J2000,
                                 std::unordered_map<std::string, SliceDef> x_idx_map);
 
 VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
