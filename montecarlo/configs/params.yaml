@@ -112,15 +112,23 @@ photodiodes:
      photodiode_std : 500 # [UNITS: lux]
      photodiode_std_dev : 40 # stddev of uncertainity in photodiode lux error estimation as a % of nominal error stddev [%]
 
+# IMU: BMX160
+# datasheet available at https://www.mouser.com/pdfdocs/BST-BMX160-DS000-11.pdf?srsltid=AfmBOorTgWdtOic1ucbtO3aiVbBWY2ZANbA-VqI-fsoNfpYn_k_XHI-1
+# with values for the magnetometer, gyroscope, and (unused) accelerometer
 magnetometer:
-     magnetometer_dt : 1.0 # [UNITS: s]
+     # Output is in microtesla (uT)
+     magnetometer_dt : 0.2 # [UNITS: s]
      # [TODO:] check if this makes sense
-     magnetometer_noise_std : 0.005 # [UNITS: T]
+     magnetometer_noise_std : 1.4 # [UNITS: uT]
      magnetometer_std_dev : 0 # stddev of uncertainity in magnetometer error estimation as a % of nominal error stddev [%]
      # min_sigma_magnetometer: 0.0523 # [rad] [Angular error in Bfield direction]
      # max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
+     range_z: 2500  # [UNITS: uT]
+     range_xy: 1300 # [UNITS: uT]
+     resolution : 16 # [UNITS: uT] 
 
-gyroscope: # BMX160
+gyroscope: 
+     # Output is in degrees per second (deg/s)
      gyro_correlation_time : 5000.0 # [UNITS: s]
      gyro_scale_factor_err : 1.0e-5
 

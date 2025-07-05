@@ -42,6 +42,7 @@ class Simulator():
         self.num_panels = self.params.num_panels
 
         # Initialization
+        self.fsw_state = np.zeros((28,))
         self.state = np.array(self.params.initial_state)
         self.J2000_start_time = self.params.sim_start_time
         self.current_time = self.J2000_start_time

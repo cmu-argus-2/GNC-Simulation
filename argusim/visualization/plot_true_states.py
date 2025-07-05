@@ -196,9 +196,7 @@ def plot_true_gyro_bias(pyparams, data_dicts, filepaths):
     for i, (trial_number, _) in enumerate(filepaths):
         multiPlot(
             data_dicts[i]["Time [s]"],
-            np.rad2deg(
-                np.array([data_dicts[i]["bias_x [rad/s]"], data_dicts[i]["bias_y [rad/s]"], data_dicts[i]["bias_z [rad/s]"]])
-            ),
+            np.array([data_dicts[i]["bias_x [deg/s]"], data_dicts[i]["bias_y [deg/s]"], data_dicts[i]["bias_z [deg/s]"]]),
             seriesLabel=f"_{trial_number}",
         )
     annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
