@@ -91,8 +91,15 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
 
     // Noisy Measurement 
-    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*state(sc.x_idx_map["angular_rate"].to_seq()) + bias + white_noise;
-    
+    Vector3 omega_true = state(sc.x_idx_map["angular_rate"].to_seq()) * (180.0 / M_PI); // rad/s to deg/s
+    Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*omega_true + bias + white_noise;
+    // Enforce gyro range limits
+    for (int i = 0; i < 3; ++i) {
+        if (omega_meas(i) > sc.gyro_range) omega_meas(i) = sc.gyro_range;
+        else if (omega_meas(i) < -sc.gyro_range) omega_meas(i) = -sc.gyro_range;
+    }
+    // Quantize the gyro measurement
+    omega_meas = (omega_meas.array()/sc.gyro_resolution).round()*  sc.gyro_resolution; // Round to the nearest resolution
     imu_reading(Eigen::seqN(0,3)) = omega_meas;
 
     /* Magnetometer */
@@ -102,7 +109,7 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     Quaternion quat_BtoECI = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
 
     // True Magnetic Field
-    Vector3 B_eci = state(sc.x_idx_map["magnetic_field"].to_seq());
+    Vector3 B_eci = state(sc.x_idx_map["magnetic_field"].to_seq()) * 1e6; // Convert from T to uT
 
     // Noisy Measurement
     Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;

@@ -74,6 +74,10 @@ class Simulation_Parameters {
     double gyro_sigma_v;
     double gyro_correlation_time;
     double gyro_scale_factor_err;
+    double gyro_bias_stab;
+    double gyro_range;
+    int gyro_nbits;
+    double gyro_resolution;
     //double gyro_bias_std; 
     Vector3 initial_gyro_bias;
 

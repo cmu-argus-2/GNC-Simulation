@@ -65,6 +65,7 @@ magnetorquers:
      max_voltage : 5  # V maximum voltage that can be applied by each magnetorquer
      max_current_rating : 1.0  # A
      max_power : 1  # W
+     inductance : 0.001 # [UNITS: H] # nominal inductance of each magnetorquer
 
      mtb_orientation : [1,0,0,
                         -1,0,0, 
@@ -119,16 +120,20 @@ magnetometer:
      # min_sigma_magnetometer: 0.0523 # [rad] [Angular error in Bfield direction]
      # max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
 
-gyroscope:
-     gyro_correlation_time : 500000.0 # [UNITS: s]
+gyroscope: # BMX160
+     gyro_correlation_time : 5000.0 # [UNITS: s]
      gyro_scale_factor_err : 1.0e-5
 
-     gyro_sigma_w : 1.9673214867507325e-06 # Bias dynamics [UNITS: rad/s^2/sqrt(Hz)]
+     gyro_sigma_w : 1e-08 # Bias dynamics [UNITS: deg/sqrt(Hz)]
      gyro_sigma_w_dev : 3 # stddev of uncertainity in bias dynamics estimation as a % of nominal error stddev [%]
 
-     gyro_sigma_v : 0.0006449930361213116 # Additive white noise [UNITS: rad/s/sqrt(Hz)]
+     # 0.007 [deg/s/sqrt(Hz)] = 1.2217e-4 [rad/s/sqrt(Hz)]
+     gyro_sigma_v : 0.007 # Additive white noise [UNITS: deg/s/sqrt(Hz)]
      gyro_sigma_v_dev : 3 # stddev of uncertainity in white noise estimation as a % of nominal error stddev [%]
-
+     gyro_bias_stab: 8.3e-4 # [UNITS: deg/s] # Bias stability [UNITS: deg/s]
+     range: 125 # [UNITS: deg/s] # Range of the gyroscope [UNITS: deg/s]
+     nbits : 16 # [UNITS: bits] # Number of bits of the gyroscope
+     
 solar_panels:
      num_panels : 13
      panel_normals : [1,0,0,  # XP

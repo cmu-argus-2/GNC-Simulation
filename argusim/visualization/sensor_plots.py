@@ -8,7 +8,6 @@ from argusim.visualization.plot_helper import (
 )
 
 
-
 def gyro_plots(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
@@ -17,15 +16,13 @@ def gyro_plots(pyparams, data_dicts, filepaths):
     for i, (trial_number, _) in enumerate(filepaths):
         multiPlot(
             data_dicts[i]["Time [s]"],
-            np.rad2deg(
-                np.array([data_dicts[i]["gyro_x [rad/s]"], data_dicts[i]["gyro_y [rad/s]"], data_dicts[i]["gyro_z [rad/s]"]])
-            ),
+            np.array([data_dicts[i]["gyro_x [deg/s]"], data_dicts[i]["gyro_y [deg/s]"], data_dicts[i]["gyro_z [deg/s]"]]),
             seriesLabel=f"_{trial_number}",
         )
     annotateMultiPlot(title="Gyro measurement [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
     save_figure(itm.gcf(), plot_dir, "gyro_measurement.png", close_after_saving)
 
-""""""
+
 def sunsensor_plots(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
@@ -49,7 +46,7 @@ def magsensor_plots(pyparams, data_dicts, filepaths):
     for i, (trial_number, _) in enumerate(filepaths):
         multiPlot(
             data_dicts[i]["Time [s]"],
-            np.array([data_dicts[i]["mag_x_body [T]"], data_dicts[i]["mag_y_body [T]"], data_dicts[i]["mag_z_body [T]"]]),
+            np.array([data_dicts[i]["mag_x_body [muT]"], data_dicts[i]["mag_y_body [muT]"], data_dicts[i]["mag_z_body [muT]"]]),
             seriesLabel=f"_{trial_number}",
         )
     annotateMultiPlot(title="Measured B field in body frame", ylabels=["x", "y", "z"])

@@ -105,6 +105,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gyro_sigma_v = gyro_white_noise_dist(dev);
     gyro_correlation_time = params["gyroscope"]["gyro_correlation_time"].as<double>(); 
     gyro_scale_factor_err = params["gyroscope"]["gyro_scale_factor_err"].as<double>();
+    gyro_bias_stab = params["gyroscope"]["gyro_bias_stab"].as<double>(); // [UNITS: deg/s]
+    gyro_range = params["gyroscope"]["range"].as<double>(); // [UNITS: deg/s]
+    gyro_nbits = params["gyroscope"]["nbits"].as<int>(); // [UNITS: bits]
+    gyro_resolution = gyro_range / (pow(2, gyro_nbits - 1)); // [UNITS: deg/s]
 
     // Solar panels
     num_panels = params["solar_panels"]["num_panels"].as<int>();
@@ -482,12 +486,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
 
     // Gyroscope
     double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>() / sqrt(params["dt"].as<double>());
-    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
-    std::cout << "dt: " << params["dt"].as<double>() << std::endl;
-    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
     double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100.0);
-    std::cout << "gyro_sigma_w_nominal: " << gyro_sigma_w_nominal << std::endl;
-    std::cout << "gyro_sigma_w_std: " << gyro_sigma_w_std << std::endl;
     gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
 
     double gyro_sigma_v_nominal = params["gyroscope"]["gyro_sigma_v"].as<double>() / sqrt(params["dt"].as<double>());

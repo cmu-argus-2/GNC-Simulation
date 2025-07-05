@@ -41,12 +41,12 @@ class SimLogger(MultiFileLogger):
             "gps_velx ECEF [m/s]",
             "gps_vely ECEF [m/s]",
             "gps_velz ECEF [m/s]",
-            "gyro_x [rad/s]",
-            "gyro_y [rad/s]",
-            "gyro_z [rad/s]",
-            "mag_x_body [T]",
-            "mag_y_body [T]",
-            "mag_z_body [T]"] \
+            "gyro_x [deg/s]",
+            "gyro_y [deg/s]",
+            "gyro_z [deg/s]",
+            "mag_x_body [muT]",
+            "mag_y_body [muT]",
+            "mag_z_body [muT]"] \
         + ["light_sensor_lux [lx]" + str(i) for i in range(self.num_photodiodes)] \
         + ['mtb_power [W]' + str(i) for i in range(self.num_MTBs)] \
         + ['solar_power [W]' + str(i) for i in range(self.num_panels)] \
@@ -69,31 +69,6 @@ class SimLogger(MultiFileLogger):
             ["Time [s]"] + self.measurement_labels,
         )
         # [TODO:] log measurements separately for each sensor, only log when there is a new measurement
-        """
-        if gotSensor["GotSun"]:
-            self.log_v(
-                "sun_sensor_measurement.bin",
-                [current_time - self.J2000_start_time] + measurements[Idx["Y"]["SUN"]].tolist(),
-                ["Time [s]"] + [f"{axis} [-]" for axis in "xyz"],
-            )
-
-        if gotSensor["GotMag"]:
-            self.log_v(
-                "magnetometer_measurement.bin",
-                [current_time - self.J2000_start_time] + measurements[Idx["Y"]["MAG"]].tolist(),
-                ["Time [s]"] + [f"{axis} [T]" for axis in "xyz"],
-            )
-
-        if gotSensor["GotGyro"]:
-            self.log_v(
-                "gyro_measurement.bin",
-                [current_time - self.J2000_start_time] + measurements[Idx["Y"]["GYRO"]].tolist(),
-                ["Time [s]"] + [f"{axis} [rad/s]" for axis in "xyz"],
-            )
-        # [TODO:] add GPS
-
-        # [TODO:] add Battery readings
-        """
 
     def log_true_state(self, current_time, true_state, control_input):
         
