@@ -85,6 +85,7 @@ VectorXd Magnetorquer::getVoltageOrCurrent(VectorXd voltages, VectorXd currents)
     const double epsilon = 1e-8; // threshold for "close to zero"
     for (int i = 0; i < num_MTBs; i++) {
         if (std::abs(inductance(i)) < epsilon) {
+
             result(i) = voltages(i) / resistance(i);
         } else {
             result(i) = currents(i);

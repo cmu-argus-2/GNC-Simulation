@@ -177,7 +177,9 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
 
     // if inductance is zero, set x currents to the voltage / resistance
     VectorXd x_old = x;
-    x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getVoltageOrCurrent(x(SC.x_idx_map["mtb_volt"].to_seq()), x(SC.x_idx_map["mtb_currents"].to_seq()));
+    VectorXd mtb_currents = x(SC.x_idx_map["mtb_currents"].to_seq());
+    VectorXd mtb_volt = u(SC.u_idx_map["mtb_volt"].to_seq());
+    x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getVoltageOrCurrent(mtb_volt, mtb_currents);
 
     auto k1    = f(x_old, u, SC, t_J2000);
     auto k2    = f(x_old + half_dt * k1, u, SC, t_J2000 + half_dt);

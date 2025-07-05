@@ -65,7 +65,7 @@ magnetorquers:
      max_voltage : 5  # V maximum voltage that can be applied by each magnetorquer
      max_current_rating : 1.0  # A
      max_power : 1  # W
-     inductance : 2.5 # [UNITS: H] # nominal inductance of each magnetorquer
+     inductance : 0 # 2.5 # [UNITS: H] # nominal inductance of each magnetorquer
      inductance_dev : 5 # stddev from nominal [%]
      inductance_lub : 10 # max allowed deviation from nominal  [%]
      
