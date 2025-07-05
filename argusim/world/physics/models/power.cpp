@@ -14,13 +14,14 @@
    ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 
-   VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, VectorXd resistances, std::unordered_map<std::string, SliceDef> u_idx_map, 
+   VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
                             MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, double battery_capacity, 
                             double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage, double battery_internal_resistance,
                             double mb_power, int num_MTBs, int num_RWs, double jetson_power)
    {
        /* Magnetorquer Power Consumption */ 
-       VectorXd mtb_power = MagnetorquerPower(control_input, resistances, u_idx_map);
+       VectorXd currents = state(x_idx_map["mtb_currents"].to_seq());
+       VectorXd mtb_power = MagnetorquerPower(control_input, currents, u_idx_map);
 
        /* Reaction Wheel Power Consumption */
    
@@ -43,9 +44,10 @@
    
    }  
 
-   VectorXd MagnetorquerPower(const VectorXd control_input, VectorXd resistances, std::unordered_map<std::string, SliceDef> u_idx_map)
-   {
-       VectorXd power_consumption = control_input(u_idx_map["mtb_volt"].to_seq()).array() * control_input(u_idx_map["mtb_volt"].to_seq()).array() / resistances.array();
+   VectorXd MagnetorquerPower(const VectorXd control_input, VectorXd currents, std::unordered_map<std::string, SliceDef> u_idx_map)
+   { // VectorXd resistances, 
+       // VectorXd power_consumption = control_input(u_idx_map["mtb_volt"].to_seq()).array() * control_input(u_idx_map["mtb_volt"].to_seq()).array() / resistances.array();
+       VectorXd power_consumption = control_input(u_idx_map["mtb_volt"].to_seq()).array() * currents.array();
        return power_consumption;
    }
 

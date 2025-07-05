@@ -185,6 +185,20 @@ def plot_true_st(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="Sun Position in ECI [m]", ylabels=["x", "y", "z"])
     save_figure(itm.gcf(), plot_dir, "ECI_sun_direction.png", close_after_saving)
+    # ==========================================================================
+    # Truth Magnetorquer Currents
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        # Determine the correct keys for magnetorquer currents
+        mtq_keys = ["I_MTB_" + str(j) + " [A]" for j in range(len([k for k in data_dicts[i].keys() if k.startswith("I_MTB_")]))]
+        mtq_currents = [data_dicts[i][key] for key in mtq_keys]
+        multiPlot(
+            data_dicts[i]["Time [s]"] - data_dicts[i]["Time [s]"][0],
+            mtq_currents,
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="Magnetorquer Currents [A]", ylabels=[f"MTB {j}" for j in range(len(mtq_currents))])
+    save_figure(itm.gcf(), plot_dir, "magnetorquer_currents_true.png", close_after_saving)
 
 
 def plot_true_gyro_bias(pyparams, data_dicts, filepaths):
@@ -196,10 +210,25 @@ def plot_true_gyro_bias(pyparams, data_dicts, filepaths):
     for i, (trial_number, _) in enumerate(filepaths):
         multiPlot(
             data_dicts[i]["Time [s]"],
-            np.rad2deg(
-                np.array([data_dicts[i]["bias_x [rad/s]"], data_dicts[i]["bias_y [rad/s]"], data_dicts[i]["bias_z [rad/s]"]])
-            ),
+            np.array([data_dicts[i]["bias_x [deg/s]"], data_dicts[i]["bias_y [deg/s]"], data_dicts[i]["bias_z [deg/s]"]]),
             seriesLabel=f"_{trial_number}",
         )
     annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
     save_figure(itm.gcf(), plot_dir, "gyro_bias_true.png", close_after_saving)
+
+
+def plot_true_battery(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ==========================================================================
+    
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            [data_dicts[i]["Battery SoC"], data_dicts[i]["Battery temperature [K]"], data_dicts[i]["Pack Voltage [V]"], data_dicts[i]["Pack Current [A]"]],
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="True Battery State", ylabels=["SoC [%]", "Temp [K]", "Voltage [V]", "Current [A]"])
+    save_figure(itm.gcf(), plot_dir, "battery_true.png", close_after_saving)
+

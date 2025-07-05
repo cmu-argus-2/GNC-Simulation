@@ -96,7 +96,6 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     // sigma_sunsensor = sigma_sunsensor_dist(dev);
     photodiode_dt = params["photodiodes"]["photodiodes_dt"].as<double>();
 
-
     // Magnetometer
     magnetometer_noise_std =magnetometer_dist(dev);
 
@@ -195,13 +194,14 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     x_idx_map["rotation"]        = {6, 7};
     x_idx_map["sun_position"]    = {13, 3};
     x_idx_map["magnetic_field"]  = {16, 3};
-    x_idx_map["rw_speeds"]       = {19, num_RWs};
-    x_idx_map["gyro_bias"]       = {19+num_RWs, 3};
-    x_idx_map["battery"]         = {22+num_RWs, 4};
-    x_idx_map["battery_soc"]     = {22+num_RWs, 1};
-    x_idx_map["battery_temp"]    = {22+num_RWs+1, 1};
-    x_idx_map["battery_voltage"] = {22+num_RWs+2, 1};
-    x_idx_map["battery_current"] = {22+num_RWs+3, 1};
+    x_idx_map["mtb_currents"]     = {19, num_MTBs};
+    x_idx_map["rw_speeds"]       = {19+num_MTBs, num_RWs};
+    x_idx_map["gyro_bias"]       = {19+num_MTBs+num_RWs, 3};
+    x_idx_map["battery"]         = {22+num_MTBs+num_RWs, 4};
+    x_idx_map["battery_soc"]     = {22+num_MTBs+num_RWs, 1};
+    x_idx_map["battery_temp"]    = {22+num_MTBs+num_RWs+1, 1};
+    x_idx_map["battery_voltage"] = {22+num_MTBs+num_RWs+2, 1};
+    x_idx_map["battery_current"] = {22+num_MTBs+num_RWs+3, 1};
 
     // Control Vector index map
     u_idx_map["mtb_volt"]        = {0,              num_MTBs};
@@ -261,6 +261,10 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
     double resistance_bound = params["magnetorquers"]["mtb_resistance_lub"].as<double>();
     resistances = resistances.cwiseMax((1-resistance_bound)*resistances).cwiseMin((1+resistance_bound)*resistances);  
 
+    inductances = VectorXd::NullaryExpr(num_MTBs,[&](){return mtb_inductance_dist(gen);});
+    double inductance_bound = params["magnetorquers"]["inductance_lub"].as<double>();
+    inductances = inductances.cwiseMax((1-inductance_bound)*inductances).cwiseMin((1+inductance_bound)*inductances);
+    
     G_mtb_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["magnetorquers"]["mtb_orientation"].as<std::vector<double>>().data(), 3, num_MTBs);
     for (int i=0; i<num_MTBs; i++) {
         G_mtb_b.col(i) = random_SO3_rotation(mtb_orientation_dist, gen)*G_mtb_b.col(i);
@@ -274,6 +278,7 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
                                     params["magnetorquers"]["max_voltage"].as<double>(),
                                     params["magnetorquers"]["max_current_rating"].as<double>(),
                                     params["magnetorquers"]["max_power"].as<double>(),
+                                    inductances,
                                     G_mtb_b
                                     );
 
@@ -396,7 +401,7 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
     int battery_state_size = 4;
-    VectorXd State(22+num_RWs+battery_state_size);
+    VectorXd State(22+num_RWs+num_MTBs+battery_state_size);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
 
@@ -407,7 +412,10 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
     State(x_idx_map["angular_rate"].to_seq()) = initial_angular_rate;
     State(x_idx_map["sun_position"].to_seq()) = sun_position_eci(epoch);
     State(x_idx_map["magnetic_field"].to_seq()) = MagneticField(State(Eigen::seqN(0, 3)), epoch);
-    State(x_idx_map["rw_speeds"].to_seq()).setZero();
+    State(x_idx_map["mtb_currents"].to_seq()).setZero();
+    if (num_RWs > 0) {
+        State(x_idx_map["rw_speeds"].to_seq()).setZero();
+    }
     State(x_idx_map["gyro_bias"].to_seq()) = initial_gyro_bias;
     Vector4 battery {battery_initial_soc, battery_initial_temp, max_pack_voltage, 0};
     State(x_idx_map["battery"].to_seq()) = battery;
@@ -457,6 +465,9 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     double mtb_resistance_nominal = params["magnetorquers"]["mtb_resistance"].as<double>();
     double mtb_resistance_std = mtb_resistance_nominal*(params["magnetorquers"]["mtb_resistance_dev"].as<double>())/100;
     mtb_resistance_dist = std::normal_distribution<double>(mtb_resistance_nominal, mtb_resistance_std);
+    double mtb_inductance_nominal = params["magnetorquers"]["inductance"].as<double>();
+    double mtb_inductance_std = mtb_inductance_nominal*(params["magnetorquers"]["inductance_dev"].as<double>())/100;
+    mtb_inductance_dist = std::normal_distribution<double>(mtb_inductance_nominal, mtb_inductance_std);
 
     // GPS
     double gps_pos_std_nominal = params["gps"]["gps_pos_std"].as<double>();
@@ -626,6 +637,9 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     vec.assign(resistances.data(), resistances.data() + resistances.size());
     out << YAML::Key << "mtb_resistances" << YAML::Flow << vec;
+
+    vec.assign(inductances.data(), inductances.data() + inductances.size());
+    out << YAML::Key << "mtb_inductances" << YAML::Flow << vec;
 
     out << YAML::Key << "gps_pos_std" << gps_pos_std;
     out << YAML::Key << "gps_vel_std" << gps_vel_std;

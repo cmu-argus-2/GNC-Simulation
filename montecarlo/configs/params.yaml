@@ -43,7 +43,7 @@ CR : 1.8 # Reflectivity coefficient
 # Reaction Wheels
 # -----------------------------------------------------------------------------------------------------------
 reaction_wheels:
-     N_rw : 1                   # number of reaction wheels
+     N_rw : 0                   # number of reaction wheels
      m_rw: 0.002                # kg mass of each reaction wheel
      max_torque : 0.001         # N.m maximum torque that can be applied by each reaction wheel
      max_speed : 600            # rad/s maximum speed that can be achieved by each reaction wheel
@@ -65,8 +65,10 @@ magnetorquers:
      max_voltage : 5  # V maximum voltage that can be applied by each magnetorquer
      max_current_rating : 1.0  # A
      max_power : 1  # W
-     inductance : 0.001 # [UNITS: H] # nominal inductance of each magnetorquer
-
+     inductance : 2.5 # [UNITS: H] # nominal inductance of each magnetorquer
+     inductance_dev : 5 # stddev from nominal [%]
+     inductance_lub : 10 # max allowed deviation from nominal  [%]
+     
      mtb_orientation : [1,0,0,
                         -1,0,0, 
                         0,1,0,

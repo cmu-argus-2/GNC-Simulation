@@ -46,6 +46,7 @@ class Simulation_Parameters {
     // Magnetorquers
     int num_MTBs;
     VectorXd resistances;
+    VectorXd inductances;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
     double max_voltage;
     double max_current_rating;
@@ -157,6 +158,7 @@ class Simulation_Parameters {
     std::normal_distribution<double> I_rw_dist;
     std::normal_distribution<double> mtb_orientation_dist;
     std::normal_distribution<double> mtb_resistance_dist;
+    std::normal_distribution<double> mtb_inductance_dist;
 
     // Sensors
     std::normal_distribution<double> gps_pos_dist;

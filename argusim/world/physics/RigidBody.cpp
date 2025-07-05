@@ -31,7 +31,9 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
     xdot = xdot + AttitudeDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.G_rw_b, sc.G_mtb_b, 
                                 sc.I_rw, sc.I_sat, sc.MTB, t_J2000, sc.mass,  sc.Cd, sc.A, 
                                 sc.CoPM, sc.useDT, sc.useGG, sc.x_idx_map, sc.u_idx_map);
-    // [TODO:] Actuator Dynamics
+
+    xdot = xdot + ActuatorDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.I_rw, sc.MTB, 
+                                        sc.x_idx_map, sc.u_idx_map);
     // [TODO:] Sensor Dynamics (bias, noise, etc)
     
     return xdot;
@@ -86,7 +88,9 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     // Assert matrix sizes
     assert(u.size() == (num_MTBs + num_RWs+1)); // num_MTB + num_RWs torques + Jetson ON/OFF
     assert(G_rw_b.rows() == 3); // Orientation matrix has 3 element vectors
-    assert(G_rw_b.cols() == num_RWs); // 1 column for each RW
+    if (num_RWs > 0) {
+        assert(G_rw_b.cols() == num_RWs); // 1 column for each RW
+    }
     assert(G_mtb_b.rows() == 3); // 3D vector for each MTB
     assert(G_mtb_b.cols() == num_MTBs); // 1 column for each MTB
 
@@ -97,23 +101,17 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     Quaternion q = vectorToQuaternion(x(x_idx_map["quaternion"].to_seq()));
     q.normalize();
     Vector3 omega = x(x_idx_map["angular_rate"].to_seq());
-    VectorXd omega_rw(num_RWs);
-    omega_rw = x(x_idx_map["rw_speeds"].to_seq());
 
-    Vector3 tau;
+    Vector3 tau = Vector3::Zero();
 
     /* Attitude Dynamics */
     Quaternion omega_quat {0, omega(0), omega(1), omega(2)};
     Quaternion qdot_quat = 0.5 * q * omega_quat;
     Vector4 qdot{qdot_quat.w(), qdot_quat.x(), qdot_quat.y(), qdot_quat.z()};
-
-    // Reaction Wheels
-    auto h_rw = I_rw * omega_rw;
-    auto tau_rw = u(u_idx_map["rw_torques"].to_seq());
-    tau = -G_rw_b * tau_rw;
-
+    
     // Magnetorquers
-    tau += MTB.getTorque(u(u_idx_map["mtb_volt"].to_seq()), q, MagneticField(r, t_J2000));
+    auto mtb_currents = x(x_idx_map["mtb_currents"].to_seq());
+    tau += MTB.getTorque(mtb_currents, q, MagneticField(r, t_J2000));
 
     /* Perturbations */
     if (useDT) {
@@ -125,16 +123,49 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     }
 
     // Gyrostat Equation
-    Vector3 h_sc = I_sat * omega + G_rw_b * h_rw;
-    Vector3 omega_dot = I_sat.inverse() * (-omega.cross(h_sc) + tau);
+    Vector3 h_sc = I_sat * omega;
+    if (num_RWs > 0) {
+        VectorXd omega_rw(num_RWs);
+        omega_rw = x(x_idx_map["rw_speeds"].to_seq());
+        auto h_rw = I_rw * omega_rw;
+        auto tau_rw = u(u_idx_map["rw_torques"].to_seq());
+        tau += -G_rw_b * tau_rw;
+        h_sc += G_rw_b * h_rw;
+    }
 
-    // Reaction wheel speeds
-    auto omega_dot_rw = tau_rw / I_rw;
+    Vector3 omega_dot = I_sat.inverse() * (-omega.cross(h_sc) + tau);
 
     // Pack into state derivative vector
     xdot(x_idx_map["quaternion"].to_seq()) = qdot;
     xdot(x_idx_map["angular_rate"].to_seq()) = omega_dot;
-    xdot(x_idx_map["rw_speeds"].to_seq()) = omega_dot_rw;
+
+    return xdot;
+}
+
+VectorXd ActuatorDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
+                             double I_rw, Magnetorquer MTB, 
+                             std::unordered_map<std::string, SliceDef> x_idx_map,
+                             std::unordered_map<std::string, SliceDef> u_idx_map)
+{
+    
+    // Assert matrix sizes
+    assert(u.size() == (num_MTBs + num_RWs+1)); // num_MTB + num_RWs torques + Jetson ON/OFF
+
+    VectorXd xdot = VectorXd::Zero(x.size());
+
+    // Reaction Wheels
+    if (num_RWs > 0) {
+        auto tau_rw = u(u_idx_map["rw_torques"].to_seq());
+    
+        // Reaction wheel speeds
+        auto omega_dot_rw = tau_rw / I_rw;
+
+        xdot(x_idx_map["rw_speeds"].to_seq()) = omega_dot_rw;
+    }
+
+    auto mtb_currents = x(x_idx_map["mtb_currents"].to_seq());
+    auto mtb_volts = u(u_idx_map["mtb_volt"].to_seq());
+    xdot(x_idx_map["mtb_currents"].to_seq()) = MTB.getdidt(mtb_currents, mtb_volts);
 
     return xdot;
 }
@@ -144,11 +175,15 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     VectorXd x_new(x.size());
     double half_dt    = dt * 0.5;
 
-    auto k1    = f(x, u, SC, t_J2000);
-    auto k2    = f(x + half_dt * k1, u, SC, t_J2000 + half_dt);
-    auto k3    = f(x + half_dt * k2, u, SC, t_J2000 + half_dt);
-    auto k4    = f(x + dt * k3, u, SC, t_J2000 + dt);
-    x_new = x + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+    // if inductance is zero, set x currents to the voltage / resistance
+    VectorXd x_old = x;
+    x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getVoltageOrCurrent(x(SC.x_idx_map["mtb_volt"].to_seq()), x(SC.x_idx_map["mtb_currents"].to_seq()));
+
+    auto k1    = f(x_old, u, SC, t_J2000);
+    auto k2    = f(x_old + half_dt * k1, u, SC, t_J2000 + half_dt);
+    auto k3    = f(x_old + half_dt * k2, u, SC, t_J2000 + half_dt);
+    auto k4    = f(x_old + dt * k3, u, SC, t_J2000 + dt);
+    x_new = x_old + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 
     // renormalize the attitude quaternion
     x_new(SC.x_idx_map["quaternion"].to_seq()) = x_new(SC.x_idx_map["quaternion"].to_seq())/x_new(SC.x_idx_map["quaternion"].to_seq()).norm();
@@ -175,7 +210,7 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
 
 VectorXd PowerConsumptionWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC) 
 {
-    return PowerConsumption(x, u, SC.resistances, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, 
+    return PowerConsumption(x, u, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, 
                             SC.solar_panel_area, SC.x_idx_map, SC.battery_capacity, SC.battery_thermal_mass, 
                             SC.battery_radiative_loss, SC.solar_heat_factor, SC.max_pack_voltage, SC.battery_internal_resistance,
                             SC.mb_power, SC.num_MTBs, SC.num_RWs, SC.jetson_power);

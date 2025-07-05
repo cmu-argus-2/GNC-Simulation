@@ -55,6 +55,11 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
                              bool useDT, bool useGG, std::unordered_map<std::string, SliceDef> x_idx_map,
                              std::unordered_map<std::string, SliceDef> u_idx_map);
 
+VectorXd ActuatorDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int num_RWs, 
+                             double I_rw, Magnetorquer MTB, 
+                             std::unordered_map<std::string, SliceDef> x_idx_map,
+                             std::unordered_map<std::string, SliceDef> u_idx_map);
+
 VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, double t_J2000, double dt);
 
 VectorXd PowerConsumptionWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC); 

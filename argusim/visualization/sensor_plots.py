@@ -26,15 +26,21 @@ def gyro_plots(pyparams, data_dicts, filepaths):
 def sunsensor_plots(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
+    num_photodiodes = pyparams["photodiodes"]["num_photodiodes"]
     # ====================== Sun Sensor measurement plots ======================
     itm.figure()
     for i, (trial_number, _) in enumerate(filepaths):
+        time = data_dicts[i]["Time [s]"]
+        sensor_data = np.array([
+            data_dicts[i][f"light_sensor_lux [lx]{j}"] for j in range(num_photodiodes)
+        ])
         multiPlot(
-            data_dicts[i]["Time [s]"],
-            np.array([data_dicts[i]["x [-]"], data_dicts[i]["y [-]"], data_dicts[i]["z [-]"]]),
+            time,
+            sensor_data,
             seriesLabel=f"_{trial_number}",
         )
-    annotateMultiPlot(title="Measured Sun Ray in body frame", ylabels=["x", "y", "z"])
+    ylabels = [f"Photodiode {j}" for j in range(num_photodiodes)]
+    annotateMultiPlot(title="Sun Sensor Photodiode Measurements [lx]", ylabels=ylabels)
     save_figure(itm.gcf(), plot_dir, "sun_sensor_body_measurement.png", close_after_saving)
 
 
@@ -49,5 +55,5 @@ def magsensor_plots(pyparams, data_dicts, filepaths):
             np.array([data_dicts[i]["mag_x_body [muT]"], data_dicts[i]["mag_y_body [muT]"], data_dicts[i]["mag_z_body [muT]"]]),
             seriesLabel=f"_{trial_number}",
         )
-    annotateMultiPlot(title="Measured B field in body frame", ylabels=["x", "y", "z"])
+    annotateMultiPlot(title="Measured B field in body frame", ylabels=["x [uT]", "y [uT]", "z [uT]"])
     save_figure(itm.gcf(), plot_dir, "magnetometer_measurement.png", close_after_saving)

@@ -38,7 +38,7 @@ from argusim.visualization.plot_pointing import pointing_plots
 from argusim.visualization.actuator_plots import actuator_plots
 from argusim.visualization.sensor_plots import gyro_plots, sunsensor_plots, magsensor_plots
 from argusim.visualization.att_animation import att_animation
-from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias
+from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias, plot_true_battery
 import yaml
 
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
@@ -138,6 +138,8 @@ class MontecarloPlots:
             print(f"Elapsed time to read in data: {END-START:.2f} s")
             # --------------------------------------------------------------------------
             plot_true_gyro_bias(pyparams, data_dicts, filepaths)
+            # ========================= True battery plots =========================
+            plot_true_battery(pyparams, data_dicts, filepaths)
 
 
     def sensor_measurement_plots(self):
@@ -161,28 +163,12 @@ class MontecarloPlots:
             gyro_plots(pyparams, data_dicts, filepaths)
 
             # ====================== Sun Sensor measurement plots ======================
-            # filepaths = self._get_files_across_trials("sun_sensor_measurement.bin")
-
-            START = time.time()
-            args = [(filepath, 100) for (_, filepath) in filepaths]
-            with Pool() as pool:
-                data_dicts = pool.map(parse_bin_file_wrapper, args)
-            END = time.time()
-            print(f"Elapsed time to read in data: {END-START:.2f} s")
-            # --------------------------------------------------------------------------
             sunsensor_plots(pyparams, data_dicts, filepaths)
 
             # ====================== Magnetometer measurement plots ======================
-            # filepaths = self._get_files_across_trials("magnetometer_measurement.bin")
-
-            START = time.time()
-            args = [(filepath, 100) for (_, filepath) in filepaths]
-            with Pool() as pool:
-                data_dicts = pool.map(parse_bin_file_wrapper, args)
-            END = time.time()
-            print(f"Elapsed time to read in data: {END-START:.2f} s")
-            # --------------------------------------------------------------------------
             magsensor_plots(pyparams, data_dicts, filepaths)
+
+            # [TODO]: Add power and battery measurement plots
 
 """
 def ground_track(data_dict, save_dir):

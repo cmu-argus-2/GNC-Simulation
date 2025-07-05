@@ -28,10 +28,11 @@ class SimLogger(MultiFileLogger):
                             "xMag ECI [T]",
                             "yMag ECI [T]",
                             "zMag ECI [T]"] + \
+                            ["I_MTB_" + str(i) + " [A]" for i in range(self.num_MTBs)] + \
                             ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)] + \
-                            ["bias_x [rad/s]",
-                            "bias_y [rad/s]",
-                            "bias_z [rad/s]"]    + \
+                            ["bias_x [deg/s]",
+                            "bias_y [deg/s]",
+                            "bias_z [deg/s]"]    + \
                             ["Battery SoC", "Battery temperature [K]", "Pack Voltage [V]", "Pack Current [A]"]
             
         self.measurement_labels = [
