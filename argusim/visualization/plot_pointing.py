@@ -148,69 +148,69 @@ def pointing_plots(pyparams, data_dicts, filepaths):
                 seriesLabel=f"_{trial_number}",
             )
 
-            time_data = data_dicts[0]["Time [s]"] - data_dicts[0]["Time [s]"][0]
-            if time_data[-1] > 4 * 24 * 3600:
-                time_data /= 24 * 3600
-                time_label = "Time [days]"
-            elif time_data[-1] > 4 * 3600:
-                time_data /= 3600
-                time_label = "Time [hours]"
-            elif time_data[-1] > 4 * 60:
-                time_data /= 60
-                time_label = "Time [minutes]"
-            else:
-                time_label = "Time [s]"
+        time_data = data_dicts[0]["Time [s]"] - data_dicts[0]["Time [s]"][0]
+        if time_data[-1] > 4 * 24 * 3600:
+            time_data /= 24 * 3600
+            time_label = "Time [days]"
+        elif time_data[-1] > 4 * 3600:
+            time_data /= 3600
+            time_label = "Time [hours]"
+        elif time_data[-1] > 4 * 60:
+            time_data /= 60
+            time_label = "Time [minutes]"
+        else:
+            time_label = "Time [s]"
 
-            annotateMultiPlot(title=algo["figtitle"],
-                            ylabels=["$\\angle_{\\mathbf{s}/\\mathbf{h}} [\\degree]$",
-                                    "$\\angle_{\\mathbf{h}/\\mathbf{I_{max}}} [\\degree]$",
-                                    "$||\\mathbf{h}|| [Nms]$"])
+        annotateMultiPlot(title=algo["figtitle"],
+                        ylabels=["$\\angle_{\\mathbf{s}/\\mathbf{h}} [\\degree]$",
+                                "$\\angle_{\\mathbf{h}/\\mathbf{I_{max}}} [\\degree]$",
+                                "$||\\mathbf{h}|| [Nms]$"])
 
-            # sun pointing threshold
-            itm.subplot(3, 1, 1)
-            itm.axhline(y=10, color='red', linestyle='--', linewidth=1.0)
-            plt.xlim([0, time_data[-1]])
-            plt.ylim([0, 180])
-            plt.xlabel(time_label)
-            # ang mom pointing threshold
-            itm.subplot(3, 1, 2)
-            itm.axhline(y=15, color='red', linestyle='--', linewidth=1.0)
-            plt.xlim([0, time_data[-1]])
-            plt.ylim([0, 180])
-            plt.xlabel(time_label)
-            # ang mom norm threshold
-            itm.subplot(3, 1, 3)
-            itm.axhline(y=target_ang_mom_norm*(1-delta), color='red', linestyle='--', linewidth=1.0)
-            itm.axhline(y=target_ang_mom_norm*(1+delta), color='red', linestyle='--', linewidth=1.0)
-            plt.xlim([0, time_data[-1]])
-            plt.ylim([0, max_ang_mom])
-            plt.xlabel(time_label)
+        # sun pointing threshold
+        itm.subplot(3, 1, 1)
+        itm.axhline(y=10, color='red', linestyle='--', linewidth=1.0)
+        plt.xlim([0, time_data[-1]])
+        plt.ylim([0, 180])
+        plt.xlabel(time_label)
+        # ang mom pointing threshold
+        itm.subplot(3, 1, 2)
+        itm.axhline(y=15, color='red', linestyle='--', linewidth=1.0)
+        plt.xlim([0, time_data[-1]])
+        plt.ylim([0, 180])
+        plt.xlabel(time_label)
+        # ang mom norm threshold
+        itm.subplot(3, 1, 3)
+        itm.axhline(y=target_ang_mom_norm*(1-delta), color='red', linestyle='--', linewidth=1.0)
+        itm.axhline(y=target_ang_mom_norm*(1+delta), color='red', linestyle='--', linewidth=1.0)
+        plt.xlim([0, time_data[-1]])
+        plt.ylim([0, max_ang_mom])
+        plt.xlabel(time_label)
 
-            save_figure(itm.gcf(), plot_dir, algo["figname"], close_after_saving)
-            # ==========================================================================
-            # Plot the spin stabilization time and the sun pointing after spin stabilization time separately
-            plt.figure()
+        save_figure(itm.gcf(), plot_dir, algo["figname"], close_after_saving)
+        # ==========================================================================
+        # Plot the spin stabilization time and the sun pointing after spin stabilization time separately
+        plt.figure()
 
-            # Spin stabilization time
-            plt.subplot(2, 1, 1)
-            plt.hist(spin_stabilize_times, bins=20, alpha=0.7, label='Spin Stabilize Time')
-            plt.xlabel(time_label)
-            plt.ylabel('Frequency')
-            plt.legend()
-            plt.title('Histogram of Spin Stabilize Times')
+        # Spin stabilization time
+        plt.subplot(2, 1, 1)
+        plt.hist(spin_stabilize_times, bins=20, alpha=0.7, label='Spin Stabilize Time')
+        plt.xlabel(time_label)
+        plt.ylabel('Frequency')
+        plt.legend()
+        plt.title('Histogram of Spin Stabilize Times')
 
-            # Sun pointing time after spin stabilization
-            plt.subplot(2, 1, 2)
-            tgt_point_times_minus_spin_stabilize_times = [tgt_point_times[i] - spin_stabilize_times[i] for i in range(len(spin_stabilize_times))]
-            plt.hist(tgt_point_times_minus_spin_stabilize_times, bins=20, alpha=0.7, label='Sun Point Time')
-            plt.xlabel(time_label)
-            plt.ylabel('Frequency')
-            plt.legend()
-            plt.title(algo["figtitle2"])
+        # Sun pointing time after spin stabilization
+        plt.subplot(2, 1, 2)
+        tgt_point_times_minus_spin_stabilize_times = [tgt_point_times[i] - spin_stabilize_times[i] for i in range(len(spin_stabilize_times))]
+        plt.hist(tgt_point_times_minus_spin_stabilize_times, bins=20, alpha=0.7, label='Sun Point Time')
+        plt.xlabel(time_label)
+        plt.ylabel('Frequency')
+        plt.legend()
+        plt.title(algo["figtitle2"])
 
-            plt.tight_layout()
-            plt.savefig(os.path.join(plot_dir, algo["figname2"]))
-            plt.close()
+        plt.tight_layout()
+        plt.savefig(os.path.join(plot_dir, algo["figname2"]))
+        plt.close()
 
     # ==========================================================================
     # Nadir Pointing

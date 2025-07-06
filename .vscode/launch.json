@@ -25,6 +25,7 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "cwd": "${fileDirname}/../",
+            "args": ["2"],
             "purpose": [
                 "debug-in-terminal"
             ]
