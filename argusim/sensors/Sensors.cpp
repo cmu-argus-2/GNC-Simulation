@@ -76,10 +76,8 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ---------------------------------------------------- IMU -------------------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
-VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
+Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
 {
-    VectorXd imu_reading = VectorXd::Zero(6);
-
     /* Gyroscope */ 
     // Gyro Noise Models
     static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v);
@@ -100,9 +98,12 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     }
     // Quantize the gyro measurement
     omega_meas = (omega_meas.array()/sc.gyro_resolution).round()*  sc.gyro_resolution; // Round to the nearest resolution
-    imu_reading(Eigen::seqN(0,3)) = omega_meas;
+    return omega_meas;
+}
 
-    /* Magnetometer */
+
+Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
+{
     // Magnetometer Noise Distribution
     static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
 
@@ -111,10 +112,41 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     // True Magnetic Field
     Vector3 B_eci = state(sc.x_idx_map["magnetic_field"].to_seq()) * 1e6; // Convert from T to uT
 
-    // Noisy Measurement
-    Vector3 B_body = random_SO3_rotation(mag_noise_dist, gen)*quat_BtoECI.toRotationMatrix().transpose()*B_eci;
+    // Magnetic field in the body frame
+    Vector3 B_body = quat_BtoECI.toRotationMatrix().transpose() * B_eci;
 
-    imu_reading(Eigen::seqN(3,3)) = B_body;
+    // Noisy Measurement
+    // Vector3 B_body_meas = random_SO3_rotation(mag_noise_dist, gen) * B_body;
+    Vector3 B_body_meas = B_body + Vector3::NullaryExpr([&](){return mag_noise_dist(gen);});
+
+    // Effect of magnetorquers on the magnetic field
+    VectorXd mtb_currents = state(sc.x_idx_map["mtb_currents"].to_seq());
+    Vector3 mtb_B_effect = sc.MTB.getMagneticFieldAtMagnetometer(mtb_currents);
+    B_body_meas += mtb_B_effect * 1e6;
+
+    // Enforce magnetometer range limits
+    for (int i = 0; i < 2; ++i) {
+        if (B_body_meas(i) > sc.magnetometer_range_xy) B_body_meas(i) = sc.magnetometer_range_xy;
+        else if (B_body_meas(i) < -sc.magnetometer_range_xy) B_body_meas(i) = -sc.magnetometer_range_xy;
+    }
+    if (B_body_meas(2) > sc.magnetometer_range_z) B_body_meas(2) = sc.magnetometer_range_z;
+    else if (B_body_meas(2) < -sc.magnetometer_range_z) B_body_meas(2) = -sc.magnetometer_range_z;
+    
+    // Quantize the magnetometer measurement
+    B_body_meas = (B_body_meas.array()/sc.magnetometer_resolution).round() * sc.magnetometer_resolution;
+
+    return B_body_meas;
+}
+
+VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
+{
+    VectorXd imu_reading = VectorXd::Zero(6);
+
+    /* Gyroscope */ 
+    imu_reading(Eigen::seqN(0,3)) = Gyroscope(state, sc);
+
+    /* Magnetometer */
+    imu_reading(Eigen::seqN(3,3)) = Magnetometer(state, sc);
 
     return imu_reading;
 }

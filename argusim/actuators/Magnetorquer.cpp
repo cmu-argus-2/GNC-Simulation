@@ -14,7 +14,7 @@
 
 Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, double Nturns,
                            double maxVolt, double maxCurrentRating, double maxPower, VectorXd mtb_inductance,
-                           MatrixXd mtb_orientation)  
+                           MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation)  
 {
     num_MTBs = N_MTBs;
     resistance = mtb_resistance;
@@ -24,7 +24,7 @@ Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, d
     max_current_rating = maxCurrentRating;
     max_power = maxPower;
     inductance = mtb_inductance;
-   
+    mag_mtb_sens = std::move(mag_mtb_sens_mat);
     G_mtb_b = std::move(mtb_orientation);
 }
 
@@ -33,6 +33,14 @@ Vector3 Magnetorquer::getSingleDipoleMoment(int index, double current)
 {
     // double current = voltage / resistance(index);
     Vector3 dipole_moment = N_turns * current * A_cross * G_mtb_b.col(index);
+    return dipole_moment;
+}
+
+Vector3 Magnetorquer::getDipoleMoment(VectorXd currents) {
+    Vector3 dipole_moment = Vector3::Zero();
+    for (int i = 0; i < num_MTBs; i++) {
+        dipole_moment += getSingleDipoleMoment(i, currents(i));
+    }
     return dipole_moment;
 }
 
@@ -94,6 +102,13 @@ VectorXd Magnetorquer::getVoltageOrCurrent(VectorXd voltages, VectorXd currents)
     return result;
 }
 
+Vector3 Magnetorquer::getMagneticFieldAtMagnetometer(VectorXd currents) {
+    // Get the total dipole moment
+    Vector3 dipole_moment = getDipoleMoment(currents);
+    Vector3 mtb_B_effect = mag_mtb_sens * dipole_moment;
+    return mtb_B_effect;
+}
+
 #ifdef USE_PYBIND_TO_COMPILE
 #include <pybind11/pybind11.h>
 
@@ -101,12 +116,14 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(pymagnetorquers, m) {
     py::class_<Magnetorquer>(m, "Magnetorquer")
-        .def(py::init<int, VectorXd, double, double, double, double, double, VectorXd, MatrixXd>())
+        .def(py::init<int, VectorXd, double, double, double, double, double, VectorXd, MatrixXd, MatrixXd>())
         .def("getTorque", &Magnetorquer::getTorque, "Compute and return the net torque produced by the magnetorquers given input currents, attitude quaternion, and magnetic field vector.")
         .def("getTorqueb", &Magnetorquer::getTorqueb, "Compute and return the net torque produced by the magnetorquers given input currents, and magnetic field vector in the body frame.")
         .def("getSingleDipoleMoment", &Magnetorquer::getSingleDipoleMoment, "Compute the dipole moment for a single magnetorquer given its index and current.")
+        .def("getDipoleMoment", &Magnetorquer::getDipoleMoment, "Compute the total dipole moment from all magnetorquers given their currents.")
         .def("getSingleTorque", &Magnetorquer::getSingleTorque, "Compute the torque for a single magnetorquer given its index, current, attitude quaternion, and magnetic field vector.")
         .def("getdidt", &Magnetorquer::getdidt, "Compute the time derivative of the currents based on voltages and inductance.")
-        .def("getVoltageOrCurrent", &Magnetorquer::getVoltageOrCurrent, "Get the voltage or current for each magnetorquer based on the input voltages and currents.");
+        .def("getVoltageOrCurrent", &Magnetorquer::getVoltageOrCurrent, "Get the voltage or current for each magnetorquer based on the input voltages and currents.")
+        .def("getMagneticFieldAtMagnetometer", &Magnetorquer::getMagneticFieldAtMagnetometer, "Compute the magnetic field at the magnetometer due to the magnetorquers' dipole moments.");
 }
 #endif

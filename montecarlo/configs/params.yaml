@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------------------------------------
 # Sim settings
 # -----------------------------------------------------------------------------------------------------------
-MAX_TIME: 18000 # 96000 # [s]
+MAX_TIME: 5 # 18000 # 96000 # [s]
 dt: 0.1 # 0.1         # [s]
 earliest_sim_start_time_UTC: 2024-10-01 12:00:00
 latest_sim_start_time_UTC: 2024-10-28 23:59:59
@@ -65,7 +65,7 @@ magnetorquers:
      max_voltage : 5  # V maximum voltage that can be applied by each magnetorquer
      max_current_rating : 1.0  # A
      max_power : 1  # W
-     inductance : 0 # 2.5 # [UNITS: H] # nominal inductance of each magnetorquer
+     inductance : 2.5 # [UNITS: H] # nominal inductance of each magnetorquer
      inductance_dev : 5 # stddev from nominal [%]
      inductance_lub : 10 # max allowed deviation from nominal  [%]
      
@@ -81,6 +81,9 @@ magnetorquers:
      mtb_resistance_dev : 5 # stddev from nominal resistance as a % of nominal resistance [%]
      mtb_resistance_lub : 10 # max allowed deviation from nominal resistance as a % of the nominal resistance [%]
      
+     mag_mtb_sens: [0.01, 0.0, 0.0,
+                    0.0, 0.01, 0.0,
+                    0.0, 0.0, 0.01] # [UNITS: T/(Am2)] # sensitivity of the magnetorquers to the magnetic field in the body frame
 
 # -----------------------------------------------------------------------------------------------------------
 # Payload
@@ -127,7 +130,7 @@ magnetometer:
      # max_sigma_magnetometer: 0.1745 # [rad] [Angular error in Bfield direction]
      range_z: 2500  # [UNITS: uT]
      range_xy: 1300 # [UNITS: uT]
-     resolution : 16 # [UNITS: uT] 
+     resolution : 0.3 # [UNITS: uT] 
 
 gyroscope: 
      # Output is in degrees per second (deg/s)
@@ -245,7 +248,7 @@ PlotFlags:
      pointing_plots: True
      actuator_plots: True
      att_animation : False
-     percent_to_log : 0.1 # [0,1] percent of the data to log for plotting
+     percent_to_log : 1 # 0.1 # [0,1] percent of the data to log for plotting
 debugFlags:
      perfect_sensors: False  # Perfect measurements
 # [TODO:] flag for orbital perturbations

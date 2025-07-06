@@ -47,6 +47,7 @@ class Simulation_Parameters {
     int num_MTBs;
     VectorXd resistances;
     VectorXd inductances;
+    MatrixXd mag_mtb_sens;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
     double max_voltage;
     double max_current_rating;
@@ -69,6 +70,9 @@ class Simulation_Parameters {
     // Magnetometer
     double magnetometer_noise_std;
     double magnetometer_dt; // sampling period of the magnetometer
+    double magnetometer_range_z;
+    double magnetometer_range_xy; 
+    double magnetometer_resolution;
 
     // Gyroscope
     double gyro_sigma_w;

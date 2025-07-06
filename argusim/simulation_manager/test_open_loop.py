@@ -28,7 +28,15 @@ def run(sim):
 
     # Run iterations
     while sim_delta_time <= sim.params.MAX_TIME:
-        sim.set_control_input(np.zeros(sim.Idx["NU"]))
+        ctrl_input = np.zeros(sim.Idx["NU"])
+        # Alternate control between max and min every 100 seconds
+        period = 1
+        phase = int(sim_delta_time // period) % 2
+        if phase == 0:
+            ctrl_input[:] = 5
+        else:
+            ctrl_input[:] = 0
+        sim.set_control_input(ctrl_input)
 
         # Echo the Heartbeat once every 1000s
         if sim_delta_time - last_print_time >= 1000:

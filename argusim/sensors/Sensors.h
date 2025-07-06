@@ -31,6 +31,24 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
 Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc);
 
 /**
+ * @brief Measures the local magnetic field in the body frame using the magnetometer
+ * 
+ * @param state : True state vector of the satellite
+ * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
+ * @return Measured magnetic field vector in body frame
+ */
+Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc);
+
+/**
+ * @brief Measures the angular velocity in the body frame using the gyroscope
+ * 
+ * @param state : True state vector of the satellite
+ * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
+ * @return Measured angular velocity vector in body frame
+ */
+Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
+
+/**
  * @brief Measures Angular Velocity and local magnetic field readings in the body frame
  * 
  * @param state : True state vector of the satellite

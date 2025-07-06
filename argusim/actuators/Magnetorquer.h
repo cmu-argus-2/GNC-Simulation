@@ -8,9 +8,11 @@ class Magnetorquer {
     public:
         Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double A_cross, double N_turns,
                            double maxVolt, double maxCurrentRating, double maxPower, 
-                           VectorXd mtb_inductance, MatrixXd mtb_orientation);
+                           VectorXd mtb_inductance, MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation);
 
         Vector3 getSingleDipoleMoment(int index, double current);
+
+        Vector3 getDipoleMoment(VectorXd currents);
         
         Vector3 getSingleTorque(int index, double current, Vector3 magnetic_field_b);
 
@@ -30,6 +32,8 @@ class Magnetorquer {
 
         VectorXd getVoltageOrCurrent(VectorXd voltages, VectorXd currents);
 
+        Vector3 getMagneticFieldAtMagnetometer(VectorXd currents);
+
     private:
         int num_MTBs; 
         double A_cross;
@@ -39,6 +43,7 @@ class Magnetorquer {
         double max_current_rating;
         VectorXd resistance;
         VectorXd inductance;
+        MatrixXd mag_mtb_sens; 
         MatrixXd G_mtb_b;
 };
 

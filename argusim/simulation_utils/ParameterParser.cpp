@@ -98,6 +98,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Magnetometer
     magnetometer_noise_std =magnetometer_dist(dev);
+    magnetometer_range_z = params["magnetometer"]["range_z"].as<double>(); // [UNITS: uT]
+    magnetometer_range_xy = params["magnetometer"]["range_xy"].as<double>(); //
+    magnetometer_resolution = params["magnetometer"]["resolution"].as<double>(); // [UNITS: uT]
 
     // Gyroscope
     gyro_sigma_w = gyro_bias_dist(dev);
@@ -269,6 +272,12 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
     for (int i=0; i<num_MTBs; i++) {
         G_mtb_b.col(i) = random_SO3_rotation(mtb_orientation_dist, gen)*G_mtb_b.col(i);
     }
+
+    // Magnetic field sensitivity of the magnetorquers
+    mag_mtb_sens = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["magnetorquers"]["mag_mtb_sens"].as<std::vector<double>>().data(), 3, 3);
+    for (int i=0; i<3; i++) {
+        mag_mtb_sens.col(i) = random_SO3_rotation(mtb_orientation_dist, gen)*mag_mtb_sens.col(i);
+    }
     
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["magnetorquers"]["N_mtb"].as<int>(),
@@ -279,6 +288,7 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
                                     params["magnetorquers"]["max_current_rating"].as<double>(),
                                     params["magnetorquers"]["max_power"].as<double>(),
                                     inductances,
+                                    mag_mtb_sens,
                                     G_mtb_b
                                     );
 
@@ -640,6 +650,9 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     vec.assign(inductances.data(), inductances.data() + inductances.size());
     out << YAML::Key << "mtb_inductances" << YAML::Flow << vec;
+
+    vec.assign(mag_mtb_sens.data(), mag_mtb_sens.data() + mag_mtb_sens.size());
+    out << YAML::Key << "mag_mtb_sens" << YAML::Flow << vec;
 
     out << YAML::Key << "gps_pos_std" << gps_pos_std;
     out << YAML::Key << "gps_vel_std" << gps_vel_std;
