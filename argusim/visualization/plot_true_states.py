@@ -95,9 +95,16 @@ def plot_true_st(pyparams, data_dicts, filepaths):
                 ax.text(x_cross, y_cross, 0, f'{angle_to_sun:.1f}°', color='blue')
 
     # Calculate the mean sun direction
-    mean_sun_x = np.mean([data_dicts[i]["rSun_x ECI [m]"] for i in range(len(trials))], axis=1)
-    mean_sun_y = np.mean([data_dicts[i]["rSun_y ECI [m]"] for i in range(len(trials))], axis=1)
-    mean_sun_z = np.mean([data_dicts[i]["rSun_z ECI [m]"] for i in range(len(trials))], axis=1)
+    r_sun_x_eci = [data_dicts[i]["rSun_x ECI [m]"] for i in range(len(trials))]
+    min_len = min(len(arr) for arr in r_sun_x_eci)
+    r_sun_x_eci = [arr[:min_len] for arr in r_sun_x_eci]
+    r_sun_y_eci = [data_dicts[i]["rSun_y ECI [m]"] for i in range(len(trials))]
+    r_sun_y_eci = [arr[:min_len] for arr in r_sun_y_eci]
+    r_sun_z_eci = [data_dicts[i]["rSun_z ECI [m]"] for i in range(len(trials))]
+    r_sun_z_eci = [arr[:min_len] for arr in r_sun_z_eci]
+    mean_sun_x = np.mean(r_sun_x_eci, axis=1)
+    mean_sun_y = np.mean(r_sun_y_eci, axis=1)
+    mean_sun_z = np.mean(r_sun_z_eci, axis=1)
     mean_sun_direction = np.array([mean_sun_x, mean_sun_y, mean_sun_z]).flatten()
     mean_sun_direction /= np.linalg.norm(mean_sun_direction)
 
