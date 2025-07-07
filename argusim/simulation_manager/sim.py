@@ -176,6 +176,9 @@ class Simulator():
             self.logr.log_true_state(self.current_time, self.state, control_input)
             # measurement data logging
             self.logr.log_measurements(self.current_time, measurement)
+            # Log fsw state
+            self.logr.log_fsw_state(self.current_time, self.fsw_state, control_input)
+
             self.log_counter = 1
         else:
             self.log_counter += 1

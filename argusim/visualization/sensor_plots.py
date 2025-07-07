@@ -57,3 +57,112 @@ def magsensor_plots(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="Measured B field in body frame", ylabels=["x [uT]", "y [uT]", "z [uT]"])
     save_figure(itm.gcf(), plot_dir, "magnetometer_measurement.png", close_after_saving)
+
+def gps_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ======================= GPS measurement plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([
+                data_dicts[i]["gps_posx ECEF [m]"],
+                data_dicts[i]["gps_posy ECEF [m]"],
+                data_dicts[i]["gps_posz ECEF [m]"],
+            ]),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="GPS Position in ECEF", ylabels=["X [m]", "Y [m]", "Z [m]"])
+    save_figure(itm.gcf(), plot_dir, "gps_position_ecef.png", close_after_saving)
+
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([
+                data_dicts[i]["gps_velx ECEF [m/s]"],
+                data_dicts[i]["gps_vely ECEF [m/s]"],
+                data_dicts[i]["gps_velz ECEF [m/s]"],
+            ]),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="GPS Velocity in ECEF", ylabels=["Vx [m/s]", "Vy [m/s]", "Vz [m/s]"])
+    save_figure(itm.gcf(), plot_dir, "gps_velocity_ecef.png", close_after_saving)
+
+# MTB Power
+def mtb_power_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    num_MTBs = pyparams["magnetorquers"]["N_mtb"]
+    # ======================= MTB Power plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([data_dicts[i][f"mtb_power [W]{j}"] for j in range(num_MTBs)]),
+            seriesLabel=f"_{trial_number}",
+        )
+    ylabels = [f"MTB {j} Power [W]" for j in range(num_MTBs)]
+    annotateMultiPlot(title="Magnetorquer Power", ylabels=ylabels)
+    save_figure(itm.gcf(), plot_dir, "mtb_power.png", close_after_saving)
+
+# Solar Power
+def solar_power_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    num_panels = pyparams["solar_panels"]["num_panels"]
+    # ======================= Solar Power plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([data_dicts[i][f"solar_power [W]{j}"] for j in range(num_panels)]),
+            seriesLabel=f"_{trial_number}",
+        )
+    ylabels = [f"Solar Panel {j} Power [W]" for j in range(num_panels)]
+    annotateMultiPlot(title="Solar Panel Power", ylabels=ylabels)
+    save_figure(itm.gcf(), plot_dir, "solar_power.png", close_after_saving)
+
+# Jetson Power
+def jetson_power_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ======================= Jetson Power plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([data_dicts[i]["Jetson Power [W]"]]),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="Jetson Power", ylabels=["Jetson Power [W]"])
+    save_figure(itm.gcf(), plot_dir, "jetson_power.png", close_after_saving)
+
+# Battery SoC, Capacity, Current, Voltage, Mid Voltage, TTE, TTF, Temperature
+def battery_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ======================= Battery plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([
+                data_dicts[i]["Battery SoC [%]"],
+                data_dicts[i]["Battery Capacity [J]"],
+                data_dicts[i]["Battery Current [A]"],
+                data_dicts[i]["Battery Voltage [V]"],
+                data_dicts[i]["Battery Mid Voltage [V]"],
+                data_dicts[i]["Battery TTE [s]"],
+                data_dicts[i]["Battery TTF [s]"],
+                data_dicts[i]["Battery Temperature [K]"],
+            ]),
+            seriesLabel=f"_{trial_number}",
+        )
+    ylabels = [
+        "SoC [%]", "Capacity [J]", "Current [A]", "Voltage [V]",
+        "Mid Voltage [V]", "TTE [s]", "TTF [s]", "Temperature [K]"
+    ]
+    annotateMultiPlot(title="Battery Parameters", ylabels=ylabels)
+    save_figure(itm.gcf(), plot_dir, "meas_battery_parameters.png", close_after_saving)

@@ -40,7 +40,7 @@ def actuator_plots(pyparams, data_dicts, filepaths):
         save_figure(itm.gcf(), plot_dir, "rw_w_T_true.png", close_after_saving)
     
     # ==========================================================================
-    # Magnetorquer dipole moment
+    # Magnetorquer voltages
     num_MTBs = pyparams["magnetorquers"]["N_mtb"]
     Magnetorquers = []
     for i, (trial_number, _) in enumerate(filepaths):
@@ -61,7 +61,21 @@ def actuator_plots(pyparams, data_dicts, filepaths):
             np.array(pyparams2["mag_mtb_sens"]).reshape(3, 3),
             np.array(pyparams2["mtb_orientation"]).reshape(3, num_MTBs)
         )]
+    
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])
+        multiPlot(
+            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
+            volt_magnetorquer,
+            seriesLabel=f"_{trial_number}",
+        )
+    mtb_voltage_labels = [f"MTB_{j} [V]" for j in range(num_MTBs)]
+    annotateMultiPlot(title="Magnetorquer Voltages [V]", ylabels=mtb_voltage_labels)
+    save_figure(itm.gcf(), plot_dir, "mtb_voltage_true.png", close_after_saving)
 
+    # ==========================================================================
+    # Magnetorquer dipole moment
     itm.figure()
     for i, (trial_number, _) in enumerate(filepaths):
         # volt_magnetorquer = np.array([data_dicts[i]["V_MTB_" + str(j) + " [V]"] for j in range(num_MTBs)])

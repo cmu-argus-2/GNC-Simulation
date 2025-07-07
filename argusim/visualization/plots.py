@@ -36,7 +36,16 @@ from argusim.visualization.isolated_trace import itm
 from argusim.visualization.parse_bin_file import parse_bin_file_wrapper
 from argusim.visualization.plot_pointing import pointing_plots
 from argusim.visualization.actuator_plots import actuator_plots
-from argusim.visualization.sensor_plots import gyro_plots, sunsensor_plots, magsensor_plots
+from argusim.visualization.sensor_plots import (
+    gyro_plots,
+    sunsensor_plots,
+    magsensor_plots,
+    gps_plots,
+    battery_plots,
+    solar_power_plots,
+    jetson_power_plots,
+    mtb_power_plots,
+)
 from argusim.visualization.att_animation import att_animation
 from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias, plot_true_battery
 import yaml
@@ -168,7 +177,20 @@ class MontecarloPlots:
             # ====================== Magnetometer measurement plots ======================
             magsensor_plots(pyparams, data_dicts, filepaths)
 
-            # [TODO]: Add power and battery measurement plots
+            # ======================= GPS measurement plots =======================
+            gps_plots(pyparams, data_dicts, filepaths)
+
+            # ======================= Battery measurement plots =======================
+            battery_plots(pyparams, data_dicts, filepaths)
+
+            # ======================= Solar Power measurement plots =======================
+            solar_power_plots(pyparams, data_dicts, filepaths)
+
+            # ======================= Jetson Power measurement plots =======================
+            jetson_power_plots(pyparams, data_dicts, filepaths)
+
+            # ======================= MTB Power measurement plots =======================
+            mtb_power_plots(pyparams, data_dicts, filepaths)
 
 """
 def ground_track(data_dict, save_dir):

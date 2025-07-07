@@ -56,6 +56,35 @@ class SimLogger(MultiFileLogger):
         "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
         # + ["rw_encoder_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
 
+        self.fsw_labels = ["fsw_gps_posx ECI [m]", 
+                            "fsw_gps_posy ECI [m]", 
+                            "fsw_gps_posz ECI [m]", 
+                            "fsw_gps_velx ECI [m/s]", 
+                            "fsw_gps_vely ECI [m/s]", 
+                            "fsw_gps_velz ECI [m/s]",
+                            "fsw_qw",
+                            "fsw_qx",
+                            "fsw_qy",
+                            "fsw_qz",
+                            "fsw_gyro_x [rad/s]", 
+                            "fsw_gyro_y [rad/s]", 
+                            "fsw_gyro_z [rad/s]",
+                            "fsw_bias_x [rad/s]",
+                            "fsw_bias_y [rad/s]",
+                            "fsw_bias_z [rad/s]", 
+                            "fsw_mag_x_body [T]", 
+                            "fsw_mag_y_body [T]", 
+                            "fsw_mag_z_body [T]",
+                            "fsw_sun_x",
+                            "fsw_sun_y",
+                            "fsw_sun_z",
+                            "fsw_sun_eci_x",
+                            "fsw_sun_eci_y",
+                            "fsw_sun_eci_z",
+                            "fsw_mag_eci_x",
+                            "fsw_mag_eci_y",
+                            "fsw_mag_eci_z"]
+
         self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] \
                           + ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
 
@@ -69,7 +98,6 @@ class SimLogger(MultiFileLogger):
             + measurements.tolist(),
             ["Time [s]"] + self.measurement_labels,
         )
-        # [TODO:] log measurements separately for each sensor, only log when there is a new measurement
 
     def log_true_state(self, current_time, true_state, control_input):
         
@@ -80,4 +108,14 @@ class SimLogger(MultiFileLogger):
             + true_state.tolist()
             + control_input.tolist(),
             ["Time [s]"] + self.state_labels + self.input_labels,
+        )
+
+    def log_fsw_state(self, current_time, fsw_state, control_input):
+        # Log pertinent Quantities
+        self.log_v(
+            "state_fsw.bin",
+            [current_time - self.J2000_start_time]
+            + fsw_state.tolist()
+            + control_input.tolist(),
+            ["Time [s]"] + self.fsw_labels + self.input_labels,
         )

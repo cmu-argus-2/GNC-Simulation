@@ -190,7 +190,8 @@ VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simul
     VectorXd power_readings = VectorXd::Zero(reading_size);
     
     /* Magnetorquer Power Consumption */ 
-    VectorXd mtb_power = MagnetorquerPower(control_input, sc.resistances, sc.u_idx_map);
+    VectorXd mtb_currents = state(sc.x_idx_map["mtb_currents"].to_seq());
+    VectorXd mtb_power = MagnetorquerPower(control_input, mtb_currents, sc.u_idx_map);
     power_readings(Eigen::seqN(0,sc.num_MTBs)) = mtb_power;
 
     /* Solar power generation */
@@ -202,7 +203,6 @@ VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simul
     power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = battery_readings;
 
     return power_readings;
-
 }
 
 VectorXd BatteryReadings(const VectorXd state, Simulation_Parameters sc)
