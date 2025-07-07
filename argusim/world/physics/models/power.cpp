@@ -25,7 +25,7 @@ VectorXd PowerDynamics(const VectorXd state, const VectorXd control_input, std::
     double net_power_draw = power_vector.sum();
     
     int num_panels = G_sp_b.cols();
-    VectorXd solar_power = power_vector(Eigen::seqN(num_MTBs, num_panels));
+    VectorXd solar_power = -power_vector(Eigen::seqN(num_MTBs, num_panels));
 
     double solar_heat = (1-solar_panel_efficiency)/solar_panel_efficiency*solar_power.sum();
 
