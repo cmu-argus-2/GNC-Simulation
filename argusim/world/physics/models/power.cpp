@@ -10,13 +10,41 @@
 
 #define NOMINAL_SOLAR_INTENSITY 1373 // W/m^2
 
+
+VectorXd PowerDynamics(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, double battery_capacity, 
+                            double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage, double battery_internal_resistance,
+                            double mb_power, int num_MTBs, int num_RWs, double jetson_power)
+{
+    VectorXd xdot = VectorXd::Zero(x_idx_map["battery"].get_length());
+
+    VectorXd power_vector = PowerConsumption(state, control_input, u_idx_map, G_sp_b, solar_panel_efficiency, 
+                                            solar_panel_area, x_idx_map, 
+                                            mb_power, num_MTBs, num_RWs, jetson_power);
+    
+    double net_power_draw = power_vector.sum();
+    
+    int num_panels = G_sp_b.cols();
+    VectorXd solar_power = power_vector(Eigen::seqN(num_MTBs, num_panels));
+
+    double solar_heat = (1-solar_panel_efficiency)/solar_panel_efficiency*solar_power.sum();
+
+    int idx_bat_soc = x_idx_map["battery_soc"].to_idx() - x_idx_map["battery"].get_start();
+    int idx_bat_temp = x_idx_map["battery_temp"].to_idx() - x_idx_map["battery"].get_start();
+    
+    xdot(idx_bat_soc) = -100 * net_power_draw / battery_capacity; // Change in SoC
+    xdot(idx_bat_temp) = (solar_heat * solar_heat_factor + 
+                        pow(net_power_draw / max_pack_voltage, 2) * battery_internal_resistance - 
+                        battery_radiative_loss * pow(state(x_idx_map["battery_temp"].to_idx()), 4)) / battery_thermal_mass;
+    return xdot;
+}
+
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
    ------------------------------------------------- POWER CONSUMPTION --------------------------------------------------------------------------
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 
    VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
-                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, double battery_capacity, 
-                            double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage, double battery_internal_resistance,
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, 
                             double mb_power, int num_MTBs, int num_RWs, double jetson_power)
    {
        /* Magnetorquer Power Consumption */ 
@@ -30,19 +58,14 @@
        
        /* Static Power Consumption */
        double static_power_draw = mb_power + control_input(num_MTBs+num_RWs)*jetson_power;
-   
-       /* Get Battery State */
-       double net_power_draw = mtb_power.sum() + static_power_draw - solar_power.sum();
-       double solar_heat = (1-solar_panel_efficiency)/solar_panel_efficiency*solar_power.sum();
-       
-       VectorXd new_state = Battery(state, net_power_draw, solar_heat, battery_capacity, battery_thermal_mass,
-                                    battery_radiative_loss, solar_heat_factor, max_pack_voltage,
-                                    battery_internal_resistance, x_idx_map);
-   
-   
-       return new_state;
-   
-   }  
+
+
+       VectorXd power_consumption = VectorXd::Zero(mtb_power.size() + solar_power.size() + 1);
+       power_consumption(Eigen::seqN(0, mtb_power.size())) = mtb_power; // Magnetorquer power consumption
+       power_consumption(Eigen::seqN(mtb_power.size(), solar_power.size())) = -solar_power; // Solar power generation
+       power_consumption(power_consumption.size()-1) = static_power_draw; // Static power consumption
+       return power_consumption;
+   }
 
    VectorXd MagnetorquerPower(const VectorXd control_input, VectorXd currents, std::unordered_map<std::string, SliceDef> u_idx_map)
    { // VectorXd resistances, 
@@ -74,22 +97,17 @@
        return solar_power;
    }
    
-   VectorXd Battery(const VectorXd state, double net_power_consumption, double solar_heat, double battery_capacity,
-                    double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage,
-                double battery_internal_resistance, std::unordered_map<std::string, SliceDef> x_idx_map)
+   VectorXd Battery(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, 
+                            double mb_power, int num_MTBs, int num_RWs, double jetson_power)
     {
-        VectorXd state_dot       = VectorXd::Zero(x_idx_map["battery"].get_length());
+        VectorXd new_state       = state(x_idx_map["battery"].to_seq()); // Copy the battery state
         int idx_bat_soc          = x_idx_map["battery_soc"].to_idx() - x_idx_map["battery"].get_start();
+        int idx_bat_volt      = x_idx_map["battery_voltage"].to_idx() - x_idx_map["battery"].get_start();
         int idx_bat_cur          = x_idx_map["battery_current"].to_idx() - x_idx_map["battery"].get_start();
-        int idx_bat_temp         = x_idx_map["battery_temp"].to_idx() - x_idx_map["battery"].get_start();
-        // int idx_bat_volt      = x_idx_map["battery_voltage"].to_idx() - x_idx_map["battery"].get_start();
-
-        state_dot(idx_bat_soc)   = -100 * net_power_consumption / battery_capacity; // Change in SoC
-        state_dot(idx_bat_cur)   = -net_power_consumption / state(x_idx_map["battery_voltage"].to_idx()); // Current in A
-        state_dot(idx_bat_temp)  = (solar_heat * solar_heat_factor + 
-                                    pow(net_power_consumption / max_pack_voltage, 2) * battery_internal_resistance - 
-                                    battery_radiative_loss * pow(state(x_idx_map["battery_temp"].to_idx()), 4)) / battery_thermal_mass;
-
-        return state_dot;
+        double net_power_consumption = PowerConsumption(state, control_input, u_idx_map, G_sp_b, solar_panel_efficiency, 
+                                                        solar_panel_area, x_idx_map, mb_power, num_MTBs, num_RWs, jetson_power).sum();
+        new_state(idx_bat_cur)   = -net_power_consumption / new_state(idx_bat_volt); // Current in A
+        new_state(idx_bat_soc) = fmax(0, fmin(100, new_state(idx_bat_soc))); // Enforce SoC limit
+        return new_state;
     }
-   

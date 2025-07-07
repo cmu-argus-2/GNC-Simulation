@@ -62,6 +62,9 @@ VectorXd ActuatorDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
 
 VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, double t_J2000, double dt);
 
-VectorXd PowerConsumptionWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC); 
+VectorXd PowerDynamicsWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC); 
+
+VectorXd BatteryWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC); 
+
 
 #endif   // C___RIGIDBODY_H

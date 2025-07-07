@@ -35,6 +35,7 @@ VectorXd f(const VectorXd& x, const VectorXd& u, Simulation_Parameters sc, doubl
     xdot = xdot + ActuatorDynamics(x, u, sc.num_MTBs, sc.num_RWs, sc.I_rw, sc.MTB, 
                                         sc.x_idx_map, sc.u_idx_map);
     // [TODO:] Sensor Dynamics (bias, noise, etc)
+    xdot(sc.x_idx_map["battery"].to_seq()) = PowerDynamicsWrapper(x, u, sc);
     
     return xdot;
 }
@@ -170,6 +171,7 @@ VectorXd ActuatorDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     return xdot;
 }
 
+
 VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, double t_J2000, double dt) 
 {
     VectorXd x_new(x.size());
@@ -202,23 +204,25 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     x_new(SC.x_idx_map["gyro_bias"].to_seq()) = x_new(SC.x_idx_map["gyro_bias"].to_seq()) + dt*(bias_noise); // - bias/sc.gyro_correlation_time);
     
     // battery
-    x_new(SC.x_idx_map["battery"].to_seq()) = x(SC.x_idx_map["battery"].to_seq()) + dt * PowerConsumptionWrapper(x, u, SC);
-    
-    // enforce SOC limit
-    x_new(SC.x_idx_map["battery_soc"].to_idx()) = fmax(0,fmin(100, x_new(SC.x_idx_map["battery_soc"].to_idx())));
-
+    x_new(SC.x_idx_map["battery"].to_seq()) = BatteryWrapper(x_new, u, SC);
+   
     return x_new;
 }
 
-VectorXd PowerConsumptionWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC) 
+VectorXd PowerDynamicsWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC) 
 {
-    return PowerConsumption(x, u, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, 
+    return PowerDynamics(x, u, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, 
                             SC.solar_panel_area, SC.x_idx_map, SC.battery_capacity, SC.battery_thermal_mass, 
                             SC.battery_radiative_loss, SC.solar_heat_factor, SC.max_pack_voltage, SC.battery_internal_resistance,
                             SC.mb_power, SC.num_MTBs, SC.num_RWs, SC.jetson_power);
 
 }
 
+VectorXd BatteryWrapper(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC) 
+{
+    return Battery(x, u, SC.u_idx_map, SC.G_sp_b, SC.solar_panel_efficiency, SC.solar_panel_area, 
+                    SC.x_idx_map, SC.mb_power, SC.num_MTBs, SC.num_RWs, SC.jetson_power);
+}
 
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pyphysics, m) {

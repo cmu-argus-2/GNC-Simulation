@@ -6,6 +6,11 @@
 #include "utils_and_transforms.h"
 
 
+VectorXd PowerDynamics(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, double battery_capacity, 
+                            double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage, double battery_internal_resistance,
+                            double mb_power, int num_MTBs, int num_RWs, double jetson_power);
+
 /**
  * @brief Returns the power consumption diagnostics
  * 
@@ -16,8 +21,7 @@
  * @return power consumption measurements
  */
  VectorXd PowerConsumption(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
-                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, double battery_capacity, 
-                            double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage, double battery_internal_resistance,
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, 
                             double mb_power, int num_MTBs, int num_RWs, double jetson_power);
 /**
  * @brief Measures the power consumed by each actuator
@@ -45,8 +49,7 @@ VectorXd MagnetorquerPower(const VectorXd control_input, VectorXd currents, std:
  * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
  * @return battery diagnostics information
  */
-VectorXd Battery(const VectorXd state, double net_power_consumption, double solar_heat, double battery_capacity,
-                double battery_thermal_mass, double battery_radiative_loss, double solar_heat_factor, double max_pack_voltage,
-                double battery_internal_resistance, std::unordered_map<std::string, SliceDef> x_idx_map);
-
+VectorXd Battery(const VectorXd state, const VectorXd control_input, std::unordered_map<std::string, SliceDef> u_idx_map, 
+                            MatrixXd G_sp_b, double solar_panel_efficiency, double solar_panel_area, std::unordered_map<std::string, SliceDef> x_idx_map, 
+                            double mb_power, int num_MTBs, int num_RWs, double jetson_power);
 #endif
