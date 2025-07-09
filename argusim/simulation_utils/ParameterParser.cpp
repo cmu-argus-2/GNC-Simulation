@@ -278,7 +278,25 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
     for (int i=0; i<3; i++) {
         mag_mtb_sens.col(i) = random_SO3_rotation(mtb_orientation_dist, gen)*mag_mtb_sens.col(i);
     }
-    
+
+    // Define transition matrices
+    // Define Ahdt as a vector of size num_MTBs
+    Ahdt = VectorXd::Zero(num_MTBs);
+    Bhdt = VectorXd::Zero(num_MTBs);
+    Adt = VectorXd::Zero(num_MTBs);
+    Bdt = VectorXd::Zero(num_MTBs);
+    for (int i = 0; i < num_MTBs; i++) {
+        if (std::abs(inductances[i]) < 1e-9) {
+            Ahdt[i] = 0.0;
+            Adt[i] = 0.0;
+        } else {
+            Ahdt[i] = exp(-resistances[i] * params["dt"].as<double>() / (2 * inductances[i]));
+            Adt[i] = exp(-resistances[i] * params["dt"].as<double>() / inductances[i]);
+        }
+        Bhdt[i] = (1 - Ahdt[i]) / resistances[i];
+        Bdt[i] = (1 - Adt[i]) / resistances[i];
+    }
+
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["magnetorquers"]["N_mtb"].as<int>(),
                                     resistances,
@@ -289,7 +307,11 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
                                     params["magnetorquers"]["max_power"].as<double>(),
                                     inductances,
                                     mag_mtb_sens,
-                                    G_mtb_b
+                                    G_mtb_b,
+                                    Ahdt,
+                                    Adt,
+                                    Bhdt,
+                                    Bdt
                                     );
 
     return magnetorquer;
@@ -650,6 +672,18 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     vec.assign(inductances.data(), inductances.data() + inductances.size());
     out << YAML::Key << "mtb_inductances" << YAML::Flow << vec;
+
+    vec.assign(Ahdt.data(), Ahdt.data() + Ahdt.size());
+    out << YAML::Key << "Ahdt" << YAML::Flow << vec;
+
+    vec.assign(Bhdt.data(), Bhdt.data() + Bhdt.size());
+    out << YAML::Key << "Bhdt" << YAML::Flow << vec;
+
+    vec.assign(Adt.data(), Adt.data() + Adt.size());
+    out << YAML::Key << "Adt" << YAML::Flow << vec;
+
+    vec.assign(Bdt.data(), Bdt.data() + Bdt.size());
+    out << YAML::Key << "Bdt" << YAML::Flow << vec;
 
     vec.assign(mag_mtb_sens.data(), mag_mtb_sens.data() + mag_mtb_sens.size());
     out << YAML::Key << "mag_mtb_sens" << YAML::Flow << vec;

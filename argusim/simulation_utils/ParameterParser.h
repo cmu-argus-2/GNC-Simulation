@@ -47,6 +47,10 @@ class Simulation_Parameters {
     int num_MTBs;
     VectorXd resistances;
     VectorXd inductances;
+    VectorXd Ahdt;
+    VectorXd Bhdt;
+    VectorXd Adt;
+    VectorXd Bdt;
     MatrixXd mag_mtb_sens;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
     double max_voltage;

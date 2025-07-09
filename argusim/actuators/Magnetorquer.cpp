@@ -4,6 +4,7 @@
 #include <cmath>
 #include <utility>
 #include <iostream>
+#include <string>
 
 #ifdef USE_PYBIND_TO_COMPILE
 #pragma GCC diagnostic push
@@ -14,7 +15,8 @@
 
 Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, double Nturns,
                            double maxVolt, double maxCurrentRating, double maxPower, VectorXd mtb_inductance,
-                           MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation)  
+                           MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation, 
+                           VectorXd mtb_Ahdt, VectorXd mtb_Adt, VectorXd mtb_Bhdt, VectorXd mtb_Bdt) 
 {
     num_MTBs = N_MTBs;
     resistance = mtb_resistance;
@@ -26,6 +28,10 @@ Magnetorquer::Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double Across, d
     inductance = mtb_inductance;
     mag_mtb_sens = std::move(mag_mtb_sens_mat);
     G_mtb_b = std::move(mtb_orientation);
+    Ahdt = mtb_Ahdt;
+    Bhdt = mtb_Bhdt;
+    Adt = mtb_Adt;
+    Bdt = mtb_Bdt;
 }
 
 
@@ -88,15 +94,22 @@ VectorXd Magnetorquer::getdidt(VectorXd currents, VectorXd voltages)
     return didt;
 }
 
-VectorXd Magnetorquer::getVoltageOrCurrent(VectorXd voltages, VectorXd currents) {
+VectorXd Magnetorquer::getVoltageOrCurrent(VectorXd voltages, VectorXd currents, std::string mode) {
     VectorXd result = VectorXd::Zero(num_MTBs);
     const double epsilon = 1e-8; // threshold for "close to zero"
     for (int i = 0; i < num_MTBs; i++) {
         if (std::abs(inductance(i)) < epsilon) {
-
             result(i) = voltages(i) / resistance(i);
         } else {
-            result(i) = currents(i);
+            if (mode == "first") {
+                result(i) = currents(i);
+            } else if (mode == "half") {
+                result(i) = Ahdt(i) * currents(i) + Bhdt(i) * voltages(i);
+            } else if (mode == "full") {
+                result(i) = Adt(i) * currents(i) + Bdt(i) * voltages(i);
+            } else {
+                throw std::invalid_argument("Invalid mode specified. Use 'first', 'half', or 'full'.");
+            }
         }
     }
     return result;
@@ -116,7 +129,7 @@ namespace py = pybind11;
 
 PYBIND11_MODULE(pymagnetorquers, m) {
     py::class_<Magnetorquer>(m, "Magnetorquer")
-        .def(py::init<int, VectorXd, double, double, double, double, double, VectorXd, MatrixXd, MatrixXd>())
+        .def(py::init<int, VectorXd, double, double, double, double, double, VectorXd, MatrixXd, MatrixXd, VectorXd, VectorXd, VectorXd, VectorXd>())
         .def("getTorque", &Magnetorquer::getTorque, "Compute and return the net torque produced by the magnetorquers given input currents, attitude quaternion, and magnetic field vector.")
         .def("getTorqueb", &Magnetorquer::getTorqueb, "Compute and return the net torque produced by the magnetorquers given input currents, and magnetic field vector in the body frame.")
         .def("getSingleDipoleMoment", &Magnetorquer::getSingleDipoleMoment, "Compute the dipole moment for a single magnetorquer given its index and current.")

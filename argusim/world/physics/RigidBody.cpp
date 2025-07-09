@@ -181,13 +181,24 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     VectorXd x_old = x;
     VectorXd mtb_currents = x(SC.x_idx_map["mtb_currents"].to_seq());
     VectorXd mtb_volt = u(SC.u_idx_map["mtb_volt"].to_seq());
-    x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getVoltageOrCurrent(mtb_volt, mtb_currents);
+    x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getVoltageOrCurrent(mtb_volt, mtb_currents, "first");
+    VectorXd mtb_currents_half_dt = SC.MTB.getVoltageOrCurrent(mtb_volt, x_old(SC.x_idx_map["mtb_currents"].to_seq()), "half");
+    VectorXd mtb_currents_dt = SC.MTB.getVoltageOrCurrent(mtb_volt, x_old(SC.x_idx_map["mtb_currents"].to_seq()), "full");
 
     auto k1    = f(x_old, u, SC, t_J2000);
-    auto k2    = f(x_old + half_dt * k1, u, SC, t_J2000 + half_dt);
-    auto k3    = f(x_old + half_dt * k2, u, SC, t_J2000 + half_dt);
-    auto k4    = f(x_old + dt * k3, u, SC, t_J2000 + dt);
+    // Update the time for the next step
+    VectorXd xk1 = x_old + half_dt * k1;
+    xk1(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_half_dt;
+    auto k2    = f(xk1, u, SC, t_J2000 + half_dt);
+    VectorXd xk2 = x_old + half_dt * k2;
+    xk2(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_half_dt;
+    auto k3    = f(xk2, u, SC, t_J2000 + half_dt);
+    VectorXd xk3 = x_old + half_dt * k3;
+    xk3(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_dt;
+    auto k4    = f(xk3, u, SC, t_J2000 + dt);
     x_new = x_old + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+
+    x_new(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_dt;
 
     // renormalize the attitude quaternion
     x_new(SC.x_idx_map["quaternion"].to_seq()) = x_new(SC.x_idx_map["quaternion"].to_seq())/x_new(SC.x_idx_map["quaternion"].to_seq()).norm();

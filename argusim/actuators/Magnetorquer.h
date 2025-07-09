@@ -2,13 +2,15 @@
 #define C___magnetorquer_H
 
 #include "math/EigenWrapper.h"
+#include <string>
 
 double COPPER_RESISTIVITY = 1.724e-8;
 class Magnetorquer {
     public:
         Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double A_cross, double N_turns,
                            double maxVolt, double maxCurrentRating, double maxPower, 
-                           VectorXd mtb_inductance, MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation);
+                           VectorXd mtb_inductance, MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation,
+                           VectorXd mtb_Ahdt, VectorXd mtb_Adt, VectorXd mtb_Bhdt, VectorXd mtb_Bdt);
 
         Vector3 getSingleDipoleMoment(int index, double current);
 
@@ -30,7 +32,7 @@ class Magnetorquer {
         
         VectorXd getdidt(VectorXd currents, VectorXd voltages);
 
-        VectorXd getVoltageOrCurrent(VectorXd voltages, VectorXd currents);
+        VectorXd getVoltageOrCurrent(VectorXd voltages, VectorXd currents, std::string mode);
 
         Vector3 getMagneticFieldAtMagnetometer(VectorXd currents);
 
@@ -43,6 +45,10 @@ class Magnetorquer {
         double max_current_rating;
         VectorXd resistance;
         VectorXd inductance;
+        VectorXd Ahdt;
+        VectorXd Bhdt;
+        VectorXd Adt;
+        VectorXd Bdt;
         MatrixXd mag_mtb_sens; 
         MatrixXd G_mtb_b;
 };

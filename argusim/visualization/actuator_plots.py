@@ -59,7 +59,11 @@ def actuator_plots(pyparams, data_dicts, filepaths):
             pyparams["magnetorquers"]["max_power"],
             np.full(num_MTBs, pyparams["magnetorquers"]["inductance"]),
             np.array(pyparams2["mag_mtb_sens"]).reshape(3, 3),
-            np.array(pyparams2["mtb_orientation"]).reshape(3, num_MTBs)
+            np.array(pyparams2["mtb_orientation"]).reshape(3, num_MTBs),
+            pyparams2["Ahdt"],
+            pyparams2["Bhdt"],
+            pyparams2["Adt"],
+            pyparams2["Bdt"],
         )]
     
     itm.figure()
