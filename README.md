@@ -65,12 +65,14 @@ Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simu
 This project includes code adapted from:
 - SatelliteDynamics.jl, licensed under MIT License. Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors. Link here: https://github.com/sisl/SatelliteDynamics.jl
 - SatelliteToolbox.jl, licensed under MIT License. Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas. Link here: https://github.com/JuliaSpace/SatelliteToolbox.jl
+- Basilisk, licensed under the ISC License. Copyright (c) 2016, Autonomous Vehicle Systems Lab, University of Colorado at Boulder. Link here: https://avslab.github.io/basilisk/Documentation/index.html
 
 The copyright notice is available in the ./LICENSES folder. 
 
-The software adapted from SatelliteDynamics.jl is present within the following file(s):
-- drag.cpp : ... (waiting on Tuushar)
-- ...
-
 The software adapted from SatelliteToolbox.jl is present within the following file(s):
 -  utils_and_transforms.cpp : functions for converting raan to ltan/ltdn and associated subfunctions.
+
+The software adapted from SatelliteDynamics.jl is present within the following file(s):
+- drag.cpp 
+
+The specific software adapted from Basilisk was not identified in the file system by the involved student.
