@@ -5,36 +5,31 @@
 #include "math/EigenWrapper.h"
 #include "utils_and_transforms.h"
 
-const double R_EARTH = 6371000.0; // Earth radius in meters
-const double R_SUN = 696340000.0; // Sun radius in meters
+const double R_EARTH = 6378000.0; // Earth radius in meters
 
 double shadow_factor(const Vector3 r_sat, const Vector3 r_sun) 
 {
-    Vector3 r_rel = r_sun - r_sat;
-
     double r_mag = r_sat.norm();
-    double R_sun = R_SUN;
-    double R_earth = R_EARTH;
-    double dmag = r_rel.norm();
-    double sd = -r_sat.dot(r_rel);
-    double a = asin(R_sun / dmag);
-    if (R_earth > r_mag) {
+    if (R_EARTH > r_mag) {
         std::cerr << "Error! Collision detected with Earth." << std::endl;
         return 0.0;
     }
-    double b = asin(R_earth / r_mag);
-    double c = acos(sd / (r_mag * dmag));
-    if ((a + b) <= c) { 
+    double sd = r_sat.dot(r_sun);
+
+    if (sd >= 0.0) { 
         return 1.0;
-    } else if (c < (b - a)) { 
-        return 0.0;
-    } else {
-        double x = (c * c + a * a - b * b) / (2 * c);
-        double y = sqrt(a * a - x * x);
-        double A = a * a * acos(x / a) + b * b * acos((c - x) / b) - c * y;
-        double nu = 1 - A / (M_PI * a * a);
-        return nu;
     }
+    
+    double dmag = r_sun.norm();
+
+    Vector3 r_sat_parallel = r_sun * sd / (dmag * dmag);
+    Vector3 r_sat_perpendicular = r_sat - r_sat_parallel;
+
+    double r_sat_perpendicular_mag = r_sat_perpendicular.norm();
+    if (r_sat_perpendicular_mag < R_EARTH) { 
+        return 0.0;
+    }
+    return 1.0;
 }
 
 Vector3 SRP_acceleration(const Vector3 r, const Quaternion q, double t_J2000, double CR, double A, double m)

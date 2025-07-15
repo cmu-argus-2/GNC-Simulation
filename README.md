@@ -59,3 +59,18 @@ Install the following VSCode extensions:
 
 ## Code Architecture
 Refer to the code architecture <a href="https://www.notion.so/Physics-Model-Simulation-Architecture-10648018d82a80d4a90ce8fb38b47777">here</a>
+
+## Licensing
+
+This project includes code adapted from:
+- SatelliteDynamics.jl, licensed under MIT License. Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors. Link here: https://github.com/sisl/SatelliteDynamics.jl
+- SatelliteToolbox.jl, licensed under MIT License. Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas. Link here: https://github.com/JuliaSpace/SatelliteToolbox.jl
+
+The copyright notice is available in the ./LICENSES folder. 
+
+The software adapted from SatelliteDynamics.jl is present within the following file(s):
+- drag.cpp : ... (waiting on Tuushar)
+- ...
+
+The software adapted from SatelliteToolbox.jl is present within the following file(s):
+-  utils_and_transforms.cpp : functions for converting raan to ltan/ltdn and associated subfunctions.

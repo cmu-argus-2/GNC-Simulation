@@ -4,7 +4,13 @@
 #include "SpiceUsr.h"
 #include "math/EigenWrapper.h"
 
-
+/**
+ * @brief Compute shadow factor for satellite
+ * 
+ * @param r_earth : position vector of Earth
+ * @param r_sun : position vector of Sun
+ * @return shadow factor (0.0 if in shadow, 1.0 if fully illuminated)
+ */
 double shadow_factor(const Vector3 r_earth, const Vector3 r_sun);
 
 /**
