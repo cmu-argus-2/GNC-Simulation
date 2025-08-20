@@ -1,9 +1,10 @@
 from argusim.simulation_manager import MultiFileLogger
 
 class SimLogger(MultiFileLogger):
-    def __init__(self, log_directory, num_RWs, num_photodiodes, num_MTBs, num_panels, J2000_start_time):
+    def __init__(self, log_directory, num_RWs, num_stk, num_photodiodes, num_MTBs, num_panels, J2000_start_time):
         super().__init__(log_directory)
         self.num_RWs = num_RWs
+        self.num_stk = num_stk
         self.num_photodiodes = num_photodiodes
         self.num_MTBs = num_MTBs
         self.num_panels = num_panels
@@ -47,14 +48,18 @@ class SimLogger(MultiFileLogger):
             "gyro_z [deg/s]",
             "mag_x_body [muT]",
             "mag_y_body [muT]",
-            "mag_z_body [muT]"] \
-        + ["light_sensor_lux [lx]" + str(i) for i in range(self.num_photodiodes)] \
-        + ['mtb_power [W]' + str(i) for i in range(self.num_MTBs)] \
-        + ['solar_power [W]' + str(i) for i in range(self.num_panels)] \
-        + ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
-        "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
-        "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
-        # + ["rw_encoder_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
+            "mag_z_body [muT]"]
+        if self.num_stk > 0:
+            self.measurement_labels += ["star_tracker_qw [-]", "star_tracker_qx [-]", 
+                                        "star_tracker_qy [-]", "star_tracker_qz [-]"]
+        
+        self.measurement_labels += ["light_sensor_lux [lx]" + str(i) for i in range(self.num_photodiodes)] \
+                                + ['mtb_power [W]' + str(i) for i in range(self.num_MTBs)] \
+                                + ['solar_power [W]' + str(i) for i in range(self.num_panels)] \
+                                + ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
+                                "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
+                                "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
+                                # + ["rw_encoder_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
 
         self.fsw_labels = ["fsw_gps_posx ECI [m]", 
                             "fsw_gps_posy ECI [m]", 

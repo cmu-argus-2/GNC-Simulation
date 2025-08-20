@@ -58,6 +58,15 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
  VectorXd IMU(const VectorXd state, Simulation_Parameters sc);
 
 /**
+ * @brief Measures the attitude quaternion using the star tracker
+ * 
+ * @param state : True state vector of the satellite
+ * @param sc : Instance of ParameterParser class holding Sensor noise characterizations
+ * @return Measured attitude quaternion
+ */
+ Vector4 StarTracker(const VectorXd state, Simulation_Parameters sc);
+
+/**
  * @brief Measures the % of nominal solar flux incident at each light diode
  * 
  * @param state : True state vector of the satellite

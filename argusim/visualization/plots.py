@@ -45,6 +45,7 @@ from argusim.visualization.sensor_plots import (
     solar_power_plots,
     jetson_power_plots,
     mtb_power_plots,
+    star_tracker_plots,
 )
 from argusim.visualization.att_animation import att_animation
 from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias, plot_true_battery
@@ -191,6 +192,9 @@ class MontecarloPlots:
 
             # ======================= MTB Power measurement plots =======================
             mtb_power_plots(pyparams, data_dicts, filepaths)
+
+            # ======================= Star Tracker measurement plots =======================
+            star_tracker_plots(pyparams, data_dicts, filepaths)
 
 """
 def ground_track(data_dict, save_dir):

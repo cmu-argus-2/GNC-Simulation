@@ -90,6 +90,11 @@ class Simulation_Parameters {
     //double gyro_bias_std; 
     Vector3 initial_gyro_bias;
 
+    // Star Tracker
+    int num_stk;
+    bool include_star_tracker;
+    double star_tracker_std; 
+
     // Solar Panels
     int num_panels;
     MatrixXd G_sp_b;

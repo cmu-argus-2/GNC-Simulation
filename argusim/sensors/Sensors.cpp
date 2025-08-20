@@ -23,17 +23,23 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
 {
     /* Measurement Vector: [GPS state          (6x1),
                             IMU reading        (6x1),
+                            Star Tracker       (4x1), (optional)
                             Lux Readings       (9x1),
                             solar power        (14x1),  
                             Power Diagnostics ((6+8)x1),
                             Jetson Power       (1x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
+    int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
 
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
     measurement(sc.y_idx_map["gps"].to_seq()) = GPS(state, t_J2000, sc);
 
     measurement(sc.y_idx_map["imu"].to_seq()) = IMU(state, sc);
+
+    // If including star tracker, populate the star tracker measurement
+    if (sc.include_star_tracker) {
+        measurement(sc.y_idx_map["star_tracker"].to_seq()) = StarTracker(state, sc);
+    }
 
     measurement(sc.y_idx_map["photodiode"].to_seq()) = SunSensor(state, sc);
 
@@ -149,6 +155,22 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
     imu_reading(Eigen::seqN(3,3)) = Magnetometer(state, sc);
 
     return imu_reading;
+}
+
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ------------------------------------------------ STAR TRACKER --------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
+Vector4 StarTracker(const VectorXd state, Simulation_Parameters sc)
+{
+    // Star Tracker Noise Distribution
+    static std::normal_distribution<double> star_tracker_noise_dist(0, sc.star_tracker_std);
+    // Quaternion representing the body frame to ECI frame transformation
+    Quaternion quat = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
+    Quaternion noise_quat(random_SO3_rotation(star_tracker_noise_dist, gen));
+    // Apply noise to the quaternion
+    Quaternion noisy_quat = quat * noise_quat;
+    Vector4 star_tracker_measurement{noisy_quat.w(), noisy_quat.x(), noisy_quat.y(), noisy_quat.z()};
+    return star_tracker_measurement;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------

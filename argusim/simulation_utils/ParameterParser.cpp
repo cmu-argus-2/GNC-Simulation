@@ -112,6 +112,15 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gyro_nbits = params["gyroscope"]["nbits"].as<int>(); // [UNITS: bits]
     gyro_resolution = gyro_range / (pow(2, gyro_nbits - 1)); // [UNITS: deg/s]
 
+    // Star Tracker
+    include_star_tracker = params["debugFlags"]["include_star_tracker"].as<bool>();
+    if (include_star_tracker) {
+        num_stk = 4; // quaternion
+    } else {
+        num_stk = 0;
+    }
+    star_tracker_std = params["star_tracker"]["star_tracker_std"].as<double>();
+
     // Solar panels
     num_panels = params["solar_panels"]["num_panels"].as<int>();
     G_sp_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["solar_panels"]["panel_normals"].as<std::vector<double>>().data(), 3, num_panels);
@@ -213,18 +222,29 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Measurement Vector index map
     // std::map<std::string, Eigen::seqN> y_idx_map;
-    y_idx_map["gps"]             = {0,              6};
-    y_idx_map["gps_pos"]         = {0,              3};
-    y_idx_map["gps_vel"]         = {3,              3};
-    y_idx_map["imu"]             = {6,              6};
-    y_idx_map["gyro"]            = {6,              3};
-    y_idx_map["magnetometer"]    = {9,              3};
-    y_idx_map["photodiode"]      = {12,             num_photodiodes};
-    y_idx_map["power_readings"]  = {12+num_photodiodes, num_MTBs + num_panels + 8};
-    y_idx_map["mtb_power"]       = {12+num_photodiodes, num_MTBs};
-    y_idx_map["solar_power"]     = {12+num_photodiodes+num_MTBs, num_panels};
-    y_idx_map["bat_readings"]    = {12+num_photodiodes+num_MTBs+num_panels, 8};
-    y_idx_map["jetson_power"]    = {12+num_photodiodes+num_MTBs+num_panels+8, 1};
+    int ny = 0;
+    y_idx_map["gps"]             = {ny, 6};
+    y_idx_map["gps_pos"]         = {ny, 3};
+    ny += 3;
+    y_idx_map["gps_vel"]         = {ny, 3};
+    ny += 3;
+    y_idx_map["imu"]             = {ny, 6};
+    y_idx_map["gyro"]            = {ny, 3};
+    ny += 3;
+    y_idx_map["magnetometer"]    = {ny, 3};
+    ny += 3;
+    y_idx_map["star_tracker"]    = {ny, num_stk};
+    ny += num_stk;
+    y_idx_map["photodiode"]      = {ny, num_photodiodes};
+    ny += num_photodiodes;
+    y_idx_map["power_readings"]  = {ny, num_MTBs + num_panels + 8};
+    y_idx_map["mtb_power"]       = {ny, num_MTBs};
+    ny += num_MTBs;
+    y_idx_map["solar_power"]     = {ny, num_panels};
+    ny += num_panels;
+    y_idx_map["bat_readings"]    = {ny, 8}; 
+    ny += 8;
+    y_idx_map["jetson_power"]    = {ny, 1};
 
     // Populate State Vector
     initial_state = initializeSatellite(sim_start_time);
@@ -739,6 +759,9 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("num_photodiodes", &Simulation_Parameters::num_photodiodes)
         .def_readonly("photodiodes_dt", &Simulation_Parameters::photodiode_dt)
         //.def_readonly("sigma_sunsensor", &Simulation_Parameters::sigma_sunsensor)
+        .def_readonly("num_stk", &Simulation_Parameters::num_stk)
+        .def_readonly("star_tracker_std", &Simulation_Parameters::star_tracker_std)
+        .def_readonly("include_star_tracker", &Simulation_Parameters::include_star_tracker)
         //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)

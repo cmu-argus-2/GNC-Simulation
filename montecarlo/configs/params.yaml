@@ -147,6 +147,10 @@ gyroscope:
      range: 125 # [UNITS: deg/s] # Range of the gyroscope [UNITS: deg/s]
      nbits : 16 # [UNITS: bits] # Number of bits of the gyroscope
      
+star_tracker:
+     star_tracker_dt : 1.0 # [UNITS: s] [UNUSED]
+     star_tracker_std : 0.001 # [UNITS: rad] # stddev of the star tracker measurement noise
+
 solar_panels:
      num_panels : 13
      panel_normals : [1,0,0,  # XP
@@ -251,4 +255,6 @@ PlotFlags:
      percent_to_log : 0.01 # [0,1] percent of the data to log for plotting
 debugFlags:
      perfect_sensors: False  # Perfect measurements
+     include_battery: True # Include battery in simulation
+     include_star_tracker: False # Include star tracker in simulation
 # [TODO:] flag for orbital perturbations

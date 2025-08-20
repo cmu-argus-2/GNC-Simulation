@@ -166,3 +166,26 @@ def battery_plots(pyparams, data_dicts, filepaths):
     ]
     annotateMultiPlot(title="Battery Parameters", ylabels=ylabels)
     save_figure(itm.gcf(), plot_dir, "meas_battery_parameters.png", close_after_saving)
+
+# Star Tracker Plots
+def star_tracker_plots(pyparams, data_dicts, filepaths):
+    if pyparams["debugFlags"]["include_star_tracker"] is False:
+        return
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ======================= Star Tracker plots =======================
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([
+                data_dicts[i]["star_tracker_qw [-]"],
+                data_dicts[i]["star_tracker_qx [-]"],
+                data_dicts[i]["star_tracker_qy [-]"],
+                data_dicts[i]["star_tracker_qz [-]"],
+            ]),
+            seriesLabel=f"_{trial_number}",
+        )
+    ylabels = ["qw", "qx", "qy", "qz"]
+    annotateMultiPlot(title="Star Tracker Quaternion Measurements", ylabels=ylabels)
+    save_figure(itm.gcf(), plot_dir, "star_tracker_quaternion.png", close_after_saving)

@@ -40,6 +40,7 @@ class Simulator():
         self.num_MTBs = self.params.num_MTBs
         self.num_photodiodes = self.params.num_photodiodes
         self.num_panels = self.params.num_panels
+        self.num_stk = self.params.num_stk
 
         # Initialization
         self.fsw_state = np.zeros((28,))
@@ -56,8 +57,8 @@ class Simulator():
 
         # Logging
         if self.log:
-            self.logr = SimLogger(log_directory, self.num_RWs, self.num_photodiodes, self.num_MTBs, self.num_panels, self.J2000_start_time)
-            
+            self.logr = SimLogger(log_directory, self.num_RWs, self.num_stk, self.num_photodiodes, self.num_MTBs, self.num_panels, self.J2000_start_time)
+
     def define_indexes(self):
         # # Indexing
         # State
