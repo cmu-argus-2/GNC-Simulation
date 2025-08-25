@@ -99,6 +99,8 @@ class Simulator():
         self.Idx["Y"]["GYRO"] = slice(6, 9)
         self.Idx["Y"]["MAG"] = slice(9, 12)
         ny = 12
+        self.Idx["Y"]["STK"] = slice(ny, ny+self.num_stk)
+        ny = ny+self.num_stk
         self.Idx["Y"]["SUN"] = slice(ny, ny+self.num_photodiodes)
         ny = ny+self.num_photodiodes
         self.Idx["Y"]["RW_OMEGA"] = slice(ny, ny+self.num_RWs)
