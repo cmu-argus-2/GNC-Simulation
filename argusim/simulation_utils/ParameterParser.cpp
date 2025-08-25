@@ -178,6 +178,15 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
         initial_angular_rate = Eigen::Map<Vector3>(params["initialization"]["initial_angular_rate"].as<std::vector<double>>().data());
     }
 
+    // target attitude for inertial three axis pointing scenario
+    bool disperse_target_attitude = params["initialization"]["disperse_target_attitude"].as<bool>();
+    if (disperse_target_attitude) {
+        target_attitude = Vector4::NullaryExpr([&](){return initial_attitude_dist(dev);});
+        target_attitude = target_attitude/target_attitude.norm();
+    } else {
+        target_attitude = Eigen::Map<Vector4>(params["initialization"]["target_attitude"].as<std::vector<double>>().data());
+    }
+
     // Battery Initialization
     battery_capacity = params["initialization"]["battery_capacity"].as<double>();
     battery_initial_soc = params["initialization"]["battery_initial_soc"].as<double>();
@@ -252,7 +261,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
     bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
     auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
-    
+    bool start_three_axis = params["initialization"]["start_three_axis"].as<bool>();
+    auto three_axis_target = params["initialization"]["three_axis_target"].as<std::string>(); //"Inertial" or "Nadir"
+
     // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
     if (start_spin_stabilized) {
         auto tgt_ss_ang_vel = params["initialization"]["tgt_ss_ang_vel"].as<double>();
@@ -262,13 +273,36 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     if (start_ss_pointed) {
         if (start_ss_pointing == "Nadir") {
-            initial_attitude = nadirPointingAttitude(initial_state, dev);
+            initial_attitude = SSnadirPointingAttitude(initial_state, dev);
         } else if (start_ss_pointing == "Sun") {
             initial_attitude = sunPointingAttitude(initial_state, dev);
         } else {
             throw std::invalid_argument("Invalid initial pointing direction. Must be 'Nadir' or 'Sun'.");
         }
         initial_state(x_idx_map["quaternion"].to_seq()) = initial_attitude;
+    } else if (start_three_axis) {
+        if (three_axis_target == "Inertial") {
+            initial_state(x_idx_map["quaternion"].to_seq()) = target_attitude;
+            // minor attitude deviation from target in this scenario
+        } else if (three_axis_target == "Nadir") { 
+            VectorXd nadir_rotation = threeAxisNadirPointingAttitude(initial_state); // , x_idx_map);
+            initial_state(x_idx_map["quaternion"].to_seq()) = nadir_rotation(Eigen::seqN(0, 4));
+            initial_state(x_idx_map["angular_rate"].to_seq()) += nadir_rotation(Eigen::seqN(4, 3));
+        } else {
+            throw std::invalid_argument("Invalid three axis target pointing direction. Must be 'Nadir' or 'Inertial'.");
+        }
+        
+        // minor attitude deviation from target in this scenario
+        double initial_attitude_dev = params["initialization"]["initial_attitude_dev"].as<double>()*M_PI/180.0; // [rad]
+        // double theta = randomNormal(0, initial_attitude_dev, dev);
+        // Quaternion randomQuaternion(theta, dev);
+        std::normal_distribution<double> init_att_dist(0, initial_attitude_dev);
+        Eigen::Quaterniond q_noise(random_SO3_rotation(init_att_dist, dev));
+        Eigen::Quaterniond init_quat = vectorToQuaternion(initial_state(x_idx_map["quaternion"].to_seq()));
+        init_quat = (init_quat*q_noise).normalized();
+        // Eigen::Quaterniond q(Rb2i);
+        initial_state(x_idx_map["quaternion"].to_seq()) << init_quat.w(), init_quat.x(), init_quat.y(), init_quat.z();
+        
     }
 
     // Dump Dispersed Parameters to YAML
@@ -369,7 +403,8 @@ Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
     return initial_angular_rate;
 }
 
-Vector4 Simulation_Parameters::nadirPointingAttitude(VectorXd State, std::mt19937 gen)
+// Spin-stabilized nadir-pointing attitude
+Vector4 Simulation_Parameters::SSnadirPointingAttitude(VectorXd State, std::mt19937 gen)
 {
     // angular momentum direction in body frame
     Eigen::Vector3d h = I_sat * State(x_idx_map["angular_rate"].to_seq());
@@ -448,6 +483,31 @@ Vector4 Simulation_Parameters::sunPointingAttitude(VectorXd State, std::mt19937 
     // sun_pointing = (np.linalg.norm(sun_vector-(h/h_norm))<= np.deg2rad(10))
 
     return init_att;
+}
+
+// Three-axis nadir-pointing attitude and angular velocity
+VectorXd Simulation_Parameters::threeAxisNadirPointingAttitude(VectorXd State) { // }, std::unordered_map<std::string, SliceDef> x_idx_map){
+    // VectorXd init_rot(7);
+    Vector3 reci = State(x_idx_map["position"].to_seq()); //Eigen::seqN(0, 3));
+    Vector3 veci = State(x_idx_map["velocity"].to_seq()); //Eigen::seqN(3, 3));
+    Vector3 z = -reci / reci.norm(); // nadir
+    Vector3 y = z.cross(veci); // negative orbit normal
+    y = y / y.norm();
+    Vector3 x = y.cross(z); // ~ velocity vector
+    x = x / x.norm();
+    Matrix_3x3 nadirR;
+    nadirR << x, y, z;
+    Matrix_3x3 Mconv;
+    Mconv << 0, 1, 0,
+            0, 0, 1,
+            1, 0, 0;
+    nadirR = nadirR * Mconv;
+    Eigen::Quaterniond q(nadirR);
+
+    Vector3 omega_eci = reci.cross(veci) / (reci.norm() * reci.norm());
+    Vector3 nadir_omega = nadirR.transpose() * omega_eci;
+    Eigen::Matrix<double, 7, 1> init_rot(q.w(), q.x(), q.y(), q.z(), nadir_omega(0), nadir_omega(1), nadir_omega(2));
+    return init_rot;
 }
 
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
@@ -728,6 +788,8 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     vec.assign(initial_attitude.data(), initial_attitude.data() + initial_attitude.size());
     out<<YAML::Key << "initial_attitude" << YAML::Flow << vec;
+    vec.assign(target_attitude.data(), target_attitude.data() + target_attitude.size());
+    out<<YAML::Key << "target_attitude" << YAML::Flow << vec;
     vec.assign(initial_angular_rate.data(), initial_angular_rate.data() + initial_angular_rate.size());
     out<<YAML::Key << "initial_angular_rate" << YAML::Flow << vec;
 

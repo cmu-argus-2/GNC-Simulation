@@ -13,9 +13,6 @@
 class Simulation_Parameters {
    public:
     Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename);
-    Vector3 spinStabilizedRate(double tgt_ss_ang_vel);
-    Vector4 nadirPointingAttitude(VectorXd State, std::mt19937 gen);
-    Vector4 sunPointingAttitude(VectorXd State, std::mt19937 gen);
     
     VectorXd initializeSatellite(double epoch);
     void dumpSampledParametersToYAML(std::string results_folder);
@@ -139,6 +136,9 @@ class Simulation_Parameters {
     Vector3 initial_angular_rate; // [rad/s]
     VectorXd initial_state;
 
+    // For inertial three-axis pointing
+    Vector4 target_attitude; 
+
     // Index maps
     // using Seq = decltype(Eigen::seqN(0, 0)); // type alias for Eigen::seqN
     std::unordered_map<std::string, SliceDef> x_idx_map; // State Vector index map
@@ -198,6 +198,10 @@ class Simulation_Parameters {
     std::uniform_real_distribution<double> sim_start_time_dist;
 
     private:
+    Vector3 spinStabilizedRate(double tgt_ss_ang_vel);
+    Vector4 SSnadirPointingAttitude(VectorXd State, std::mt19937 gen);
+    Vector4 sunPointingAttitude(VectorXd State, std::mt19937 gen);
+    VectorXd threeAxisNadirPointingAttitude(VectorXd State); //, std::unordered_map<std::string, SliceDef> x_idx_map);
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
     void defineDistributions(std::string filename);
     void defineLUTs(std::string data_folder);

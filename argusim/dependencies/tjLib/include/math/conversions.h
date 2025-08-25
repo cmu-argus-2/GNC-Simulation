@@ -39,6 +39,14 @@ double angle(const Quaternion& q);
  */
 Vector3 axis(const Quaternion& q);
 
+/**
+ * @brief Convert a 4D vector to a quaternion
+ *
+ * @param q_vec 4D vector representing the quaternion (w, x, y, z)
+ * @return Quaternion the corresponding quaternion
+ */
+Quaternion vectorToQuaternion(const Vector4& q_vec);
+
 // TODO(tushaar): add sgn(x) to return -1 or 1 based on whether x is negative or
 // positive
 #endif

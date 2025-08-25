@@ -24,3 +24,7 @@ double angle(const Quaternion& q) {
 Vector3 axis(const Quaternion& q) {
     return Vector3{q.x(), q.y(), q.z()}.normalized();
 }
+
+Quaternion vectorToQuaternion(const Vector4& q_vec) {
+    return Quaternion{q_vec(0), q_vec(1), q_vec(2), q_vec(3)}.normalized();
+}

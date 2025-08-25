@@ -1,4 +1,5 @@
 numpy
+numpy-quaternion
 scipy
 matplotlib
 basemap==1.4.1

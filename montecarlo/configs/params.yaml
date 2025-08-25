@@ -231,6 +231,13 @@ initialization:
      start_ss_pointing: "Sun" # "Nadir" or "Sun"
      tgt_ss_ang_vel: 2.0 # [deg/s]
 
+     # three axis pointing initialization
+     start_three_axis: False
+     three_axis_target: "Nadir" # "Inertial" or "Nadir"
+     disperse_target_attitude : True # if inertial pointing
+     target_attitude : [1,0,0,0] # only accessed if disperse_target_attitude is False
+     initial_attitude_dev : 0.0 # stddev of initial attitude dispersion about target [deg]
+
      # Battery Settings (no deviations in battery capacity)
      battery_capacity: 270000 # Joules
      battery_initial_soc: 35 # [%] soc
