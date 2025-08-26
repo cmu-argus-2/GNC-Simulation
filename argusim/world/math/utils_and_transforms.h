@@ -142,6 +142,14 @@ void loadAllKernels();
 Matrix_3x3 Cspice2Eigen(SpiceDouble M[3][3]);
 
 /**
+ * @brief Cast a double[6][6] into an Eigen <double, 6, 6> matrix
+ *
+ * @param M SpiceDouble 6x6 matrix
+ * @return R Eigen 6x6 matrix
+ */
+Matrix_6x6 Cspice2Eigen6(SpiceDouble M[6][6]);
+
+/**
  * @brief Computes the rotation matrix from ECI to ECEF at a given time
  *
  * @param t_J2000 - seconds past J2000 i.e., seconds past Jan 1st 2000, 12:00:00 PM
@@ -156,6 +164,22 @@ Matrix_3x3 ECI2ECEF(double t_J2000);
  * @return R Eigen 3x3 matrix representing roation from ECEF to ECI
  */
 Matrix_3x3 ECEF2ECI(double t_J2000);
+
+/**
+ * @brief Computes the 6x6 transformation matrix from ECI to ECEF at a given time
+ *
+ * @param t_J2000 - seconds past J2000 i.e., seconds past Jan 1st 2000, 12:00:00 PM
+ * @return R Eigen 6x6 matrix representing transformation from ECI to ECEF
+ */
+Matrix_6x6 ECEF2ECI_rv(double t_J2000);
+
+/**
+ * @brief Computes the 6x6 transformation matrix from ECEF to ECI at a given time
+ *
+ * @param t_J2000 - seconds past J2000 i.e., seconds past Jan 1st 2000, 12:00:00 PM
+ * @return R Eigen 6x6 matrix representing transformation from ECEF to ECI
+ */
+Matrix_6x6 ECI2ECEF_rv(double t_J2000);
 
 /**
  * @brief Transforms a vector in ECEF frame to Geodetic coordinates

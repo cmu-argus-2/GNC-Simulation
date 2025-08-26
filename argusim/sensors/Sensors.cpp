@@ -57,25 +57,34 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 {
-    // Noise Distributions
-    static std::normal_distribution<double> pos_noise_dist(0, sc.gps_pos_std);
-    static std::normal_distribution<double> vel_noise_dist(0, sc.gps_vel_std);
-    
     Vector6 y = Vector6::Zero();
-
+    /*
     Matrix_3x3 R_ECI2ECEF = ECI2ECEF(t_J2000);
-
-    Vector3 pos_noise = Vector3::NullaryExpr([&](){return pos_noise_dist(gen);});
-    Vector3 vel_noise = Vector3::NullaryExpr([&](){return vel_noise_dist(gen);});
     
     // GPS returns measurements in ECEF 
     Vector3 OMEGA {0, 0, 7.292115E-5};
-    // [TODO:] bug of double multiplication with GPS sigma 
-    y(Eigen::seqN(0,3)) = R_ECI2ECEF*state(sc.x_idx_map["position"].to_seq()) + sc.gps_pos_std*pos_noise; // Add noise to the measurements
+
+    y(Eigen::seqN(0,3)) = R_ECI2ECEF*state(sc.x_idx_map["position"].to_seq()) + pos_noise; // Add noise to the measurements
 
     Vector3 r_ecef = R_ECI2ECEF*state(sc.x_idx_map["position"].to_seq());
-    y(Eigen::seqN(3,3)) = R_ECI2ECEF*state(sc.x_idx_map["velocity"].to_seq()) - OMEGA.cross(r_ecef) + sc.gps_vel_std*vel_noise;
+    y(Eigen::seqN(3,3)) = R_ECI2ECEF*state(sc.x_idx_map["velocity"].to_seq()) - OMEGA.cross(r_ecef) + vel_noise;
+    */
+    Matrix_6x6 R_ECI2ECEF = ECI2ECEF_rv(t_J2000);
+    y(Eigen::seqN(0,6)) = R_ECI2ECEF * state(sc.x_idx_map["translation"].to_seq());
 
+    if (sc.perfect_sensors) {
+        return y;
+    }
+
+    // Noise Distributions
+    static std::normal_distribution<double> pos_noise_dist(0, sc.gps_pos_std);
+    static std::normal_distribution<double> vel_noise_dist(0, sc.gps_vel_std);
+
+    Vector3 pos_noise = Vector3::NullaryExpr([&](){return pos_noise_dist(gen);});
+    Vector3 vel_noise = Vector3::NullaryExpr([&](){return vel_noise_dist(gen);});
+
+    y(Eigen::seqN(0,3)) += pos_noise;
+    y(Eigen::seqN(3,3)) += vel_noise;
     return y;
 }
 
@@ -85,6 +94,12 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
 Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
 {
     /* Gyroscope */ 
+    Vector3 omega_true = state(sc.x_idx_map["angular_rate"].to_seq()) * (180.0 / M_PI); // rad/s to deg/s
+
+    if (sc.perfect_sensors) {
+        return omega_true;
+    }
+
     // Gyro Noise Models
     static std::normal_distribution<double> white_noise_dist(0, sc.gyro_sigma_v);
 
@@ -95,7 +110,6 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
     Vector3 white_noise = Vector3::NullaryExpr([&](){return white_noise_dist(gen);});
 
     // Noisy Measurement 
-    Vector3 omega_true = state(sc.x_idx_map["angular_rate"].to_seq()) * (180.0 / M_PI); // rad/s to deg/s
     Vector3 omega_meas = (1 + sc.gyro_scale_factor_err)*omega_true + bias + white_noise;
     // Enforce gyro range limits
     for (int i = 0; i < 3; ++i) {
@@ -110,9 +124,6 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc)
 
 Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 {
-    // Magnetometer Noise Distribution
-    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
-
     Quaternion quat_BtoECI = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
 
     // True Magnetic Field
@@ -120,6 +131,13 @@ Vector3 Magnetometer(const VectorXd state, Simulation_Parameters sc)
 
     // Magnetic field in the body frame
     Vector3 B_body = quat_BtoECI.toRotationMatrix().transpose() * B_eci;
+
+    if (sc.perfect_sensors) {
+        return B_body;
+    }
+
+    // Magnetometer Noise Distribution
+    static std::normal_distribution<double> mag_noise_dist(0, sc.magnetometer_noise_std);
 
     // Noisy Measurement
     // Vector3 B_body_meas = random_SO3_rotation(mag_noise_dist, gen) * B_body;
@@ -162,14 +180,22 @@ VectorXd IMU(const VectorXd state, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 Vector4 StarTracker(const VectorXd state, Simulation_Parameters sc)
 {
-    // Star Tracker Noise Distribution
-    static std::normal_distribution<double> star_tracker_noise_dist(0, sc.star_tracker_std);
     // Quaternion representing the body frame to ECI frame transformation
     Quaternion quat = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
+
+    if (sc.perfect_sensors) {
+        Vector4 exact_quat{quat.w(), quat.x(), quat.y(), quat.z()};
+        return exact_quat;
+    }
+
+    // Star Tracker Noise Distribution
+    static std::normal_distribution<double> star_tracker_noise_dist(0, sc.star_tracker_std);
+
     Quaternion noise_quat(random_SO3_rotation(star_tracker_noise_dist, gen));
     // Apply noise to the quaternion
     Quaternion noisy_quat = quat * noise_quat;
     Vector4 star_tracker_measurement{noisy_quat.w(), noisy_quat.x(), noisy_quat.y(), noisy_quat.z()};
+
     return star_tracker_measurement;
 }
 
@@ -178,9 +204,6 @@ Vector4 StarTracker(const VectorXd state, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 {
-    // Photodiodes noise distribution
-    static std::normal_distribution<double> pd_noise_dist(0, sc.photodiode_std);
-    
     Quaternion quat = vectorToQuaternion(state(sc.x_idx_map["quaternion"].to_seq()));
     // Quaternion quat {state(6), state(7), state(8), state(9)};
     Vector3 r_eci = state(sc.x_idx_map["position"].to_seq());
@@ -192,9 +215,19 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
     // Shadow Factor
     double shadow = shadow_factor(r_eci, sun_pos_eci);
 
+    VectorXd solar_intensity_on_panel = shadow*140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm();
+
+    if (sc.perfect_sensors) {
+        solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel);
+        return solar_intensity_on_panel;
+    }
+
+    // Photodiodes noise distribution
+    static std::normal_distribution<double> pd_noise_dist(0, sc.photodiode_std);
+
     // Noisy Measurements
     VectorXd photodiode_noise = VectorXd::NullaryExpr(sc.num_photodiodes, [&](){return pd_noise_dist(gen);});
-    VectorXd solar_intensity_on_panel = shadow*140000*sc.G_pd_b.transpose()*sun_pos_body/sun_pos_body.norm() + photodiode_noise; // 140,000 : Nominal Solar lux
+    solar_intensity_on_panel += photodiode_noise; // 140,000 : Nominal Solar lux
 
     solar_intensity_on_panel = (solar_intensity_on_panel.array() < 0.0).select(0, solar_intensity_on_panel); // If the intensity is negative, set to 0
 

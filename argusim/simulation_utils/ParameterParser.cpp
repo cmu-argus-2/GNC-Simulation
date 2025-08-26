@@ -73,6 +73,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     useDT = params["useDragTorque"].as<bool>();
     useGG = params["useGravityGradient"].as<bool>();
 
+    // Debug Flags
+    perfect_sensors = params["debugFlags"]["perfect_sensors"].as<bool>();
+
     // Reaction Wheel
     num_RWs = params["reaction_wheels"]["N_rw"].as<int>();
     G_rw_b = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["reaction_wheels"]["rw_orientation"].as<std::vector<double>>().data(), 3, num_RWs);
@@ -837,6 +840,7 @@ PYBIND11_MODULE(pysim_utils, m) {
         .def_readonly("useSRP", &Simulation_Parameters::useSRP)
         .def_readonly("useSun", &Simulation_Parameters::useSun)
         .def_readonly("useMoon", &Simulation_Parameters::useMoon)
+        .def_readonly("perfect_sensors", &Simulation_Parameters::perfect_sensors)
         //
         .def_readonly("sp_area_LUT", &Simulation_Parameters::sp_area_LUT)
         //

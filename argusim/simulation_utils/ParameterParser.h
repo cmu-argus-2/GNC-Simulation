@@ -123,6 +123,7 @@ class Simulation_Parameters {
     bool useDT;   // set to False to deactivate Drag Torque calcs
     bool useGG;   // set to False to deactivate Gravity Gradient calcs
     bool useLUTs; // set to False to deactivate LUTs
+    bool perfect_sensors; // set to True to use perfect sensors
 
     /* Satellite Initialization */
     double semimajor_axis; // [m]

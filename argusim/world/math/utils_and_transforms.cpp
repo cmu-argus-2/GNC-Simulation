@@ -119,6 +119,18 @@ Matrix_3x3 Cspice2Eigen(SpiceDouble M[3][3]) {
     return R;
 }
 
+// Convert CSPICE Double array to 6x6 Eigen Matrix
+Matrix_6x6 Cspice2Eigen6(SpiceDouble M[6][6]) {
+    Matrix_6x6 R;
+    R << M[0][0], M[0][1], M[0][2], M[0][3], M[0][4], M[0][5],
+         M[1][0], M[1][1], M[1][2], M[1][3], M[1][4], M[1][5],
+         M[2][0], M[2][1], M[2][2], M[2][3], M[2][4], M[2][5],
+         M[3][0], M[3][1], M[3][2], M[3][3], M[3][4], M[3][5],
+         M[4][0], M[4][1], M[4][2], M[4][3], M[4][4], M[4][5],
+         M[5][0], M[5][1], M[5][2], M[5][3], M[5][4], M[5][5];
+    return R;
+}
+
 // TRANSFORMS
 
 Matrix_3x3 ECI2ECEF(double t_J2000) {
@@ -137,6 +149,24 @@ Matrix_3x3 ECEF2ECI(double t_J2000) {
     pxform_c("ITRF93", "J2000", t_J2000, Rot);
     
     return Cspice2Eigen(Rot);
+}
+
+Matrix_6x6 ECI2ECEF_rv(double t_J2000) {
+    SpiceDouble Rot[6][6];
+
+    loadAllKernels();
+    sxform_c("J2000", "ITRF93", t_J2000, Rot);
+    
+    return Cspice2Eigen6(Rot);
+}
+
+Matrix_6x6 ECEF2ECI_rv(double t_J2000) {
+    SpiceDouble Rot[6][6];
+
+    loadAllKernels();
+    sxform_c("ITRF93", "J2000", t_J2000, Rot);
+
+    return Cspice2Eigen6(Rot);
 }
 
 Vector3 ECEF2GEOD(Vector3 v_ecef) {
