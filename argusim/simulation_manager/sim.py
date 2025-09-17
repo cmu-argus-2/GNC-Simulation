@@ -171,16 +171,16 @@ class Simulator():
         self.state = rk4(self.state, control_input, self.params, self.current_time, dt)
         
         # Mask state through sensors
-        measurement = self.sensors(self.current_time, self.state, control_input)
+        measurement = self.sensors(self.current_time + dt, self.state, control_input)
         
         # Log pertinent Quantities
         if self.log and self.log_counter % self.log_interval == 0:
             # Log true state
-            self.logr.log_true_state(self.current_time, self.state, control_input)
+            self.logr.log_true_state(self.current_time + dt, self.state, control_input)
             # measurement data logging
-            self.logr.log_measurements(self.current_time, measurement)
+            self.logr.log_measurements(self.current_time + dt, measurement)
             # Log fsw state
-            self.logr.log_fsw_state(self.current_time, self.fsw_state, control_input)
+            self.logr.log_fsw_state(self.current_time + dt, self.fsw_state, control_input)
 
             self.log_counter = 1
         else:

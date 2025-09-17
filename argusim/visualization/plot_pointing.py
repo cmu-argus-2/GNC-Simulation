@@ -492,17 +492,16 @@ def three_axis_pointing_error_plots(pyparams, data_dicts, filepaths):
 
 def get_nadir_states(r_eci, v_eci):
     # return the nadir pointing attitude and angular velocity for the input data
-    nadir_quat = np.array([1.0, 0.0, 0.0, 0.0])
-    nadir_omega = np.zeros(3)
     z = -r_eci / np.linalg.norm(r_eci)  # nadir
     y = np.cross(z, v_eci)  # negative orbit normal
     y = y / np.linalg.norm(y)
     x = np.cross(y, z)  # ~ velocity vector
     x = x / np.linalg.norm(x)
     nadir_rotm = np.column_stack((x, y, z))
-    Mconv = np.array([[0, 1, 0],
-                      [0, 0, 1],
-                      [1, 0, 0]])
+    # Mconv = np.array([[0, 1, 0],
+    #                   [0, 0, 1],
+    #                   [1, 0, 0]])
+    Mconv = np.eye(3)
     nadir_rotm = nadir_rotm @ Mconv
     nadir_quat = qt.from_rotation_matrix(nadir_rotm)  # scalar first
     omega_eci = np.cross(r_eci, v_eci) / (np.linalg.norm(r_eci)**2)

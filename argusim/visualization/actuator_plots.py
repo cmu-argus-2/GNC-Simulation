@@ -93,13 +93,13 @@ def actuator_plots(pyparams, data_dicts, filepaths):
                 # Magnetorquers[k].set_voltage(volt_magnetorquer[k][j])
                 # mtb_dipole_moment[k][j] = np.linalg.norm(Magnetorquers[k].get_dipole_moment())
 
-        mtb_dipole_moment_labels = [f"MTB_{j} [Cm]" for j in range(num_MTBs)]
+        mtb_dipole_moment_labels = [f"MTB_{j} [Am^2]" for j in range(num_MTBs)]
         multiPlot(
         data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
         mtb_dipole_moment,
         seriesLabel=f"_{trial_number}",
         )
-    annotateMultiPlot(title="Magnetorquer Dipole Moment [C*m]", ylabels=mtb_dipole_moment_labels)
+    annotateMultiPlot(title="Magnetorquer Dipole Moment [Am^2]", ylabels=mtb_dipole_moment_labels)
     save_figure(itm.gcf(), plot_dir, "mtb_dipole_moment_true.png", close_after_saving)
 
     # ==========================================================================

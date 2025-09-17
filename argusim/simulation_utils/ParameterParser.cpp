@@ -501,9 +501,12 @@ VectorXd Simulation_Parameters::threeAxisNadirPointingAttitude(VectorXd State) {
     Matrix_3x3 nadirR;
     nadirR << x, y, z;
     Matrix_3x3 Mconv;
-    Mconv << 0, 1, 0,
-            0, 0, 1,
-            1, 0, 0;
+    // Mconv << 0, 1, 0,
+    //          0, 0, 1,
+    //          1, 0, 0;
+    Mconv << 1, 0, 0,
+             0, 1, 0,
+             0, 0, 1;
     nadirR = nadirR * Mconv;
     Eigen::Quaterniond q(nadirR);
 

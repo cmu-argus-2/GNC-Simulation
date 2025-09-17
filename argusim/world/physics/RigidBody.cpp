@@ -193,7 +193,7 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     VectorXd xk2 = x_old + half_dt * k2;
     xk2(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_half_dt;
     auto k3    = f(xk2, u, SC, t_J2000 + half_dt);
-    VectorXd xk3 = x_old + half_dt * k3;
+    VectorXd xk3 = x_old + dt * k3;
     xk3(SC.x_idx_map["mtb_currents"].to_seq()) = mtb_currents_dt;
     auto k4    = f(xk3, u, SC, t_J2000 + dt);
     x_new = x_old + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
