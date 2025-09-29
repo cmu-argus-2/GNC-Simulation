@@ -295,6 +295,10 @@ double UTCStringtoHours(std::string UTC)
     return t_h;
 }
 
+/**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolboxCelestialBodies.jl/blob/main/src/sun.jl
+ */
 Eigen::Vector3d sun_position_mod(double t_J2000)
 {
     // Number of Julian centuries from J2000 epoch.
@@ -344,6 +348,10 @@ Eigen::Vector3d sun_position_mod(double t_J2000)
     return s_mod;
 }
 
+/**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolbox.jl/blob/master/src/time/equation_of_time.jl
+ */
 double equation_of_time(double t_J2000)
 {
     // Mean longitude of the Sun.
@@ -365,6 +373,10 @@ double equation_of_time(double t_J2000)
     return eot * M_PI / 180.0;
 }
 
+/**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolbox.jl/blob/master/src/time/raan.jl
+ */
 double LTAN_to_RAAN(double ltan, double t_J2000)
 {
     // Get the sun position at noon (UT) represented in the MOD reference frame.

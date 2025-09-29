@@ -1,4 +1,5 @@
 
+// Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
 #ifndef _POSE_EKF_UTILS_AND_TRANSFORMS_
 #define _POSE_EKF_UTILS_AND_TRANSFORMS_
 
@@ -15,6 +16,12 @@ static constexpr double DIVIDE_BY_ZERO_TOLERANCE = 1E-5;
 #define DEG_2_RAD(x) ((x) * (M_PI / 180.0))
 #define RAD_2_DEG(x) ((x) * (180.0 / M_PI))
 
+/**
+ * @brief Slice of indices for Eigen vectors
+ *
+ * @param start : starting index of slice
+ * @param length : length of slice
+ */
 struct SliceDef {
     int start;
     int length;
@@ -84,7 +91,12 @@ Matrix_3x3 cleanRotMatrix(Matrix_3x3 R);
  */
 Matrix_3x3 random_SO3_rotation(std::normal_distribution<double> dist, std::mt19937 gen);
 
-// [TODO:] add a docstring
+/**
+ * @brief Converts a 4-element Eigen VectorXd to a Quaternion
+ * 
+ * @param vec : 4-element vector representing a quaternion
+ * @return vector as a Quaternion Eigen class
+ */
 Quaternion vectorToQuaternion(const Eigen::VectorXd& vec);
 
 /**
@@ -241,7 +253,6 @@ std::string TJ2000toUTCString(double t_J2000);
  */
 double UTCStringtoTJ2000 (std::string UTC);
 
-
 /**
  * @brief Converts a UTC time string to hours.
  *
@@ -254,6 +265,8 @@ double UTCStringtoTJ2000 (std::string UTC);
 double UTCStringtoHours(std::string UTC);
 
 /**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolboxCelestialBodies.jl/blob/main/src/sun.jl
  * @brief Computes the position of the Sun in the MOD (Mean of Date) frame at a given time.
  *
  * This function calculates the position of the Sun in the Mean of Date (MOD) frame based on the 
@@ -266,6 +279,8 @@ double UTCStringtoHours(std::string UTC);
 Eigen::Vector3d sun_position_mod(double t_J2000);
 
 /**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolbox.jl/blob/master/src/time/equation_of_time.jl
  * @brief Calculates the equation of time for a given Julian date.
  *
  * The equation of time is the difference between apparent solar time and mean solar time.
@@ -277,6 +292,8 @@ Eigen::Vector3d sun_position_mod(double t_J2000);
 double equation_of_time(double t_J2000);
 
 /**
+ * Copyright (c) 2014-2025: Ronan Arraes Jardim Chagas
+ * Based on https://github.com/JuliaSpace/SatelliteToolbox.jl/blob/master/src/time/raan.jl
  * @brief Converts Local Time of the Ascending Node (LTAN) to Right Ascension of the Ascending Node (RAAN).
  * 
  * This function calculates the Right Ascension of the Ascending Node (RAAN) based on the given Local Time of the Ascending Node (LTAN)

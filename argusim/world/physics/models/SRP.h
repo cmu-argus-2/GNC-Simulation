@@ -26,6 +26,8 @@ double shadow_factor(const Vector3 r_earth, const Vector3 r_sun);
 Vector3 SRP_acceleration(const Vector3 r, const Quaternion q, double t_J2000, double CR, double A, double m);
 
 /**
+ * Note: This formula/method is wrong. Work was done to implement a look-up table with the cross-sectional areas as a function of attitude,
+ * not yet merged. This is Low priority to fix.
  * @brief Computes area perpendicular to the velocity vector as a % of face area
  * 
  * @param q : Quaternion representing rotation from body frame to ECI

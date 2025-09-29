@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors
+
 #ifndef C___drag_H
 #define C___drag_H
 
@@ -30,6 +32,9 @@ Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q,
                     double t_J2000, double Cd, double A, double m, const Vector3 CoPM);
 
 /**
+ * Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors
+ * Taken from https://github.com/sisl/SatelliteDynamics.jl/blob/46f6c9265b1e648dd3891ad593b122a5d0bfa908/src/orbit_dynamics.jl#L418-L430
+ * 
  * @brief Compute atmospheric density at current time
  * 
  * @param r : position vector in ECI frame [UNITS : m]

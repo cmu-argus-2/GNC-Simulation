@@ -1,3 +1,5 @@
+// Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors
+
 #include "drag.h"
 
 #include <math.h>
@@ -5,7 +7,21 @@
 #include "utils_and_transforms.h"
 #include "SRP.h"
 
-
+/**
+ * @brief Computes atmospheric drag acceleration at a given position and time using the Harris-Priester model.
+ *
+ * This function computes the atmospheric drag acceleration based on the Harris-Priester 
+ * atmospheric model.
+ *
+ * @param r        Position vector in ECI coordinates (meters).
+ * @param v        Velocity vector in ECI coordinates (meters per second).
+ * @param q        Quaternion representing the spacecraft's orientation.
+ * @param t_J2000  Time in seconds since J2000 epoch.
+ * @param Cd       Drag coefficient.
+ * @param A        Reference area of the spacecraft (m^2).
+ * @param m        Mass of the spacecraft (kg).
+ * @return         Atmospheric drag acceleration vector (m/s^2).
+ */
 Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q, 
                             double t_J2000, double Cd, double A, double m)
 {
@@ -26,6 +42,22 @@ Vector3 drag_acceleration(const Vector3 r, const Vector3 v, const Quaternion q,
     return acceleration;
 }
 
+/**
+ * @brief Computes atmospheric drag torque at a given position and time using the Harris-Priester model.
+ *
+ * This function computes the atmospheric drag torque based on the Harris-Priester 
+ * atmospheric model.
+ *
+ * @param r        Position vector in ECI coordinates (meters).
+ * @param v        Velocity vector in ECI coordinates (meters per second).
+ * @param q        Quaternion representing the spacecraft's orientation.
+ * @param t_J2000  Time in seconds since J2000 epoch.
+ * @param Cd       Drag coefficient.
+ * @param A        Reference area of the spacecraft (m^2).
+ * @param m        Mass of the spacecraft (kg).
+ * @param CoPM     Center of Pressure vector.
+ * @return         Atmospheric drag torque vector (N·m).
+ */
 Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q, 
                     double t_J2000, double Cd, double A, double m, const Vector3 CoPM)
 {
@@ -48,6 +80,10 @@ Vector3 drag_torque(const Vector3 r, const Vector3 v, const Quaternion q,
     return torque;
 }
 
+/**
+ * Copyright (c) 2024 Duncan Eddy <duncan.eddy@gmail.com>, Stanford Intelligent Systems Laboratory, and contributors
+ * Based on https://github.com/sisl/SatelliteDynamics.jl/blob/46f6c9265b1e648dd3891ad593b122a5d0bfa908/src/orbit_dynamics.jl#L418-L430
+ */
 double density(const Vector3 r, double t_J2000) {
     // Load all kernels
     loadAllKernels();
