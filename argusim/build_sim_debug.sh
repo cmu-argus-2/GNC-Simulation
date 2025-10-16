@@ -18,6 +18,7 @@ curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/ear
 curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00011.tpc --output-dir data
 curl -O -C - --silent https://www.ngdc.noaa.gov/IAGA/vmod/igrf14.f --output-dir data
 curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls --output-dir data
+curl -O -C - --silent https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/earth_2025_250826_2125_predict.bpc --output-dir data
 
 mkdir -p build
 cd build/
