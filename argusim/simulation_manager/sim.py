@@ -63,7 +63,7 @@ class Simulator():
         # # Indexing
         # State
         self.Idx = {}
-        self.Idx["NX"] = 22 + self.num_RWs
+        self.Idx["NX"] = 22 + self.num_RWs + self.num_MTBs + 4
         self.Idx["X"] = dict()
         self.Idx["X"]["ECI_POS"] = slice(0, 3)
         self.Idx["X"]["ECI_VEL"] = slice(3, 6)
@@ -73,13 +73,14 @@ class Simulator():
         self.Idx["X"]["ROT"] = slice(6, 13)
         self.Idx["X"]["SUN_POS"] = slice(13, 16)
         self.Idx["X"]["MAG_FIELD"] = slice(16, 19)
-        self.Idx["X"]["RW_SPEED"] = slice(19, 19 + self.num_RWs)
-        self.Idx["X"]["GYRO_BIAS"] = slice(19 + self.num_RWs,22 + self.num_RWs)
-        self.Idx["X"]["BAT"] = slice(22 + self.num_RWs, 26 + self.num_RWs)
-        self.Idx["X"]["BAT_SOC"] = slice(22 + self.num_RWs, 23 + self.num_RWs)
-        self.Idx["X"]["BAT_TEMP"] = slice(23 + self.num_RWs, 24 + self.num_RWs)
-        self.Idx["X"]["BAT_VOLT"] = slice(24 + self.num_RWs, 25 + self.num_RWs)
-        self.Idx["X"]["BAT_CUR"] = slice(25 + self.num_RWs, 26 + self.num_RWs)
+        self.Idx["X"]["I_MTB"] = slice(19, 19+self.num_MTBs)
+        self.Idx["X"]["RW_SPEED"] = slice(19+self.num_MTBs, 19 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["GYRO_BIAS"] = slice(19 + self.num_MTBs + self.num_RWs,22 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["BAT"] = slice(22 + self.num_MTBs + self.num_RWs, 26 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["BAT_SOC"] = slice(22 + self.num_MTBs + self.num_RWs, 23 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["BAT_TEMP"] = slice(23 + self.num_MTBs + self.num_RWs, 24 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["BAT_VOLT"] = slice(24 + self.num_MTBs + self.num_RWs, 25 + self.num_MTBs + self.num_RWs)
+        self.Idx["X"]["BAT_CUR"] = slice(25 + self.num_MTBs + self.num_RWs, 26 + self.num_MTBs + self.num_RWs)
 
         # Control Input
         self.num_RWs = self.obsw_params["reaction_wheels"]["N_rw"]
