@@ -86,22 +86,22 @@ Vector3 intrinsic_zyx_decomposition(const Quaternion& q) {
 /* COORDINATE TRANSFORMATIONS FROM SPICE */
 
 // Basic Utility functions
-void loadAllKernels() {
-    std::filesystem::path path(__FILE__);
-    std::string root = path.parent_path().parent_path().parent_path().string(); // utils_and_transforms.cpp --> math --> world --> dynamics sim
-    std::string data_folder = root + "/data/";
-
-
-    std::string sol_system_spk = data_folder + "de440.bsp";
-    std::string earth_rotation_pck = data_folder + "earth_latest_high_prec.bpc";
-    std::string earth_dimensions_pck = data_folder + "pck00011.tpc";
-    std::string leap_seconds_lsk = data_folder + "pck00011.tpc";
-    std::string leap_seconds_lsk2 = data_folder + "naif0012.tls";
-    
+void loadAllKernels() {    
     SpiceInt count;
-    ktotal_c("ALL", &count);
+    ktotal_c("ALL", &count); // returns number of currently loaded kernels
 
     if (count == 0) {
+        std::filesystem::path path(__FILE__);
+        std::string root = path.parent_path().parent_path().parent_path().string(); // utils_and_transforms.cpp --> math --> world --> dynamics sim
+        std::string data_folder = root + "/data/";
+
+
+        std::string sol_system_spk = data_folder + "de440.bsp";
+        std::string earth_rotation_pck = data_folder + "earth_latest_high_prec.bpc";
+        std::string earth_dimensions_pck = data_folder + "pck00011.tpc";
+        std::string leap_seconds_lsk = data_folder + "pck00011.tpc";
+        std::string leap_seconds_lsk2 = data_folder + "naif0012.tls";
+
         furnsh_c(sol_system_spk.c_str());
         furnsh_c(earth_rotation_pck.c_str());
         furnsh_c(earth_dimensions_pck.c_str());
@@ -189,6 +189,39 @@ Vector3 ECEF2GEOD(Vector3 v_ecef) {
     Vector3 geod (lon, lat, alt);
     
     return geod;
+}
+
+Vector3 ECEF2SPH(Vector3 v_ecef) {
+
+    SpiceDouble v[3]; //ECEF vector as a spice double
+
+    SpiceDouble r, colat, slon;
+
+    loadAllKernels();
+    
+    vpack_c(v_ecef(0), v_ecef(1), v_ecef(2), v); // cast Vector 3 to SpiceDouble[3]
+    recsph_c(v, &r, &colat, &slon);
+    // r [input units], colatitude [rad], longitude [rad]
+    Vector3 sph (r, colat, slon);
+    
+    return sph;
+}
+
+
+Vector3 ECEF2LAT(Vector3 v_ecef) {
+
+    SpiceDouble v[3]; //ECEF vector as a spice double
+
+    SpiceDouble r, lon, lat;
+
+    loadAllKernels();
+    
+    vpack_c(v_ecef(0), v_ecef(1), v_ecef(2), v); // cast Vector 3 to SpiceDouble[3]
+    reclat_c(v, &r, &lon, &lat);
+    // r [input units], longitude [rad], latitude [rad]
+    Vector3 latcoord (r, lon, lat);
+    
+    return latcoord;
 }
 
 Vector3 ECI2GEOD(Vector3 v_eci, double t_J2000){

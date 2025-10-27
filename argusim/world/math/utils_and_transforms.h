@@ -202,6 +202,22 @@ Matrix_6x6 ECI2ECEF_rv(double t_J2000);
 Vector3 ECEF2GEOD(Vector3 v_ecef);
 
 /**
+ * @brief Transforms a vector in ECEF frame to spherical coordinates
+ *
+ * @param v_ecef - vector in ECEF frame [UNITS : m]
+ * @return vector in spherical coordinates (r, colat, lon) [m, rad, rad]
+ */
+Vector3 ECEF2SPH(Vector3 v_ecef);
+
+/**
+ * @brief Transforms a vector in ECEF frame to latitudinal coordinates
+ *
+ * @param v_ecef - vector in ECEF frame [UNITS : m]
+ * @return vector in latitudinal coordinates (r, lon, lat) [m, rad, rad]
+ */
+Vector3 ECEF2LAT(Vector3 v_ecef);
+
+/**
  * @brief Transforms a vector in SEZ frame to ECEF
  *
  * @param r_sez - vector in ECEF frame
