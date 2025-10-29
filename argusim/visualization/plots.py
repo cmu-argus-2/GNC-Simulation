@@ -153,8 +153,9 @@ class MontecarloPlots:
 
 
     def sensor_measurement_plots(self):
-        with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
-                pyparams = yaml.safe_load(f)       
+        # with open(os.path.join(self.trials_dir, "../../../configs/params.yaml"), "r") as f:
+        with open(os.path.join(self.trials_dir, "../params.yaml"), "r") as f:
+            pyparams = yaml.safe_load(f)  
         
         if pyparams["PlotFlags"]["sensor_measurements"]:
             # ======================= Gyro measurement plots =======================
