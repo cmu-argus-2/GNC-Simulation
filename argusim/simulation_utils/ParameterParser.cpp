@@ -374,11 +374,7 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
             }
         }
     } else {
-        mtb_working_status = params["magnetorquers"]["failure_status"].as<std::vector<bool>>();
-    }
-    // Print failure status for debugging
-    for (size_t i = 0; i < mtb_working_status.size(); ++i) {
-        std::cout << "Magnetorquer " << i << " failure status: " << (mtb_working_status[i] ? "Operational" : "Failed") << std::endl;
+        mtb_working_status = params["magnetorquers"]["working_status"].as<std::vector<bool>>();
     }
 
     Magnetorquer magnetorquer = Magnetorquer(
