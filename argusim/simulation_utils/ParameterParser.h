@@ -50,6 +50,7 @@ class Simulation_Parameters {
     VectorXd Bdt;
     MatrixXd mag_mtb_sens;
     MatrixXd G_mtb_b; // Matrix whose columns are the field axes of each MTB in the body frame
+    std::vector<bool> mtb_working_status;
     double max_voltage;
     double max_current_rating;
     double max_power;

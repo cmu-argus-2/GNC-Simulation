@@ -10,7 +10,8 @@ class Magnetorquer {
         Magnetorquer(int N_MTBs, VectorXd mtb_resistance, double A_cross, double N_turns,
                            double maxVolt, double maxCurrentRating, double maxPower, 
                            VectorXd mtb_inductance, MatrixXd mag_mtb_sens_mat, MatrixXd mtb_orientation,
-                           VectorXd mtb_Ahdt, VectorXd mtb_Adt, VectorXd mtb_Bhdt, VectorXd mtb_Bdt);
+                           VectorXd mtb_Ahdt, VectorXd mtb_Adt, VectorXd mtb_Bhdt, VectorXd mtb_Bdt, 
+                           std::vector<bool> status);
         /**
          * @brief Computes body-frame magnetic dipole moment of a single magnetorquer
          * 
@@ -75,7 +76,7 @@ class Magnetorquer {
          * @param mode : "first", "half" or "full" to get the current at the start, half-way or end of the time step
          * @return currents through each magnetorquer at the specified time within the time step [UNITS: A]
          */
-        VectorXd getVoltageOrCurrent(VectorXd voltages, VectorXd currents, std::string mode);
+        VectorXd getCurrent(VectorXd voltages, VectorXd currents, std::string mode);
         
         /**
          * @brief Computes the magnetic field at the magnetometer due to the magnetorquers' dipole moments
@@ -100,6 +101,7 @@ class Magnetorquer {
         VectorXd Bdt;
         MatrixXd mag_mtb_sens; 
         MatrixXd G_mtb_b;
+        std::vector<bool> working_status;
 };
 
 

@@ -64,6 +64,7 @@ def actuator_plots(pyparams, data_dicts, filepaths):
             pyparams2["Bhdt"],
             pyparams2["Adt"],
             pyparams2["Bdt"],
+            pyparams2["mtb_working_status"],
         )]
     
     itm.figure()

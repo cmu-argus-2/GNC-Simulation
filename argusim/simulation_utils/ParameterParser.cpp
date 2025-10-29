@@ -354,6 +354,32 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
         Bdt[i] = (1 - Adt[i]) / resistances[i];
     }
 
+    // Failure injection
+    bool random_failures = params["magnetorquers"]["random_failures"].as<bool>();
+    int N_rand_failures  = params["magnetorquers"]["N_rand_failures"].as<int>();
+    mtb_working_status = std::vector<bool>(num_MTBs, true);
+    
+    if (random_failures) {
+        if (N_rand_failures > num_MTBs) {
+            throw std::invalid_argument("Number of random magnetorquer failures exceeds total number of magnetorquers.");
+        }
+        std::uniform_int_distribution<> mtb_index_dist(0, num_MTBs - 1);
+        int failed_indices_count = 0;
+        while (failed_indices_count < N_rand_failures) {
+            int rand_index = mtb_index_dist(gen);
+            if (mtb_working_status[rand_index] == true) {
+                mtb_working_status[rand_index] = false; // mark as failed
+                failed_indices_count++;
+            }
+        }
+    } else {
+        mtb_working_status = params["magnetorquers"]["failure_status"].as<std::vector<bool>>();
+    }
+    // Print failure status for debugging
+    for (size_t i = 0; i < mtb_working_status.size(); ++i) {
+        std::cout << "Magnetorquer " << i << " failure status: " << (mtb_working_status[i] ? "Operational" : "Failed") << std::endl;
+    }
+
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["magnetorquers"]["N_mtb"].as<int>(),
                                     resistances,
@@ -368,7 +394,8 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
                                     Ahdt,
                                     Adt,
                                     Bhdt,
-                                    Bdt
+                                    Bdt,
+                                    mtb_working_status
                                     );
 
     return magnetorquer;
@@ -773,6 +800,8 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
 
     vec.assign(mag_mtb_sens.data(), mag_mtb_sens.data() + mag_mtb_sens.size());
     out << YAML::Key << "mag_mtb_sens" << YAML::Flow << vec;
+
+    out << YAML::Key << "mtb_working_status" << YAML::Value << mtb_working_status;
 
     out << YAML::Key << "gps_pos_std" << gps_pos_std;
     out << YAML::Key << "gps_vel_std" << gps_vel_std;
