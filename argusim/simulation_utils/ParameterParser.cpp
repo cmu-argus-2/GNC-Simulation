@@ -25,6 +25,7 @@
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
 #include "pybind11/eigen.h"
 #include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
 #pragma GCC diagnostic pop
 #endif
 
@@ -862,6 +863,7 @@ PYBIND11_MODULE(pysim_utils, m) {
         //
         .def_readonly("num_MTBs", &Simulation_Parameters::num_MTBs)
         .def_readonly("G_mtb_b", &Simulation_Parameters::G_mtb_b)
+        .def_readonly("mtb_working_status", &Simulation_Parameters::mtb_working_status)
         //
         .def_readonly("num_panels", &Simulation_Parameters::num_panels)
         //
