@@ -28,7 +28,7 @@ def run(sim):
 
     # Run iterations
     while sim_delta_time <= sim.params.MAX_TIME:
-        ctrl_input = np.zeros(sim.Idx["NU"])
+        ctrl_input = np.zeros(sim.Idx.CONTROLS.NCONTROLS)
         # Alternate control between max and min every 100 seconds
         period = 1
         phase = int(sim_delta_time // period) % 2
