@@ -25,7 +25,7 @@ class STATES:
 
 class SENSORS:
     def __init__(self, num_stk, num_photodiodes, num_rws, num_MTBs, num_panels):
-        self.NSENSORS       = 10 + num_stk + num_photodiodes + num_rws + num_MTBs + num_panels
+        self.NSENSORS       = 21 + num_stk + num_photodiodes + num_rws + num_MTBs + num_panels
         self.GPS            = slice(0, 6)
         self.GPS_POS        = slice(0, 3)
         self.GPS_VEL        = slice(3, 6)
