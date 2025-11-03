@@ -64,6 +64,17 @@ class CONTROLS:
 
 class IDX:
     def __init__(self, num_RWs, num_MTBs, num_stk, num_photodiodes, num_panels):
+        
         self.STATES = STATES(num_RWs, num_MTBs)
         self.SENSORS = SENSORS(num_stk, num_photodiodes, num_RWs, num_MTBs, num_panels)
         self.CONTROLS = CONTROLS(num_RWs, num_MTBs)
+
+        self.NSTATES   = self.STATES.NSTATES
+        self.NSENSORS  = self.SENSORS.NSENSORS
+        self.NCONTROLS = self.CONTROLS.NCONTROLS
+        self.NRWS      = num_RWs
+        self.NMTBS     = num_MTBs
+        self.NSTK      = num_stk
+        self.NPHOTODIODES = num_photodiodes
+        self.NPANELS   = num_panels
+        
