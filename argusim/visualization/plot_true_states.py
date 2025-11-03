@@ -9,7 +9,7 @@ from argusim.visualization.plot_helper import (
     save_figure,
 )
 from argusim.visualization.isolated_trace import itm
-from argusim.build.world.pyphysics import ECI2GEOD
+from argusim.build.world.pyframes import ECI2GEOD
 import matplotlib.pyplot as plt
 
 def plot_true_st(pyparams, data_dicts, filepaths):

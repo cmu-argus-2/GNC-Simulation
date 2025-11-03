@@ -6,6 +6,13 @@
 #include <cmath>
 #include <random>
 
+#ifdef USE_PYBIND_TO_COMPILE
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"   // purposely comparing floats
+#include "pybind11/eigen.h"
+#pragma GCC diagnostic pop
+#endif
+
 // rotation matrix elements under this threshhold will be reset to 0
 static constexpr double ROT_MAT_0_THRESH = 1e-10;
 
@@ -101,12 +108,14 @@ void loadAllKernels() {
         std::string earth_dimensions_pck = data_folder + "pck00011.tpc";
         std::string leap_seconds_lsk = data_folder + "pck00011.tpc";
         std::string leap_seconds_lsk2 = data_folder + "naif0012.tls";
+        std::string earth_rot_pred_pck = data_folder + "earth_2025_250826_2125_predict.bpc";
 
         furnsh_c(sol_system_spk.c_str());
         furnsh_c(earth_rotation_pck.c_str());
         furnsh_c(earth_dimensions_pck.c_str());
         furnsh_c(leap_seconds_lsk.c_str());
         furnsh_c(leap_seconds_lsk2.c_str());
+        furnsh_c(earth_rot_pred_pck.c_str());
     }; // only load kernel if not already loaded
     
     
@@ -440,3 +449,19 @@ double LTAN_to_RAAN(double ltan, double t_J2000)
 double LTDN_to_RAAN(double ltdn, double t_J2000) {
     return LTAN_to_RAAN(fmod(ltdn + 12, 24), t_J2000);
 }
+
+#ifdef USE_PYBIND_TO_COMPILE
+PYBIND11_MODULE(pyframes, m) {
+    m.doc() = "pybind11 utils and transforms plugin";   // module docstring    
+    m.def("ECI2GEOD", &ECI2GEOD, "ECI to Geodetic Coordinates");
+    m.def("ECI2ECEF", &ECI2ECEF, "ECI to ECEF Coordinates");
+    m.def("ECEF2ECI", &ECEF2ECI, "ECEF to ECI Coordinates");
+    m.def("ECI2ECEF_rv", &ECI2ECEF_rv, "ECI to ECEF rv Coordinates");
+    m.def("ECEF2ECI_rv", &ECEF2ECI_rv, "ECEF to ECI rv Coordinates");
+    m.def("SEZ2ECEF", &SEZ2ECEF, "SEZ to ECEF Coordinates");
+    m.def("ECEF2LAT", &ECEF2LAT, "ECEF to Latitudinal Coordinates");
+    m.def("unixToJ2000", &unixToJ2000, "unix to J2000 Time");
+    m.def("TJ2000toUTC", &TJ2000toUTC, "TJ2000 to UTC Time");
+    m.def("TJ2000toUTCString", &TJ2000toUTCString, "TJ2000 to UTC Time String");
+}
+#endif

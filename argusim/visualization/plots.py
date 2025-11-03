@@ -12,7 +12,6 @@ from argusim.visualization.plot_helper import (
     save_figure,
 )
 from argusim.visualization.isolated_trace import itm
-from argusim.build.world.pyphysics import ECI2GEOD
 
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
 RED = "\033[31m"

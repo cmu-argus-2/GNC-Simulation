@@ -112,7 +112,9 @@ VectorXd AttitudeDynamics(const VectorXd& x, const VectorXd& u,int num_MTBs, int
     
     // Magnetorquers
     auto mtb_currents = x(x_idx_map["mtb_currents"].to_seq());
-    tau += MTB.getTorque(mtb_currents, q, MagneticField(r, t_J2000));
+    auto mag_field = x(x_idx_map["magnetic_field"].to_seq());
+    tau += MTB.getTorque(mtb_currents, q, mag_field);
+    // tau += MTB.getTorque(mtb_currents, q, MagneticField(r, t_J2000));
 
     /* Perturbations */
     if (useDT) {
@@ -238,8 +240,8 @@ VectorXd BatteryWrapper(const VectorXd& x, const VectorXd& u, Simulation_Paramet
 #ifdef USE_PYBIND_TO_COMPILE
 PYBIND11_MODULE(pyphysics, m) {
     m.doc() = "pybind11 physics plugin";   // module docstring    
-
     m.def("rk4", &rk4, "rk4 integrator");
-    m.def("ECI2GEOD", &ECI2GEOD, "ECI to Geodetic Coordinates");
+    m.def("MagneticField", &MagneticField, "Magnetic Field in ECI J2000.");
+    m.def("MagneticFieldSEZ", &MagneticFieldSEZ, "Magnetic Field in SEZ");
 }
 #endif

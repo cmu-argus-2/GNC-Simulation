@@ -4,6 +4,11 @@ add_library(math SHARED math/utils_and_transforms.cpp)
 target_link_libraries(math PUBLIC Eigen3::Eigen tjLib spice)
 target_include_directories(math PUBLIC "math")
 
+pybind11_add_module(pyframes SHARED math/utils_and_transforms.cpp)
+target_link_libraries(pyframes PUBLIC Eigen3::Eigen tjLib spice)
+target_include_directories(pyframes PUBLIC "math")
+target_compile_definitions(pyframes PRIVATE USE_PYBIND_TO_COMPILE)
+
 add_subdirectory(physics/models)
 
 add_library(physics SHARED physics/RigidBody.cpp)
@@ -14,3 +19,5 @@ pybind11_add_module(pyphysics SHARED physics/RigidBody.cpp)
 target_link_libraries(pyphysics PUBLIC Eigen3::Eigen tjLib models math sim_utils actuators)
 target_include_directories(pyphysics PUBLIC "physics")
 target_compile_definitions(pyphysics PRIVATE USE_PYBIND_TO_COMPILE)
+
+

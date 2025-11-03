@@ -4,8 +4,8 @@
 # -----------------------------------------------------------------------------------------------------------
 MAX_TIME: 18000 # 96000 # [s]
 dt: 0.1 # 0.1         # [s]
-earliest_sim_start_time_UTC: 2024-10-01 12:00:00
-latest_sim_start_time_UTC: 2024-10-28 23:59:59
+earliest_sim_start_time_UTC: 2026-06-01 12:00:00
+latest_sim_start_time_UTC: 2028-10-28 23:59:59
 useDrag : False
 useSRP : False
 useSun : False
