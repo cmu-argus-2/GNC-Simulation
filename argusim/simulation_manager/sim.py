@@ -38,20 +38,18 @@ class Simulator():
         
         # Spacecraft Config
         self.params = SimParams(self.config_path, self.trial_number, self.log_directory, data_path)
-        self.num_RWs = self.params.num_RWs
-        self.num_MTBs = self.params.num_MTBs
-        self.num_photodiodes = self.params.num_photodiodes
-        self.num_panels = self.params.num_panels
-        self.num_stk = self.params.num_stk
-
+        
+        # Indexing
+        self.Idx = IDX(self.params.num_RWs, self.params.num_MTBs, 
+                       self.params.num_stk, self.params.num_photodiodes, 
+                       self.params.num_panels, self.params.num_deploy_sensors)
+        
         # Initialization
         self.fsw_state = np.zeros((28,))
         self.state = np.array(self.params.initial_state)
         self.J2000_start_time = self.params.sim_start_time
         self.current_time = self.J2000_start_time
-        self.control_input = np.zeros((self.params.num_MTBs + self.params.num_RWs + 1)) # MTBs + RW + Jetson ON?
-
-        self.Idx = IDX(self.num_RWs, self.num_MTBs, self.num_stk, self.num_photodiodes, self.num_panels)
+        self.control_input = np.zeros((self.Idx.NMTBS + self.Idx.NRWS + 1)) # MTBs + RW + Jetson ON?
 
         percent_to_log = self.obsw_params["PlotFlags"]["percent_to_log"]
         self.log_counter = 0
@@ -59,19 +57,20 @@ class Simulator():
 
         # Logging
         if self.log:
-            self.logr = SimLogger(log_directory, self.num_RWs, self.num_stk, self.num_photodiodes, self.num_MTBs, self.num_panels, self.J2000_start_time)
-
+            self.logr = SimLogger(log_directory, self.Idx, self.J2000_start_time)
+            # self.num_RWs, self.num_stk, self.num_photodiodes, self.num_MTBs, self.num_panels, 
+            # Idx.NRWS, Idx.NSTK, Idx.NPHOTODIODES, Idx.NMTBS, Idx.NPANELS
     
     def set_control_input(self, u):
         '''
             Sets the control input field of the class
             Exists for FSW to provide control inputs
         '''
-        if len(u) < self.num_MTBs:
+        if len(u) < self.Idx.NMTBS:
             raise Exception("Control Input not provided to all Magnetorquers")
-        elif len(u) == self.num_MTBs:
+        elif len(u) == self.Idx.NMTBS:
             self.control_input[0:len(u)] = u # Only magnetorquers
-        elif len(u) == self.num_MTBs + self.num_RWs:
+        elif len(u) == self.Idx.NMTBS + self.Idx.NRWS:
             self.control_input[0:len(u)] = u # Only magnetorquers + RW
         else:
             self.control_input = u # magnetorquers + RWs + Jetson

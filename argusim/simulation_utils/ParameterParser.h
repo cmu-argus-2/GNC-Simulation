@@ -6,6 +6,7 @@
 
 #include "math/EigenWrapper.h"
 #include "Magnetorquer.h"
+#include "Deployable.h"
 #include "yaml-cpp/yaml.h"
 #include "utils_and_transforms.h"
 
@@ -27,6 +28,19 @@ class Simulation_Parameters {
     double mass; // [Kg]
     Matrix_3x3 I_sat; // [kg.m^2]
     double A; // [m^2] face area of each facet
+
+    // Deployables
+    int num_deployables;
+    VectorXd deployable_masses; // [Kg]
+    MatrixXd deployable_inertia; // [kg.m^2]
+    MatrixXd deployable_com_stowed; // [m]
+    MatrixXd deployable_orient_stowed; // [deg]
+    MatrixXd deployable_com_deployed; // [m]
+    MatrixXd deployable_orient_deployed; // [deg]
+    std::vector<bool> deployable_status; // true if deployed, false if stowed
+    int num_deploy_sensors;
+    std::vector<bool> sensed_deployable; // true if it has sensor, false if not
+    Deployable DPB;
 
     // Center of Pressure/Mass arm
     Vector3 CoPM; // [m,m,m]
@@ -205,6 +219,7 @@ class Simulation_Parameters {
     Vector4 sunPointingAttitude(VectorXd State, std::mt19937 gen);
     VectorXd threeAxisNadirPointingAttitude(VectorXd State); //, std::unordered_map<std::string, SliceDef> x_idx_map);
     Magnetorquer load_MTB(std::string filename, std::mt19937 gen);
+    Deployable load_Deployables(std::string filename, std::mt19937 gen);
     void defineDistributions(std::string filename);
     void defineLUTs(std::string data_folder);
     std::mt19937 loadSeed(int trial_number);

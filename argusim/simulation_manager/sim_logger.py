@@ -1,13 +1,9 @@
 from argusim.simulation_manager import MultiFileLogger
-
+from argusim.simulation_manager.indexing import IDX
 class SimLogger(MultiFileLogger):
-    def __init__(self, log_directory, num_RWs, num_stk, num_photodiodes, num_MTBs, num_panels, J2000_start_time):
+    def __init__(self, log_directory, Idx: IDX, J2000_start_time):
         super().__init__(log_directory)
-        self.num_RWs = num_RWs
-        self.num_stk = num_stk
-        self.num_photodiodes = num_photodiodes
-        self.num_MTBs = num_MTBs
-        self.num_panels = num_panels
+        self.Idx = Idx
         self.J2000_start_time = J2000_start_time
 
         self.state_labels = ["r_x ECI [m]", 
@@ -29,8 +25,8 @@ class SimLogger(MultiFileLogger):
                             "xMag ECI [T]",
                             "yMag ECI [T]",
                             "zMag ECI [T]"] + \
-                            ["I_MTB_" + str(i) + " [A]" for i in range(self.num_MTBs)] + \
-                            ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.num_RWs)] + \
+                            ["I_MTB_" + str(i) + " [A]" for i in range(self.Idx.NMTBS)] + \
+                            ["omega_RW_" + str(i) + " [rad/s]" for i in range(self.Idx.NRWS)] + \
                             ["bias_x [deg/s]",
                             "bias_y [deg/s]",
                             "bias_z [deg/s]"]    + \
@@ -49,17 +45,19 @@ class SimLogger(MultiFileLogger):
             "mag_x_body [muT]",
             "mag_y_body [muT]",
             "mag_z_body [muT]"]
-        if self.num_stk > 0:
+        if self.Idx.NSTK > 0:
             self.measurement_labels += ["star_tracker_qw [-]", "star_tracker_qx [-]", 
-                                        "star_tracker_qy [-]", "star_tracker_qz [-]"]
+                                        "star_tracker_qy [-]", "star_tracker_qz [-]"]  # self.Idx.NPHOTODIODES
         
-        self.measurement_labels += ["light_sensor_lux [lx]" + str(i) for i in range(self.num_photodiodes)] \
-                                + ['mtb_power [W]' + str(i) for i in range(self.num_MTBs)] \
-                                + ['solar_power [W]' + str(i) for i in range(self.num_panels)] \
+        self.measurement_labels += ["light_sensor_lux [lx]" + str(i) for i in range(self.Idx.NPHOTODIODES)] \
+                                + ['mtb_power [W]' + str(i) for i in range(self.Idx.NMTBS)] \
+                                + ['solar_power [W]' + str(i) for i in range(self.Idx.NPANELS)] \
                                 + ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
                                 "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
                                 "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
                                 # + ["rw_encoder_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
+        if self.Idx.NDEPLOYS > 0:
+            self.measurement_labels += ["deployment_sensor [mm]" + str(i) for i in range(self.Idx.NDEPLOYS)]
 
         self.fsw_labels = ["fsw_gps_posx ECI [m]", 
                             "fsw_gps_posy ECI [m]", 
@@ -90,8 +88,8 @@ class SimLogger(MultiFileLogger):
                             "fsw_mag_eci_y",
                             "fsw_mag_eci_z"]
 
-        self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.num_MTBs)] \
-                          + ["T_RW_" + str(i) + " [Nm]" for i in range(self.num_RWs)] + ["Jetson ON"]
+        self.input_labels = ["V_MTB_" + str(i) + " [V]" for i in range(self.Idx.NMTBS)] \
+                          + ["T_RW_" + str(i) + " [Nm]" for i in range(self.Idx.NRWS)] + ["Jetson ON"]
 
        
     def log_measurements(self, current_time, measurements):

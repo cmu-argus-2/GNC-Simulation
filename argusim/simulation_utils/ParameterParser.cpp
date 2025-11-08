@@ -18,6 +18,7 @@
 #include "ReactionWheel.h"
 #include "Magnetorquer.h"
 #include "MagneticField.h"
+#include "Deployable.h"
 #include "SRP.h"
 
 #ifdef USE_PYBIND_TO_COMPILE
@@ -37,7 +38,8 @@
 // ==========================================================================
 
 Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_number, std::string results_folder, std::string data_filename) : 
-                                    dev(loadSeed(trial_number)), MTB((defineDistributions(filename), load_MTB(filename, dev)))
+                                    dev(loadSeed(trial_number)), 
+                                    MTB((defineDistributions(filename), load_MTB(filename, dev)))
 {    
     /* Parse parameters */
     YAML::Node params = YAML::LoadFile(filename);
@@ -56,6 +58,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_sat(0,0) = Ixx_dist(dev);
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
+
+    // Deployables
+    DPB = load_Deployables(filename, dev);
 
     // Center of Pressure/Mass arm
     CoPM = Vector3::NullaryExpr([&](){return CoPM_dist(dev);});
@@ -258,6 +263,9 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     y_idx_map["bat_readings"]    = {ny, 8}; 
     ny += 8;
     y_idx_map["jetson_power"]    = {ny, 1};
+    ny += 1;
+    y_idx_map["deployment"]      = {ny, num_deploy_sensors};
+    ny += num_deploy_sensors;
 
     // Populate State Vector
     initial_state = initializeSatellite(sim_start_time);
@@ -396,6 +404,69 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
                                     );
 
     return magnetorquer;
+}
+
+Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt19937 gen)
+{
+    YAML::Node params = YAML::LoadFile(filename);
+    num_deployables = params["deployables"]["N_deployables"].as<int>();
+    deployable_masses = Eigen::Map<VectorXd>(params["deployables"]["deployable_mass"].as<std::vector<double>>().data(), num_deployables);
+    
+    // deployable_com_stowed
+    deployable_inertia = Eigen::Map<Eigen::MatrixXd, Eigen::RowMajor>(params["deployables"]["deployable_inertia"].as<std::vector<double>>().data(), 3*num_deployables, 3);
+    deployable_com_stowed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_stowed_pos"].as<std::vector<double>>().data(), 3, num_deployables);
+    deployable_orient_stowed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_stowed_orient"].as<std::vector<double>>().data(), 3, num_deployables);
+    deployable_com_deployed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_deployed_pos"].as<std::vector<double>>().data(), 3, num_deployables);
+    deployable_orient_deployed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_deployed_orient"].as<std::vector<double>>().data(), 3, num_deployables);
+    sensed_deployable = params["deployables"]["deployable_sensor_flag"].as<std::vector<bool>>();
+    num_deploy_sensors = std::count(sensed_deployable.begin(), sensed_deployable.end(), true);
+
+    bool random_failures = params["deployables"]["random_deploy_fail"].as<bool>();
+    int N_rand_failures  = params["deployables"]["N_rand_deploy_fail"].as<int>();
+    deployable_status = std::vector<bool>(num_deployables, false);
+    
+    if (random_failures) {
+        if (N_rand_failures > num_deployables) {
+            throw std::invalid_argument("Number of random magnetorquer failures exceeds total number of magnetorquers.");
+        }
+        std::uniform_int_distribution<> dep_index_dist(0, num_deployables - 1);
+        int failed_indices_count = 0;
+        while (failed_indices_count < N_rand_failures) {
+            int rand_index = dep_index_dist(gen);
+            if (deployable_status[rand_index] == true) {
+                deployable_status[rand_index] = false; // mark as failed
+                failed_indices_count++;
+            }
+        }
+    } else {
+        deployable_status = params["deployables"]["deploy_status"].as<std::vector<bool>>();
+    }
+    
+    Deployable deployable = Deployable(
+        params["deployables"]["N_deployables"].as<int>(),
+        deployable_masses,
+        deployable_inertia,
+        deployable_com_stowed,
+        deployable_orient_stowed,
+        deployable_com_deployed,
+        deployable_orient_deployed,
+        deployable_status,
+        num_deploy_sensors,
+        sensed_deployable
+        );
+    
+    // Adjust the inertia matrix based on deployed status
+    /*
+    for (int i = 0; i < num_deployables; i++) {
+        if (deployable_status[i]) {
+            I_sat += deployable.inertiaMatrixDeployed(i);
+        } else {
+            I_sat += deployable.inertiaMatrixStowed(i);
+        }
+    }
+    */
+
+    return deployable;
 }
 
 Vector3 Simulation_Parameters::spinStabilizedRate(double tgt_ss_ang_vel)
@@ -768,6 +839,8 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     out << YAML::Key << "inertia";
     out << YAML::Value << vec;
 
+    out << YAML::Key << "deployable_status" << YAML::Value << deployable_status;
+
     vec.assign(G_rw_b.data(), G_rw_b.data() + G_rw_b.rows()*G_rw_b.cols());
     out << YAML::Key << "rw_orientation";
     out << YAML::Value << vec;
@@ -841,6 +914,10 @@ PYBIND11_MODULE(pysim_utils, m) {
         //.def("dumpSampledParametersToYAML", &Simulation_Parameters::dumpSampledParametersToYAML)
         .def_readonly("mass", &Simulation_Parameters::mass)
         .def_readonly("inertia", &Simulation_Parameters::I_sat)
+        // num_deploy_sensors
+        .def_readonly("num_deploy_sensors", &Simulation_Parameters::num_deploy_sensors)
+        .def_readonly("deployable_status", &Simulation_Parameters::deployable_status)
+        //
         .def_readonly("facet_area", &Simulation_Parameters::A)
         //
         .def_readonly("num_RWs", &Simulation_Parameters::num_RWs)

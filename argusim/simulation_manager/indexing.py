@@ -24,8 +24,7 @@ class STATES:
 
 
 class SENSORS:
-    def __init__(self, num_stk, num_photodiodes, num_rws, num_MTBs, num_panels):
-        self.NSENSORS       = 21 + num_stk + num_photodiodes + num_rws + num_MTBs + num_panels
+    def __init__(self, num_stk, num_photodiodes, num_rws, num_MTBs, num_panels, num_deploy_sensors):
         self.GPS            = slice(0, 6)
         self.GPS_POS        = slice(0, 3)
         self.GPS_VEL        = slice(3, 6)
@@ -52,21 +51,26 @@ class SENSORS:
         self.BAT_TTF        = slice(ny + 6, ny + 7)
         self.BAT_TEMP       = slice(ny + 7, ny + 8)
         self.JET_POW        = slice(ny + 8, ny + 9)
-        self.NSENSORS       = ny + 9
+        ny = ny+9
+        self.DEPLOY         = slice(ny, ny + num_deploy_sensors)
+        ny = ny+num_deploy_sensors
+        self.NSENSORS       = ny + num_deploy_sensors
 
 
 class CONTROLS:
     def __init__(self, num_RWs, num_MTBs):
-        self.NCONTROLS   = num_RWs + num_MTBs
+        self.NCONTROLS   = num_RWs + num_MTBs + 1
         self.MTB_VOLT    = slice(0, num_MTBs)
         self.RW_TORQUE   = slice(num_MTBs, num_RWs + num_MTBs)
+        self.JETSON_ON   = num_RWs + num_MTBs
 
 
 class IDX:
-    def __init__(self, num_RWs, num_MTBs, num_stk, num_photodiodes, num_panels):
+    def __init__(self, num_RWs, num_MTBs, num_stk, num_photodiodes, 
+                 num_panels, num_deploy_sensors):
         
         self.STATES = STATES(num_RWs, num_MTBs)
-        self.SENSORS = SENSORS(num_stk, num_photodiodes, num_RWs, num_MTBs, num_panels)
+        self.SENSORS = SENSORS(num_stk, num_photodiodes, num_RWs, num_MTBs, num_panels, num_deploy_sensors)
         self.CONTROLS = CONTROLS(num_RWs, num_MTBs)
 
         self.NSTATES   = self.STATES.NSTATES
@@ -77,4 +81,5 @@ class IDX:
         self.NSTK      = num_stk
         self.NPHOTODIODES = num_photodiodes
         self.NPANELS   = num_panels
+        self.NDEPLOYS  = num_deploy_sensors
         

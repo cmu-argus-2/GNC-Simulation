@@ -4,6 +4,7 @@
 #include "ParameterParser.h"
 #include "SRP.h"
 #include "MagneticField.h"
+#include "Deployable.h"
 #include "power.h"
 #include <cmath>
 #include <functional>
@@ -27,8 +28,11 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
                             Lux Readings       (9x1),
                             solar power        (14x1),  
                             Power Diagnostics ((6+8)x1),
-                            Jetson Power       (1x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
+                            Jetson Power       (1x1),
+                            Deployable Sensors (Nx1)]
+    */
+    int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels \
+                                                                    + 8 + 1 + sc.num_deploy_sensors;
 
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -49,6 +53,13 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
 
     measurement(sc.y_idx_map["jetson_power"].to_idx()) = control_input(sc.u_idx_map["jet_power"].to_idx())*sc.jetson_power;
 
+    // deployables
+    if (sc.num_deploy_sensors > 1) {
+        measurement(sc.y_idx_map["deployment"].to_seq()) = sc.DPB.getDeploymentSensorReadings();
+    } else if (sc.num_deploy_sensors == 1) {
+        measurement(sc.y_idx_map["deployment"].to_idx()) = sc.DPB.getDeploymentSensorReadings()(0);
+    }
+    
     return measurement;
 }
 
