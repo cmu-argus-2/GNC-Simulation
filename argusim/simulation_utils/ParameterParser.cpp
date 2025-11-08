@@ -413,7 +413,7 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
     deployable_masses = Eigen::Map<VectorXd>(params["deployables"]["deployable_mass"].as<std::vector<double>>().data(), num_deployables);
     
     // deployable_com_stowed
-    deployable_inertia = Eigen::Map<Eigen::MatrixXd, Eigen::RowMajor>(params["deployables"]["deployable_inertia"].as<std::vector<double>>().data(), 3*num_deployables, 3);
+    deployable_inertia = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_inertia"].as<std::vector<double>>().data(), 3, 3*num_deployables);
     deployable_com_stowed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_stowed_pos"].as<std::vector<double>>().data(), 3, num_deployables);
     deployable_orient_stowed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_stowed_orient"].as<std::vector<double>>().data(), 3, num_deployables);
     deployable_com_deployed = Eigen::Map<Eigen::MatrixXd, Eigen::ColMajor>(params["deployables"]["deployable_deployed_pos"].as<std::vector<double>>().data(), 3, num_deployables);
@@ -423,7 +423,7 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
 
     bool random_failures = params["deployables"]["random_deploy_fail"].as<bool>();
     int N_rand_failures  = params["deployables"]["N_rand_deploy_fail"].as<int>();
-    deployable_status = std::vector<bool>(num_deployables, false);
+    deployable_status = std::vector<bool>(num_deployables, true);
     
     if (random_failures) {
         if (N_rand_failures > num_deployables) {
@@ -456,15 +456,34 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
         );
     
     // Adjust the inertia matrix based on deployed status
-    /*
     for (int i = 0; i < num_deployables; i++) {
+        Matrix_3x3 I_dep = deployable_inertia.block(0, 3*i, 3, 3);
         if (deployable_status[i]) {
-            I_sat += deployable.inertiaMatrixDeployed(i);
+            Vector3 com_dep = deployable_com_deployed.col(i);
+            Vector3 orient_dep = deployable_orient_deployed.col(i);
+            double angle = orient_dep.norm() * M_PI / 180.0;
+            Vector3 axis = orient_dep.normalized();
+            Eigen::AngleAxisd angleAxis(angle, axis);
+            Matrix_3x3 rot_mat = angleAxis.toRotationMatrix();
+            
+            // compute rotation matrix from stowed to deployed orientation
+            Matrix_3x3 I_dep_rot = rot_mat.transpose() * I_dep * rot_mat;
+            Matrix_3x3 I_dep_com = I_dep_rot - deployable_masses[i] * toSkew(com_dep) * toSkew(com_dep);
+            I_sat += I_dep_com;
         } else {
-            I_sat += deployable.inertiaMatrixStowed(i);
+            Vector3 com_stow = deployable_com_stowed.col(i);
+            Vector3 orient_stow = deployable_orient_stowed.col(i);
+            double angle = orient_stow.norm() * M_PI / 180.0;
+            Vector3 axis = orient_stow.normalized();
+            Eigen::AngleAxisd angleAxis(angle, axis);
+            Matrix_3x3 rot_mat = angleAxis.toRotationMatrix();
+            // compute rotation matrix from stowed to deployed orientation
+            Matrix_3x3 I_stow_rot = rot_mat.transpose() * I_dep * rot_mat;
+            Matrix_3x3 I_stow_com = I_stow_rot - deployable_masses[i] * toSkew(com_stow) * toSkew(com_stow);
+            I_sat += I_stow_com;
         }
     }
-    */
+    
 
     return deployable;
 }
