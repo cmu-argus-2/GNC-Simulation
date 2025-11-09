@@ -43,6 +43,8 @@ class Simulation_Parameters {
     Deployable DPB;
 
     // Center of Pressure/Mass arm
+    Vector3 CoP; // [m,m,m]
+    Vector3 CoM; // [m,m,m]
     Vector3 CoPM; // [m,m,m]
 
     // Drag and SRP properties
@@ -176,7 +178,8 @@ class Simulation_Parameters {
     // Physical
     std::normal_distribution<double> mass_dist;
     std::normal_distribution<double> area_dist;
-    std::normal_distribution<double> CoPM_dist;
+    std::normal_distribution<double> CoM_dist;
+    std::normal_distribution<double> CoP_dist;
     std::normal_distribution<double> Ixx_dist;
     std::normal_distribution<double> Iyy_dist;
     std::normal_distribution<double> Izz_dist;

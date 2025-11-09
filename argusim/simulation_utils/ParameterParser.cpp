@@ -62,8 +62,12 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     // Deployables
     DPB = load_Deployables(filename, dev);
 
+    // Center of Pressure
+    CoP = Vector3::NullaryExpr([&](){return CoP_dist(dev);});
+    // Center of Mass
+    CoM = Vector3::NullaryExpr([&](){return CoM_dist(dev);});
     // Center of Pressure/Mass arm
-    CoPM = Vector3::NullaryExpr([&](){return CoPM_dist(dev);});
+    CoPM = CoP - CoM;
 
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
@@ -455,11 +459,36 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
         sensed_deployable
         );
     
-    // Adjust the inertia matrix based on deployed status
+    // Adjust the inertia matrix, mass and center-of-mass based on deployed status
+    //  mass CoM
+    double mass_total = 0.0;
+    Vector3 CoM_total = Vector3::Zero();
+
+    mass_total += mass;
+    CoM_total += mass * CoM;
+
     for (int i = 0; i < num_deployables; i++) {
-        Matrix_3x3 I_dep = deployable_inertia.block(0, 3*i, 3, 3);
+        mass_total += deployable_masses[i];
         if (deployable_status[i]) {
             Vector3 com_dep = deployable_com_deployed.col(i);
+            CoM_total += deployable_masses[i] * com_dep;
+        } else {
+            Vector3 com_stow = deployable_com_stowed.col(i);
+            CoM_total += deployable_masses[i] * com_stow;
+        }
+    }
+    CoM_total /= mass_total;
+
+    Matrix_3x3 new_I_sat = Matrix_3x3::Zero();
+    new_I_sat += I_sat - mass * toSkew(CoM - CoM_total) * toSkew(CoM - CoM_total);
+    // fixed center-of-pressure not affected for simplicity
+    for (int i = 0; i < num_deployables; i++) {
+        
+        Matrix_3x3 I_dep = deployable_inertia.block(0, 3*i, 3, 3);
+
+        if (deployable_status[i]) {
+            // Inertia deployed update
+            Vector3 com_dep = deployable_com_deployed.col(i) - CoM_total;
             Vector3 orient_dep = deployable_orient_deployed.col(i);
             double angle = orient_dep.norm() * M_PI / 180.0;
             Vector3 axis = orient_dep.normalized();
@@ -469,9 +498,10 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
             // compute rotation matrix from stowed to deployed orientation
             Matrix_3x3 I_dep_rot = rot_mat.transpose() * I_dep * rot_mat;
             Matrix_3x3 I_dep_com = I_dep_rot - deployable_masses[i] * toSkew(com_dep) * toSkew(com_dep);
-            I_sat += I_dep_com;
+            new_I_sat += I_dep_com;
+
         } else {
-            Vector3 com_stow = deployable_com_stowed.col(i);
+            Vector3 com_stow = deployable_com_stowed.col(i) - CoM_total;
             Vector3 orient_stow = deployable_orient_stowed.col(i);
             double angle = orient_stow.norm() * M_PI / 180.0;
             Vector3 axis = orient_stow.normalized();
@@ -480,10 +510,15 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
             // compute rotation matrix from stowed to deployed orientation
             Matrix_3x3 I_stow_rot = rot_mat.transpose() * I_dep * rot_mat;
             Matrix_3x3 I_stow_com = I_stow_rot - deployable_masses[i] * toSkew(com_stow) * toSkew(com_stow);
-            I_sat += I_stow_com;
+            new_I_sat += I_stow_com;
         }
     }
-    
+
+    // update MCI parameters
+    mass  = mass_total;
+    CoM   = CoM_total;
+    CoPM = CoP - CoM;
+    I_sat = new_I_sat;
 
     return deployable;
 }
@@ -670,8 +705,10 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     area_dist = std::normal_distribution<double>(area_nominal, area_std);
 
     // Center of Pressure/Mass arm
-    double CoPM_std = params["CoPM_dev"].as<double>();
-    CoPM_dist = std::normal_distribution<double>(0, CoPM_std);
+    double CoP_std = params["CoP_dev"].as<double>();
+    CoP_dist = std::normal_distribution<double>(0, CoP_std);
+    double CoM_std = params["CoM_dev"].as<double>();
+    CoM_dist = std::normal_distribution<double>(0, CoM_std);
 
     // Inertia
     Vector3 inertia_dev = Eigen::Map<Vector3>(params["inertia"]["principal_axis_dev"].as<std::vector<double>>().data());
@@ -857,6 +894,11 @@ void Simulation_Parameters::dumpSampledParametersToYAML(std::string results_fold
     vec.assign(I_sat.data(), I_sat.data() + 9);
     out << YAML::Key << "inertia";
     out << YAML::Value << vec;
+
+    vec.assign(CoP.data(), CoP.data() + CoP.size());
+    out << YAML::Key << "CoP" << YAML::Value << vec;
+    vec.assign(CoM.data(), CoM.data() + CoM.size());
+    out << YAML::Key << "CoM" << YAML::Value << vec;
 
     out << YAML::Key << "deployable_status" << YAML::Value << deployable_status;
 

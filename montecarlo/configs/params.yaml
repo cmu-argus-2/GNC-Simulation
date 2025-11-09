@@ -18,8 +18,8 @@ useLUTs : False
 # physical properties
 # -----------------------------------------------------------------------------------------------------------
 mass : 
-     nominal_mass : 1.0 # kg
-     mass_dev : 50 # Stddev from nominal mass as a % of nominal mass [%]
+     nominal_mass : 1.1468 # kg # nominal mass without deployables
+     mass_dev : 3 # Stddev from nominal mass as a % of nominal mass [%]
      min_mass : 0.5 # Min allowable mass [kg]
      max_mass : 2.0 # Max allowable mass [kg]
 
@@ -29,6 +29,7 @@ area :
      min_area : 0.01 # Min area [m^2]
 
 inertia :
+     # nominal without deployables at the center of mass
      nominal_inertia : [ 2.29087756e-03, -1.87290000e-05, -5.24670000e-06,
                          -1.87290000e-05,  2.33687756e-03,  1.91340000e-05,
                          -5.24670000e-06,  1.91340000e-05,  2.37975511e-03]
@@ -79,9 +80,15 @@ deployables :
      N_rand_deploy_fail: 0  # number of random magnetorquer failures
      deploy_status: [True,True,True,True] # True = deployed, False = undeployed
 
-
-CoPM : [0.005,-0.005,-0.005] # center of pressure with respect to center of mass of CubeSat
-CoPM_dev : 0.001 # stddev from nominal of CoPM [m]
+# Spacecraft body frame origin is the center of mass. 
+# These are all positioned relative to the geometric center of the CubeSat at the center of the cube.
+# CoPM : [0.005,-0.005,-0.005] # center of pressure with respect to center of mass of CubeSat
+# CoPM_dev : 0.001 # stddev from nominal of CoPM [m]
+CoM : [0.0,0.0,-0.005] # center of pressure with respect to center of mass of CubeSat
+CoM_dev : 0.001 # stddev from nominal of CoPM [m]
+# In practice, CoP will be very dependent on the attitude of the spacecraft. For simplicity, we assume a fixed CoP here.
+CoP : [0.0,0.0,0.0] # center of pressure with respect to center of mass of CubeSat
+CoP_dev : 0.001 # stddev from nominal of CoPM [m]
 Cd : 2.2 # Drag coefficient
 CR : 1.8 # Reflectivity coefficient
 
