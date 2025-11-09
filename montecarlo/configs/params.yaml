@@ -73,7 +73,7 @@ deployables :
                                     90.0,   0.0,0.0,
                                    -90.0,   0.0,0.0] # deg
      # deployable has a deployment sensor: True, no sensor: False
-     deployable_sensor_flag : [True, False, True, False] # flags for deployable position sensors
+     deployable_sensor_flag : [True, False, False, True] # flags for deployable position sensors
      # failures
      random_deploy_fail: False
      N_rand_deploy_fail: 0  # number of random magnetorquer failures
