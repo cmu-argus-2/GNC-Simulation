@@ -59,15 +59,15 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     I_sat(1,1) = Iyy_dist(dev);
     I_sat(2,2) = Izz_dist(dev);
 
-    // Deployables
-    DPB = load_Deployables(filename, dev);
-
     // Center of Pressure
     CoP = Vector3::NullaryExpr([&](){return CoP_dist(dev);});
     // Center of Mass
     CoM = Vector3::NullaryExpr([&](){return CoM_dist(dev);});
     // Center of Pressure/Mass arm
     CoPM = CoP - CoM;
+
+    // Deployables
+    DPB = load_Deployables(filename, dev);
 
     // Drag & SRP properties
     Cd = params["Cd"].as<double>();
@@ -491,9 +491,12 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
             Vector3 com_dep = deployable_com_deployed.col(i) - CoM_total;
             Vector3 orient_dep = deployable_orient_deployed.col(i);
             double angle = orient_dep.norm() * M_PI / 180.0;
-            Vector3 axis = orient_dep.normalized();
-            Eigen::AngleAxisd angleAxis(angle, axis);
-            Matrix_3x3 rot_mat = angleAxis.toRotationMatrix();
+            Matrix_3x3 rot_mat = Matrix_3x3::Identity();
+            if (angle > 1e-9) {
+                Vector3 axis = orient_dep.normalized();
+                Eigen::AngleAxisd angleAxis(angle, axis);
+                rot_mat = angleAxis.toRotationMatrix();
+            }
             
             // compute rotation matrix from stowed to deployed orientation
             Matrix_3x3 I_dep_rot = rot_mat.transpose() * I_dep * rot_mat;
@@ -504,9 +507,12 @@ Deployable Simulation_Parameters::load_Deployables(std::string filename, std::mt
             Vector3 com_stow = deployable_com_stowed.col(i) - CoM_total;
             Vector3 orient_stow = deployable_orient_stowed.col(i);
             double angle = orient_stow.norm() * M_PI / 180.0;
-            Vector3 axis = orient_stow.normalized();
-            Eigen::AngleAxisd angleAxis(angle, axis);
-            Matrix_3x3 rot_mat = angleAxis.toRotationMatrix();
+            Matrix_3x3 rot_mat = Matrix_3x3::Identity();
+            if (angle > 1e-9) {
+                Vector3 axis = orient_stow.normalized();
+                Eigen::AngleAxisd angleAxis(angle, axis);
+                rot_mat = angleAxis.toRotationMatrix();
+            }
             // compute rotation matrix from stowed to deployed orientation
             Matrix_3x3 I_stow_rot = rot_mat.transpose() * I_dep * rot_mat;
             Matrix_3x3 I_stow_com = I_stow_rot - deployable_masses[i] * toSkew(com_stow) * toSkew(com_stow);
