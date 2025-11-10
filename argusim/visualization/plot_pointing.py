@@ -36,11 +36,14 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
     J_ref = np.array(pyparams["inertia"]["nominal_inertia"]).reshape((3,3))
+    # compute 
     eigenvalues, _ = np.linalg.eig(J_ref)
     J_ref_max = np.max(eigenvalues)
     delta = np.deg2rad(15)
     target_ang_mom_norm = np.linalg.norm( J_ref_max * np.deg2rad(pyparams["initialization"]["tgt_ss_ang_vel"]))
+    target_ang_vel_norm = pyparams["initialization"]["tgt_ss_ang_vel"]
     max_ang_mom = 0
+    max_ang_vel = 0
     algorithms = [
         {
             "key": "Lyapunov",
@@ -74,6 +77,7 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
             bpoint_vector = []
             ang_mom_vector = []
             ang_mom_norm_vector = []
+            ang_vel_norm_vector = []
             for j in range(len(data_dicts[i]["Time [s]"])):
                 quat = np.array(
                     [data_dicts[i]["q_w"][j], data_dicts[i]["q_x"][j], data_dicts[i]["q_y"][j], data_dicts[i]["q_z"][j]]
@@ -120,6 +124,7 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
                 ang_mom = J @ ang_vel
                 ang_mom_norm = np.linalg.norm(ang_mom)
                 ang_mom_norm_vector.append(ang_mom_norm)
+                ang_vel_norm_vector.append(np.rad2deg(np.linalg.norm(ang_vel)))
                 ang_mom = ang_mom / ang_mom_norm
                 angle_am = np.rad2deg(np.arccos(np.dot(ang_mom, major_axis)))
                 ang_mom_vector.append(angle_am)
@@ -128,6 +133,8 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
 
                 if max(ang_mom_norm_vector) > max_ang_mom:
                     max_ang_mom = max(ang_mom_norm_vector)
+                if max(ang_vel_norm_vector) > max_ang_vel:
+                    max_ang_vel = max(ang_vel_norm_vector)
 
             bpoint_vector = np.array(bpoint_vector).T
             ang_mom_vector = np.array(ang_mom_vector).T
@@ -154,7 +161,7 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
 
             multiPlot(
                 time_data,
-                [bpoint_vector, ang_mom_vector, ang_mom_norm_vector],
+                [bpoint_vector, ang_mom_vector, ang_vel_norm_vector], # ang_mom_norm_vector],
                 seriesLabel=f"_{trial_number}",
             )
 
@@ -174,7 +181,7 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
         annotateMultiPlot(title=algo["figtitle"],
                         ylabels=["$\\angle_{\\mathbf{s}/\\mathbf{h}} [\\degree]$",
                                 "$\\angle_{\\mathbf{h}/\\mathbf{I_{max}}} [\\degree]$",
-                                "$||\\mathbf{h}|| [Nms]$"])
+                                "$||\\omega|| [deg/s]$"])
 
         # sun pointing threshold
         itm.subplot(3, 1, 1)
@@ -190,10 +197,10 @@ def ss_pointing_plots(pyparams, data_dicts, filepaths):
         plt.xlabel(time_label)
         # ang mom norm threshold
         itm.subplot(3, 1, 3)
-        itm.axhline(y=target_ang_mom_norm*(1-delta), color='red', linestyle='--', linewidth=1.0)
-        itm.axhline(y=target_ang_mom_norm*(1+delta), color='red', linestyle='--', linewidth=1.0)
+        itm.axhline(y=target_ang_vel_norm*(1-delta), color='red', linestyle='--', linewidth=1.0)
+        itm.axhline(y=target_ang_vel_norm*(1+delta), color='red', linestyle='--', linewidth=1.0)
         plt.xlim([0, time_data[-1]])
-        plt.ylim([0, max_ang_mom])
+        plt.ylim([0, max_ang_vel])
         plt.xlabel(time_label)
 
         save_figure(itm.gcf(), plot_dir, algo["figname"], close_after_saving)
