@@ -86,20 +86,7 @@ def quatrotation(q: np.ndarray):
     T = np.diag([1, -1, -1, -1])
     H = np.vstack((np.zeros((1, 3)), np.eye(3)))
     return H.T @ T @ Left(q) @ T @ Left(q) @ H
-    """
-    R = np.zeros((3, 3))
-    R[0, 0] = 2 * (q[0] ** 2 + q[1] ** 2) - 1
-    R[0, 1] = 2 * (q[1] * q[2] - q[0] * q[3])
-    R[0, 2] = 2 * (q[1] * q[3] + q[0] * q[2])
-    R[1, 0] = 2 * (q[1] * q[2] + q[0] * q[3])
-    R[1, 1] = 2 * (q[0] ** 2 + q[2] ** 2) - 1
-    R[1, 2] = 2 * (q[2] * q[3] - q[0] * q[1])
-    R[2, 0] = 2 * (q[1] * q[3] - q[0] * q[2])
-    R[2, 1] = 2 * (q[2] * q[3] + q[0] * q[1])
-    R[2, 2] = 2 * (q[0] ** 2 + q[3] ** 2) - 1
-    
-    return R
-    """
+
 
 def Gquat(q):
     H = np.vstack((np.zeros((1, 3)), np.eye(3)))
@@ -134,3 +121,14 @@ def quat_to_axis_angle(q: np.ndarray):
     else:
         axis = q[1:] / s
     return axis, angle
+
+
+def rot_vec_to_rotmat(rot_vec: np.ndarray):
+    angle = np.linalg.norm(rot_vec)
+    if angle < 1e-8:
+        return np.eye(3)
+    axis = rot_vec / angle
+    q = np.zeros((4,))
+    q[0] = np.cos(angle / 2)
+    q[1:] = axis * np.sin(angle / 2)
+    return quatrotation(q)

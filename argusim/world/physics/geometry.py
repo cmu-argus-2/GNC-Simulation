@@ -1,6 +1,9 @@
+from typing import Any
 import numpy as np
 import shapely as sp
 from shapely.geometry import Polygon
+from argusim.world.math.quaternions import crossproduct, rot_vec_to_rotmat
+
 
 class Edge:
     def __init__(self, vertex1, vertex2):
@@ -210,13 +213,74 @@ class Surface:
         centroid = RI2S @ (m @ x + b)
         
         return pol_sp.area, centroid
+
+
+class Sensor():
+    def __init__(self, direction, position, half_angle):
+        self.position = np.array(position)
+        self.direction = np.array(direction)
+        self.direction = self.direction / np.linalg.norm(self.direction)
+        self.position += self.direction*1e-3
+        self.half_angle = half_angle
+
+
+# Solar Panels need to have their facing direction defined
+class SolarPanel(Surface):
+    def __init__(self, vertices, facing_vector):
+        super().__init__(vertices)
+        self.translate(np.array(facing_vector) * 1e-3)
+        self.facing_vector = np.array(facing_vector)
+        self.check_facing_direction()
+        self.area = self.calculate_area()
+
+    def check_facing_direction(self):
+        dot_product = np.dot(self.normal, self.facing_vector)
+        if dot_product < 0:
+            self.normal = -self.normal
+            
+    def compute_unoccluded_effective_area(self, sun_direction, Body):
+        # Solar pannel effective exposed area only on one side
+        dot_product = np.dot(self.normal, sun_direction)
+        if dot_product < 0:
+            return 0.0
+        else:
+            effective_area, centroid = super().compute_unoccluded_effective_area(sun_direction, Body)
+            return effective_area
+        
     
+    def compute_effective_area(self, sun_direction):
+        # Compute the effective area of the solar panel based on the angle between the sun direction and the normal
+        dot_product = np.dot(self.normal, sun_direction)
+        if dot_product > 0:
+            return self.area * dot_product
+        return 0
+
+    def calculate_area(self):
+        # Calculate the area of the solar panel
+        area = 0
+        num_vertices = len(self.vertices)
+        for i in range(num_vertices):
+            vertex1 = self.vertices[i]
+            vertex2 = self.vertices[(i + 1) % num_vertices]
+            area += (vertex1[0] * vertex2[1] - vertex2[0] * vertex1[1])
+        return 0.5 * abs(area)
+
 
 class Body:
-    def __init__(self, surfaces, solar_panels=None, sensors=None):
+    def __init__(self, 
+                 surfaces: list[Surface]=[], 
+                 solar_panels: list[SolarPanel]=[], 
+                 sensors: list[Sensor]=[]):
         self.surfaces = surfaces
         self.solar_panels = solar_panels if solar_panels is not None else []
         self.sensors = sensors if sensors is not None else []
+
+
+    def __init__(self, obsw_params: dict[str, Any]):
+        self.surfaces = []
+        self.solar_panels = []
+        self.sensors = []
+    
     
     def is_intersecting(self, point, direction):
         for surface in self.surfaces:
@@ -271,53 +335,54 @@ class Body:
             visibility[idx] = np.logical_and(angle <= sensor.half_angle, unoccluded)
         return visibility
 
-
-class Sensor():
-    def __init__(self, direction, position, half_angle):
-        self.position = np.array(position)
-        self.direction = np.array(direction)
-        self.direction = self.direction / np.linalg.norm(self.direction)
-        self.position += self.direction*1e-3
-        self.half_angle = half_angle
-
-
-# Solar Panels need to have their facing direction defined
-class SolarPanel(Surface):
-    def __init__(self, vertices, facing_vector):
-        super().__init__(vertices)
-        self.translate(np.array(facing_vector) * 1e-3)
-        self.facing_vector = np.array(facing_vector)
-        self.check_facing_direction()
-        self.area = self.calculate_area()
-
-    def check_facing_direction(self):
-        dot_product = np.dot(self.normal, self.facing_vector)
-        if dot_product < 0:
-            self.normal = -self.normal
-            
-    def compute_unoccluded_effective_area(self, sun_direction, Body):
-        # Solar pannel effective exposed area only on one side
-        dot_product = np.dot(self.normal, sun_direction)
-        if dot_product < 0:
-            return 0.0
-        else:
-            effective_area, centroid = super().compute_unoccluded_effective_area(sun_direction, Body)
-            return effective_area
-        
+def compute_inertia(obsw_params: dict[str, Any]):
+    mass_no_deployables = np.array(obsw_params["mass"]["nominal_mass"])
+    com_no_deployables = np.array(obsw_params["CoM"])
+    inertia_no_deployables = np.array(obsw_params["inertia"]["nominal_inertia"]).reshape(3,3)
+    deployables = obsw_params["deployables"]
+    n_deployables = np.array(deployables["N_deployables"])
+    deployable_mass = np.array(deployables["deployable_mass"])
+    deployable_inertia = np.array(deployables["deployable_inertia"]).reshape(n_deployables,3,3)
+    deployable_stowed_pos = np.array(deployables["deployable_stowed_pos"]).reshape(n_deployables,3)
+    deployable_stowed_orient = np.array(deployables["deployable_stowed_orient"]).reshape(n_deployables,3)
+    deployable_deployed_pos = np.array(deployables["deployable_deployed_pos"]).reshape(n_deployables,3)
+    deployable_deployed_orient = np.array(deployables["deployable_deployed_orient"]).reshape(n_deployables,3)
+    deploy_status = np.array(deployables["deploy_status"])
+    # total mass
+    mass = mass_no_deployables + np.sum(deployable_mass)
+    # center-of-mass
+    com_deployables = np.zeros((n_deployables,3))
+    com_deployables[deploy_status] = deployable_deployed_pos[deploy_status]
+    com_deployables[np.logical_not(deploy_status)] = \
+                        deployable_stowed_pos[np.logical_not(deploy_status)]
+    com = np.zeros(3)
+    com += mass_no_deployables * com_no_deployables
+    com += deployable_mass @ com_deployables
+    com /= mass
     
-    def compute_effective_area(self, sun_direction):
-        # Compute the effective area of the solar panel based on the angle between the sun direction and the normal
-        dot_product = np.dot(self.normal, sun_direction)
-        if dot_product > 0:
-            return self.area * dot_product
-        return 0
+    orient_deployables = np.zeros((n_deployables,3))
+    orient_deployables[deploy_status] = deployable_deployed_orient[deploy_status]
+    orient_deployables[np.logical_not(deploy_status)] = \
+                            deployable_stowed_orient[np.logical_not(deploy_status)]
+    
+    
+    # inertia matrix
+    inertia = np.zeros((3,3))
+    inertia += inertia_no_deployables
+    for i in range(n_deployables):
+        inertia_i = deployable_inertia[i]
+        # rotate inertia
+        o = orient_deployables[i]
+        rotmat = rot_vec_to_rotmat(np.deg2rad(o))
+        c = com_deployables[i] - com
+        skewc = crossproduct(c)
+        m = deployable_mass[i]
+        inertia_i = rotmat.T @ inertia_i @ rotmat
+        inertia_i_at_com = inertia_i - m * skewc @ skewc
+        inertia += inertia_i_at_com
+    
+    obsw_params["total_mass"] = mass.tolist()
+    obsw_params["total_CoM"] = com.tolist()
+    obsw_params["total_inertia"] = inertia.tolist()
 
-    def calculate_area(self):
-        # Calculate the area of the solar panel
-        area = 0
-        num_vertices = len(self.vertices)
-        for i in range(num_vertices):
-            vertex1 = self.vertices[i]
-            vertex2 = self.vertices[(i + 1) % num_vertices]
-            area += (vertex1[0] * vertex2[1] - vertex2[0] * vertex1[1])
-        return 0.5 * abs(area)
+    return obsw_params

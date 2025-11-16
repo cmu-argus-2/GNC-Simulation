@@ -11,6 +11,7 @@ from argusim.simulation_manager import SimLogger
 from argusim.simulation_manager.indexing import IDX
 import numpy as np
 from argusim.world.LUT_generator import generate_lookup_tables
+from argusim.world.physics.geometry import compute_inertia
 import yaml
 
 
@@ -27,7 +28,9 @@ class Simulator():
         # [TODO:] remove the next ~10 lines 
         with open(config_path, "r") as f:
             self.obsw_params = yaml.safe_load(f)
-
+            
+        self.obsw_params = compute_inertia(self.obsw_params)
+        
         # if data_path does not, 
         if self.obsw_params["useLUTs"]:
             data_path = os.path.realpath("./argusim/data/lookup_tables.yaml")
