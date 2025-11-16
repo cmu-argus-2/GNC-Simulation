@@ -8,6 +8,7 @@ pyigrf
 flask
 argcomplete==1.9.4
 scipy
+pillow==12.0.0
 pyyaml
 pytest
 shapely
