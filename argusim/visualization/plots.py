@@ -144,9 +144,15 @@ class MontecarloPlots:
             with Pool() as pool:
                 data_dicts = pool.map(parse_bin_file_wrapper, args)
             END = time.time()
+            sens_filepaths = self._get_files_across_trials("measurements.bin")
+            START = time.time()
+            args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in sens_filepaths]
+            with Pool() as pool:
+                sens_data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
             print(f"Elapsed time to read in data: {END-START:.2f} s")
             # --------------------------------------------------------------------------
-            plot_true_gyro_bias(pyparams, data_dicts, filepaths)
+            plot_true_gyro_bias(pyparams, data_dicts, sens_data_dicts, filepaths)
             # ========================= True battery plots =========================
             plot_true_battery(pyparams, data_dicts, filepaths)
 

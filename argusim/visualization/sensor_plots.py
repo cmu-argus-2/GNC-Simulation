@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from argusim.visualization.isolated_trace import itm
 from argusim.world.math.quaternions import quatrotation
 from argusim.visualization.plot_helper import (
@@ -6,7 +7,6 @@ from argusim.visualization.plot_helper import (
     annotateMultiPlot,
     save_figure,
 )
-
 
 def gyro_plots(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
