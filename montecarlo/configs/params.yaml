@@ -202,7 +202,12 @@ gyroscope:
      gyro_bias_stab: 8.3e-4 # [UNITS: deg/s] # Bias stability [UNITS: deg/s]
      range: 125 # [UNITS: deg/s] # Range of the gyroscope [UNITS: deg/s]
      nbits : 16 # [UNITS: bits] # Number of bits of the gyroscope
-     
+
+# parameters for ds3231 RTC (url at https://www.analog.com/media/en/technical-documentation/data-sheets/ds3231.pdf)
+rtc:
+     rtc_drift_rate_ppm : 3.5 # [UNITS: ppm]
+     rtc_resolution: 1 # [UNITS: s] # smallest time increment the RTC can measure
+
 star_tracker:
      star_tracker_dt : 1.0 # [UNITS: s] [UNUSED]
      star_tracker_std : 0.001 # [UNITS: rad] # stddev of the star tracker measurement noise

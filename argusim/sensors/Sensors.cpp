@@ -32,7 +32,7 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
                             Deployable Sensors (Nx1)]
     */
     int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels \
-                                                                    + 8 + 1 + sc.num_deploy_sensors;
+                                                                + 1 + 8 + 1 + sc.num_deploy_sensors;
 
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -46,6 +46,8 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
     }
 
     measurement(sc.y_idx_map["photodiode"].to_seq()) = SunSensor(state, sc);
+
+    measurement(sc.y_idx_map["rtc"].to_idx()) = RTC(t_J2000, state, sc);
 
     VectorXd power_readings = PowerReadings(state, control_input, sc);
 
@@ -97,6 +99,7 @@ Vector6 GPS(const VectorXd state, double t_J2000, Simulation_Parameters sc)
     y(Eigen::seqN(0,3)) += pos_noise;
     y(Eigen::seqN(3,3)) += vel_noise;
     return y;
+    // TODO: GPS time
 }
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -244,6 +247,24 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
 
     return solar_intensity_on_panel;
 
+}
+
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+   ----------------------------------------------------------- RTC ------------------------------------------------------------------------------
+   ---------------------------------------------------------------------------------------------------------------------------------------------- */
+double RTC(double t_J2000, const VectorXd state, Simulation_Parameters sc)
+{
+    double rtc_time = t_J2000;
+
+    if (sc.perfect_sensors) {
+        return rtc_time;
+    }
+
+    rtc_time += state(sc.x_idx_map["rtc_bias"].to_idx());
+
+    rtc_time = std::round(rtc_time/sc.rtc_resolution) * sc.rtc_resolution;
+
+    return rtc_time;
 }
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------

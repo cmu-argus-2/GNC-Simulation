@@ -1,3 +1,4 @@
+from pyrsistent import ny
 from argusim.simulation_manager import MultiFileLogger
 from argusim.simulation_manager.indexing import IDX
 class SimLogger(MultiFileLogger):
@@ -30,6 +31,7 @@ class SimLogger(MultiFileLogger):
                             ["bias_x [deg/s]",
                             "bias_y [deg/s]",
                             "bias_z [deg/s]"]    + \
+                            ["rtc_bias [s]"] + \
                             ["Battery SoC", "Battery temperature [K]", "Pack Voltage [V]", "Pack Current [A]"]
             
         self.measurement_labels = [
@@ -50,6 +52,7 @@ class SimLogger(MultiFileLogger):
                                         "star_tracker_qy [-]", "star_tracker_qz [-]"]  # self.Idx.NPHOTODIODES
         
         self.measurement_labels += ["light_sensor_lux [lx]" + str(i) for i in range(self.Idx.NPHOTODIODES)] \
+                                + ["RTC_time [s]"] \
                                 + ['mtb_power [W]' + str(i) for i in range(self.Idx.NMTBS)] \
                                 + ['solar_power [W]' + str(i) for i in range(self.Idx.NPANELS)] \
                                 + ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",

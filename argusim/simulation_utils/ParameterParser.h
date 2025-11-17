@@ -104,6 +104,10 @@ class Simulation_Parameters {
     //double gyro_bias_std; 
     Vector3 initial_gyro_bias;
 
+    // RTC
+    double rtc_drift_rate_std;
+    double rtc_resolution;
+
     // Star Tracker
     int num_stk;
     bool include_star_tracker;

@@ -125,6 +125,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gyro_nbits = params["gyroscope"]["nbits"].as<int>(); // [UNITS: bits]
     gyro_resolution = gyro_range / (pow(2, gyro_nbits - 1)); // [UNITS: deg/s]
 
+    // RTC
+    rtc_drift_rate_std = params["rtc"]["rtc_drift_rate_ppm"].as<double>() * 1e-6; // [UNITS: s per second]
+    rtc_resolution     = params["rtc"]["rtc_resolution"].as<double>(); // [UNITS: s]
+
     // Star Tracker
     include_star_tracker = params["debugFlags"]["include_star_tracker"].as<bool>();
     if (include_star_tracker) {
@@ -220,22 +224,31 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
 
     // Index maps
     // State Vector index map
+    int nx = 0;
     x_idx_map["position"]        = {0, 3};
     x_idx_map["velocity"]        = {3, 3};
     x_idx_map["translation"]     = {0, 6};
-    x_idx_map["quaternion"]      = {6, 4};
-    x_idx_map["angular_rate"]    = {10, 3};
-    x_idx_map["rotation"]        = {6, 7};
-    x_idx_map["sun_position"]    = {13, 3};
-    x_idx_map["magnetic_field"]  = {16, 3};
-    x_idx_map["mtb_currents"]     = {19, num_MTBs};
-    x_idx_map["rw_speeds"]       = {19+num_MTBs, num_RWs};
-    x_idx_map["gyro_bias"]       = {19+num_MTBs+num_RWs, 3};
-    x_idx_map["battery"]         = {22+num_MTBs+num_RWs, 4};
-    x_idx_map["battery_soc"]     = {22+num_MTBs+num_RWs, 1};
-    x_idx_map["battery_temp"]    = {22+num_MTBs+num_RWs+1, 1};
-    x_idx_map["battery_voltage"] = {22+num_MTBs+num_RWs+2, 1};
-    x_idx_map["battery_current"] = {22+num_MTBs+num_RWs+3, 1};
+    nx += 6;
+    x_idx_map["quaternion"]      = {nx, 4};
+    x_idx_map["angular_rate"]    = {nx+4, 3};
+    x_idx_map["rotation"]        = {nx, 7};
+    nx += 7;
+    x_idx_map["sun_position"]    = {nx, 3};
+    x_idx_map["magnetic_field"]  = {nx+3, 3};
+    nx += 6;
+    x_idx_map["mtb_currents"]    = {nx, num_MTBs};
+    nx += num_MTBs;
+    x_idx_map["rw_speeds"]       = {nx, num_RWs};
+    nx += num_RWs;
+    x_idx_map["gyro_bias"]       = {nx, 3};
+    x_idx_map["rtc_bias"]        = {nx+3, 1};
+    nx += 4;
+    x_idx_map["battery"]         = {nx, 4};
+    x_idx_map["battery_soc"]     = {nx, 1};
+    x_idx_map["battery_temp"]    = {nx+1, 1};
+    x_idx_map["battery_voltage"] = {nx+2, 1};
+    x_idx_map["battery_current"] = {nx+3, 1};
+    nx += 4;
 
     // Control Vector index map
     u_idx_map["mtb_volt"]        = {0,              num_MTBs};
@@ -259,6 +272,8 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     ny += num_stk;
     y_idx_map["photodiode"]      = {ny, num_photodiodes};
     ny += num_photodiodes;
+    y_idx_map["rtc"]             = {ny, 1};
+    ny += 1;
     y_idx_map["power_readings"]  = {ny, num_MTBs + num_panels + 8};
     y_idx_map["mtb_power"]       = {ny, num_MTBs};
     ny += num_MTBs;
@@ -275,10 +290,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     initial_state = initializeSatellite(sim_start_time);
 
     bool start_spin_stabilized = params["initialization"]["start_spin_stabilized"].as<bool>();
-    bool start_ss_pointed = params["initialization"]["start_ss_pointed"].as<bool>();
-    auto start_ss_pointing = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
-    bool start_three_axis = params["initialization"]["start_three_axis"].as<bool>();
-    auto three_axis_target = params["initialization"]["three_axis_target"].as<std::string>(); //"Inertial" or "Nadir"
+    bool start_ss_pointed      = params["initialization"]["start_ss_pointed"].as<bool>();
+    auto start_ss_pointing     = params["initialization"]["start_ss_pointing"].as<std::string>(); //"Nadir" or "Sun"
+    bool start_three_axis      = params["initialization"]["start_three_axis"].as<bool>();
+    auto three_axis_target     = params["initialization"]["three_axis_target"].as<std::string>(); //"Inertial" or "Nadir"
 
     // adjust initial attitude and angular rate if to begin spin-stabilized/pointed
     if (start_spin_stabilized) {
@@ -674,7 +689,7 @@ VectorXd Simulation_Parameters::threeAxisNadirPointingAttitude(VectorXd State) {
 VectorXd Simulation_Parameters::initializeSatellite(double epoch)
 {    
     int battery_state_size = 4;
-    VectorXd State(22+num_RWs+num_MTBs+battery_state_size);
+    VectorXd State(23+num_RWs+num_MTBs+battery_state_size);
 
     Vector6 KOE {semimajor_axis, eccentricity, inclination, RAAN, AOP, true_anomaly};
 
@@ -690,6 +705,7 @@ VectorXd Simulation_Parameters::initializeSatellite(double epoch)
         State(x_idx_map["rw_speeds"].to_seq()).setZero();
     }
     State(x_idx_map["gyro_bias"].to_seq()) = initial_gyro_bias;
+    State(x_idx_map["rtc_bias"].to_idx()) = 0.0;
     Vector4 battery {battery_initial_soc, battery_initial_temp, max_pack_voltage, 0};
     State(x_idx_map["battery"].to_seq()) = battery;
 

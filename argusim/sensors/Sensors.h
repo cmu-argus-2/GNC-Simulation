@@ -76,6 +76,16 @@ Vector3 Gyroscope(const VectorXd state, Simulation_Parameters sc);
 VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc);
 
 /**
+ * @brief Gets RTC time with drift and given resolution
+ * 
+ * @param t_J2000 : seconds since J2000 used to read sensors
+ * @param state : true state vector
+ * @param sc : Instance of Simulation_Parameters class holding Sensor noise characterizations
+ * @return measured RTC time
+ */
+double RTC(double t_J2000, const VectorXd state, Simulation_Parameters sc);
+
+/**
  * @brief Returns the power consumption/generation diagnostics. This includes:
  * 1 - Power consumption of each magnetorquer [W]
  * 2 - Power generation of each solar panel [W]
