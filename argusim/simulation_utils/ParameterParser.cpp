@@ -126,7 +126,10 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     gyro_resolution = gyro_range / (pow(2, gyro_nbits - 1)); // [UNITS: deg/s]
 
     // RTC
-    rtc_drift_rate_std = params["rtc"]["rtc_drift_rate_ppm"].as<double>() * 1e-6; // [UNITS: s per second]
+    double rtc_drift_rate_dev = params["rtc"]["rtc_drift_rate_std_ppm"].as<double>() * 1e-6;
+    std::normal_distribution<double> rtc_bias_ramp_dist(0, rtc_drift_rate_dev);
+    rtc_drift_rate = rtc_bias_ramp_dist(dev);
+    rtc_drift_rw_std_dev = params["rtc"]["rtc_drift_rw_std_dev"].as<double>() * sqrt(dt); // [UNITS: s per second]
     rtc_resolution     = params["rtc"]["rtc_resolution"].as<double>(); // [UNITS: s]
 
     // Star Tracker

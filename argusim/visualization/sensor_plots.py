@@ -1,4 +1,6 @@
 import numpy as np
+import yaml
+import os
 import matplotlib.pyplot as plt
 from argusim.visualization.isolated_trace import itm
 from argusim.world.math.quaternions import quatrotation
@@ -7,8 +9,11 @@ from argusim.visualization.plot_helper import (
     annotateMultiPlot,
     save_figure,
 )
+import allantools as atools
+import spiceypy as spice
 
-def gyro_plots(pyparams, data_dicts, filepaths):
+
+def gyro_plots(pyparams, data_dicts, state_data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
     # ======================= Gyro measurement plots =======================
@@ -21,6 +26,43 @@ def gyro_plots(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="Gyro measurement [deg/s]", ylabels=["$\Omega_x$", "$\Omega_y$", "$\Omega_z$"])
     save_figure(itm.gcf(), plot_dir, "gyro_measurement.png", close_after_saving)
+    
+    # Allan Variance of gyro error plot
+    fig, axes = plt.subplots(3)
+    for i, (trial_number, _) in enumerate(filepaths):
+        tt = np.array(data_dicts[i]["Time [s]"])
+        true_omega = np.rad2deg(np.array([state_data_dicts[i]["omega_x [rad/s]"], state_data_dicts[i]["omega_y [rad/s]"], state_data_dicts[i]["omega_z [rad/s]"]]))
+        omega_meas = np.array([data_dicts[i]["gyro_x [deg/s]"], data_dicts[i]["gyro_y [deg/s]"], data_dicts[i]["gyro_z [deg/s]"]])
+
+        # gyro_bias = true_omega[:,:-1] - omega_meas
+        gyro_bias = true_omega - omega_meas
+        r = 1 / (tt[1] - tt[0])
+        (tau_outx, adevx, _, _) = atools.oadev(gyro_bias[0,:], rate=r, data_type="freq",taus="all") 
+        (tau_outy, adevy, _, _) = atools.oadev(gyro_bias[1,:], rate=r, data_type="freq",taus="all")
+        (tau_outz, adevz, _, _) = atools.oadev(gyro_bias[2,:], rate=r, data_type="freq",taus="all")
+
+        axes[0].loglog(tau_outx,adevx)
+        axes[1].loglog(tau_outy,adevy)
+        axes[2].loglog(tau_outz,adevz)
+
+    fig.suptitle('Allan Deviation Gyro [deg/s]')
+
+    axes[0].set_xlim([tau_outx[0], tau_outx[-1]])
+    axes[0].set_ylim([min(adevx), max(adevx)])
+    axes[0].set_xlabel(r'Averaging time $\tau$ [s]')
+    axes[0].set_ylabel(r'$\sigma_x(\tau) [ ^{\circ}/s]$')
+
+    axes[1].set_xlim([tau_outy[0], tau_outy[-1]])
+    axes[1].set_ylim([min(adevx), max(adevx)])
+    axes[1].set_xlabel(r'Averaging time $\tau$ [s]')
+    axes[1].set_ylabel(r'$\sigma_y(\tau) [ ^{\circ}/s]$')
+
+    axes[2].set_xlim([tau_outz[0], tau_outz[-1]])
+    axes[2].set_ylim([min(adevz), max(adevz)])
+    axes[2].set_xlabel(r'Averaging time $\tau$ [s]')
+    axes[2].set_ylabel(r'$\sigma_z(\tau) [ ^{\circ}/s]$')
+    
+    save_figure(fig, plot_dir, "gyro_allan_deviation.png", close_after_saving)
 
 
 def sunsensor_plots(pyparams, data_dicts, filepaths):
@@ -89,6 +131,45 @@ def gps_plots(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="GPS Velocity in ECEF", ylabels=["Vx [m/s]", "Vy [m/s]", "Vz [m/s]"])
     save_figure(itm.gcf(), plot_dir, "gps_velocity_ecef.png", close_after_saving)
+
+def rtc_plots(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    trials_dir         = pyparams["trials_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ======================= RTC measurement plots =======================
+    # Allan Variance of rtc error plot
+    spice.furnsh("./../data/naif0012.tls")
+    fig, axes = plt.subplots(1)
+    adevlims = (np.inf, -np.inf)
+    taulims = (np.inf, -np.inf)
+    for i, (trial_number, _) in enumerate(filepaths):
+        with open(os.path.join(trials_dir, f"trial{trial_number}/trial_params.yaml"), "r") as f:
+            pyparams2 = yaml.safe_load(f)
+        sim_start_time = pyparams2["sim_start_time"].strftime("%Y-%m-%dT%H:%M:%S.%f")
+        j2000_start_time = spice.str2et(sim_start_time)
+        # et_start_time = spiceypy.spiceypy.str2et(time)[source]
+
+        true_time = np.array(data_dicts[i]["Time [s]"] + j2000_start_time)
+        meas_time = np.array(data_dicts[i]["RTC_time [s]"])
+
+        time_error = true_time - meas_time
+        time_error = time_error - time_error[0]  # remove initial bias
+        if np.all(time_error == 0):
+            continue
+        r = 1 / (true_time[1] - true_time[0])
+        (tau_outx, adevx, _, _) = atools.oadev(time_error, rate=r, data_type="freq",taus="all")
+        adevlims = (min(adevlims[0], min(adevx)), max(adevlims[1], max(adevx)))
+        taulims = (min(taulims[0], tau_outx[0]), max(taulims[1], tau_outx[-1]))
+        axes.loglog(tau_outx,adevx)
+        axes.set_xlim([taulims[0], taulims[1]])
+        axes.set_ylim([adevlims[0], adevlims[1]])
+
+    fig.suptitle('Allan Deviation RTC [s]')
+
+    axes.set_xlabel(r'Averaging time $\tau$ [s]')
+    axes.set_ylabel(r'$\sigma_x(\tau) [s]$')
+
+    save_figure(fig, plot_dir, "rtc_allan_deviation.png", close_after_saving)
 
 # MTB Power
 def mtb_power_plots(pyparams, data_dicts, filepaths):

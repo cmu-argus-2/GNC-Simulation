@@ -11,11 +11,10 @@ from argusim.visualization.plot_helper import (
 from argusim.visualization.isolated_trace import itm
 from argusim.build.world.pyframes import ECI2GEOD
 import matplotlib.pyplot as plt
-import allantools as atools
 
 def plot_true_st(pyparams, data_dicts, filepaths):
     trials             = pyparams["trials"]
-    trials_ir         = pyparams["trials_dir"]
+    trials_dir         = pyparams["trials_dir"]
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
     # ==========================================================================
@@ -209,7 +208,7 @@ def plot_true_st(pyparams, data_dicts, filepaths):
     save_figure(itm.gcf(), plot_dir, "magnetorquer_currents_true.png", close_after_saving)
 
 
-def plot_true_gyro_bias(pyparams, data_dicts, sens_data_dicts, filepaths):
+def plot_true_gyro_bias(pyparams, data_dicts, filepaths):
     plot_dir           = pyparams["plot_dir"]
     close_after_saving = pyparams["close_after_saving"]
     # ==========================================================================
@@ -223,42 +222,22 @@ def plot_true_gyro_bias(pyparams, data_dicts, sens_data_dicts, filepaths):
         )
     annotateMultiPlot(title="True Gyro Bias [deg/s]", ylabels=["$x$", "$y$", "$z$"])
     save_figure(itm.gcf(), plot_dir, "gyro_bias_true.png", close_after_saving)
-    
-    # Allan Variance of bias plot
-    fig, axes = plt.subplots(3)
+
+
+def plot_true_rtc_bias(pyparams, data_dicts, filepaths):
+    plot_dir           = pyparams["plot_dir"]
+    close_after_saving = pyparams["close_after_saving"]
+    # ==========================================================================
+
+    itm.figure()
     for i, (trial_number, _) in enumerate(filepaths):
-        tt = np.array(data_dicts[i]["Time [s]"])
-        true_omega = np.rad2deg(np.array([data_dicts[i]["omega_x [rad/s]"], data_dicts[i]["omega_y [rad/s]"], data_dicts[i]["omega_z [rad/s]"]]))
-        omega_meas = np.array([sens_data_dicts[i]["gyro_x [deg/s]"], sens_data_dicts[i]["gyro_y [deg/s]"], sens_data_dicts[i]["gyro_z [deg/s]"]])
-
-        gyro_bias = true_omega[:,:-1] - omega_meas
-        r = 1 / (tt[1] - tt[0])
-        (tau_outx, adevx, _, _)     = atools.oadev(gyro_bias[0,:], rate=r, data_type="freq",taus="all") 
-        (tau_outy, adevy, _, _) = atools.oadev(gyro_bias[1,:], rate=r, data_type="freq",taus="all")
-        (tau_outz, adevz, _, _) = atools.oadev(gyro_bias[2,:], rate=r, data_type="freq",taus="all")
-
-        axes[0].loglog(tau_outx,adevx)
-        axes[1].loglog(tau_outy,adevy)
-        axes[2].loglog(tau_outz,adevz)
-
-    fig.suptitle('Allan Deviation Gyro [deg/s]')
-
-    axes[0].set_xlim([tau_outx[0], tau_outx[-1]])
-    axes[0].set_ylim([min(adevx), max(adevx)])
-    axes[0].set_xlabel(r'Averaging time $\tau$ [s]')
-    axes[0].set_ylabel(r'$\sigma_x(\tau) [ ^{\circ}/s]$')
-
-    axes[1].set_xlim([tau_outy[0], tau_outy[-1]])
-    axes[1].set_ylim([min(adevx), max(adevx)])
-    axes[1].set_xlabel(r'Averaging time $\tau$ [s]')
-    axes[1].set_ylabel(r'$\sigma_y(\tau) [ ^{\circ}/s]$')
-
-    axes[2].set_xlim([tau_outz[0], tau_outz[-1]])
-    axes[2].set_ylim([min(adevz), max(adevz)])
-    axes[2].set_xlabel(r'Averaging time $\tau$ [s]')
-    axes[2].set_ylabel(r'$\sigma_z(\tau) [ ^{\circ}/s]$')
-    
-    save_figure(fig, plot_dir, "gyro_allan_deviation.png", close_after_saving)
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([data_dicts[i]["rtc_bias [s]"]]),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="True RTC Bias [s]", ylabels=["RTC Bias [s]"])
+    save_figure(itm.gcf(), plot_dir, "rtc_bias_true.png", close_after_saving)
 
 
 def plot_true_battery(pyparams, data_dicts, filepaths):

@@ -42,12 +42,18 @@ from argusim.visualization.sensor_plots import (
     gps_plots,
     battery_plots,
     solar_power_plots,
+    rtc_plots,
     jetson_power_plots,
     mtb_power_plots,
     star_tracker_plots,
 )
 from argusim.visualization.att_animation import att_animation
-from argusim.visualization.plot_true_states import plot_true_st, plot_true_gyro_bias, plot_true_battery
+from argusim.visualization.plot_true_states import (
+    plot_true_st, 
+    plot_true_gyro_bias, 
+    plot_true_battery, 
+    plot_true_rtc_bias,
+)
 import yaml
 
 # ANSI escape sequences for colored terminal output  (from ChatGPT)
@@ -144,15 +150,11 @@ class MontecarloPlots:
             with Pool() as pool:
                 data_dicts = pool.map(parse_bin_file_wrapper, args)
             END = time.time()
-            sens_filepaths = self._get_files_across_trials("measurements.bin")
-            START = time.time()
-            args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in sens_filepaths]
-            with Pool() as pool:
-                sens_data_dicts = pool.map(parse_bin_file_wrapper, args)
-            END = time.time()
             print(f"Elapsed time to read in data: {END-START:.2f} s")
             # --------------------------------------------------------------------------
-            plot_true_gyro_bias(pyparams, data_dicts, sens_data_dicts, filepaths)
+            plot_true_gyro_bias(pyparams, data_dicts, filepaths)
+            # --------------------------------------------------------------------------
+            plot_true_rtc_bias(pyparams, data_dicts, filepaths)
             # ========================= True battery plots =========================
             plot_true_battery(pyparams, data_dicts, filepaths)
 
@@ -163,6 +165,8 @@ class MontecarloPlots:
         with open(os.path.join(self.trials_dir, "../params.yaml"), "r") as f:
             pyparams = yaml.safe_load(f)
         
+        pyparams["trials_dir"]         = self.trials_dir
+        
         if pyparams["PlotFlags"]["sensor_measurements"]:
             # ======================= Gyro measurement plots =======================
             filepaths = self._get_files_across_trials("measurements.bin")
@@ -172,12 +176,18 @@ class MontecarloPlots:
             with Pool() as pool:
                 data_dicts = pool.map(parse_bin_file_wrapper, args)
             END = time.time()
+            state_filepaths = self._get_files_across_trials("state_true.bin")
+            START = time.time()
+            args = [(filepath, self.PERCENTAGE_OF_DATA_TO_PLOT) for (_, filepath) in state_filepaths]
+            with Pool() as pool:
+                state_data_dicts = pool.map(parse_bin_file_wrapper, args)
+            END = time.time()
             print(f"Elapsed time to read in data: {END-START:.2f} s")
             
             pyparams["plot_dir"]           = self.plot_dir
             pyparams["close_after_saving"] = self.close_after_saving
             # --------------------------------------------------------------------------
-            gyro_plots(pyparams, data_dicts, filepaths)
+            gyro_plots(pyparams, data_dicts, state_data_dicts, filepaths)
 
             # ====================== Sun Sensor measurement plots ======================
             sunsensor_plots(pyparams, data_dicts, filepaths)
@@ -193,6 +203,9 @@ class MontecarloPlots:
 
             # ======================= Solar Power measurement plots =======================
             solar_power_plots(pyparams, data_dicts, filepaths)
+            
+            # ============================ RTC measurement plots ===========================
+            rtc_plots(pyparams, data_dicts, filepaths)
 
             # ======================= Jetson Power measurement plots =======================
             jetson_power_plots(pyparams, data_dicts, filepaths)

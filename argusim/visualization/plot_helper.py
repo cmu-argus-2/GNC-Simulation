@@ -49,7 +49,8 @@ def multiPlot(time, multiSeries, seriesLabel=None, **kwargs):
     for i, series in enumerate(multiSeries):
         itm.subplot(N, 1, i + 1)
         itm.plot(time, series, **kwargs)
-        itm.legend()
+        if seriesLabel is not None:
+            itm.legend()
 
     annotateMultiPlot()
 

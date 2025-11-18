@@ -205,7 +205,8 @@ gyroscope:
 
 # parameters for ds3231 RTC (url at https://www.analog.com/media/en/technical-documentation/data-sheets/ds3231.pdf)
 rtc:
-     rtc_drift_rate_ppm : 3.5 # [UNITS: ppm]
+     rtc_drift_rate_std_ppm : 3.5 # [UNITS: ppm] standard deviation of drift rate (ramp) error
+     rtc_drift_rw_std_dev : 0.0  # [UNITS: s * sqrt(Hz)] standard deviation of drift rate (random-walk) error
      rtc_resolution: 1 # [UNITS: s] # smallest time increment the RTC can measure
 
 star_tracker:
