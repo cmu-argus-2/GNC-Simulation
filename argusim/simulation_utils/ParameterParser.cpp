@@ -790,7 +790,7 @@ void Simulation_Parameters::defineDistributions(std::string filename)
     // sigma_magnetometer_dist = std::uniform_real_distribution<>(min_sigma_magnetometer, max_sigma_magnetometer);
 
     // Gyroscope
-    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>() / sqrt(params["dt"].as<double>());
+    double gyro_sigma_w_nominal = params["gyroscope"]["gyro_sigma_w"].as<double>(); //  / sqrt(params["dt"].as<double>());
     double gyro_sigma_w_std = gyro_sigma_w_nominal*(params["gyroscope"]["gyro_sigma_w_dev"].as<double>()/100.0);
     gyro_bias_dist = std::normal_distribution<double>(gyro_sigma_w_nominal, gyro_sigma_w_std);
 

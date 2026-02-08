@@ -13,3 +13,4 @@ pyyaml
 pytest
 shapely
 allantools
+spiceypy

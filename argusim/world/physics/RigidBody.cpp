@@ -212,9 +212,9 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     x_new(SC.x_idx_map["magnetic_field"].to_seq()) = MagneticField( x_new(SC.x_idx_map["position"].to_seq()), t_J2000 + dt);
 
     // gyro + rtc bias
-    static std::normal_distribution<double> gyro_bias_dist(0, SC.gyro_sigma_w);
-    Vector3 gyro_bias_noise = Vector3::NullaryExpr([&](){return gyro_bias_dist(gen);});
-    x_new(SC.x_idx_map["gyro_bias"].to_seq()) += dt*(gyro_bias_noise); // - bias/sc.gyro_correlation_time);
+    // static std::normal_distribution<double> gyro_bias_dist(0, SC.gyro_sigma_w);
+    // Vector3 gyro_bias_noise = Vector3::NullaryExpr([&](){return gyro_bias_dist(gen);});
+    // x_new(SC.x_idx_map["gyro_bias"].to_seq()) += dt*(gyro_bias_noise); // - bias/sc.gyro_correlation_time);
     
     static std::normal_distribution<double> rtc_bias_dist(0, SC.rtc_drift_rw_std_dev);
     double rtc_bias_noise = rtc_bias_dist(gen);
