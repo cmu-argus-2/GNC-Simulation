@@ -170,6 +170,22 @@ def plot_true_st(pyparams, data_dicts, filepaths):
         )
     annotateMultiPlot(title="True body angular rate [deg/s]", ylabels=["x", "y", "z"])
     save_figure(itm.gcf(), plot_dir, "body_omega_true.png", close_after_saving)
+    
+    # Truth body angular rate norm
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        omega_norm = np.sqrt(
+            data_dicts[i]["omega_x [rad/s]"]**2 +
+            data_dicts[i]["omega_y [rad/s]"]**2 +
+            data_dicts[i]["omega_z [rad/s]"]**2
+        )
+        multiPlot(
+            data_dicts[i]["Time [s]"]- data_dicts[i]["Time [s]"][0],
+            [np.rad2deg(omega_norm)],
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="True body angular rate norm [deg/s]", ylabels=["||ω||"])
+    save_figure(itm.gcf(), plot_dir, "body_omega_norm_true.png", close_after_saving)
     # ==========================================================================
     # Truth magnetic field in ECI
     itm.figure()

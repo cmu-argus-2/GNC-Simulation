@@ -187,6 +187,18 @@ def mtb_power_plots(pyparams, data_dicts, filepaths):
     ylabels = [f"MTB {j} Power [W]" for j in range(num_MTBs)]
     annotateMultiPlot(title="Magnetorquer Power", ylabels=ylabels)
     save_figure(itm.gcf(), plot_dir, "mtb_power.png", close_after_saving)
+    
+    # Plot total MTB power consumption
+    itm.figure()
+    for i, (trial_number, _) in enumerate(filepaths):
+        total_mtb_power = np.sum(np.array([data_dicts[i][f"mtb_power [W]{j}"] for j in range(num_MTBs)]), axis=0)
+        multiPlot(
+            data_dicts[i]["Time [s]"],
+            np.array([total_mtb_power]),
+            seriesLabel=f"_{trial_number}",
+        )
+    annotateMultiPlot(title="Total Magnetorquer Power Consumption", ylabels=["Total Power [W]"])
+    save_figure(itm.gcf(), plot_dir, "mtb_total_power.png", close_after_saving)
 
 # Solar Power
 def solar_power_plots(pyparams, data_dicts, filepaths):

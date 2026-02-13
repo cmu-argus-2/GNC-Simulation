@@ -35,6 +35,8 @@ class SENSORS:
         ny = ny + num_stk
         self.PHOTODIODES    = slice(ny, ny + num_photodiodes)
         ny = ny + num_photodiodes
+        self.RTC            = slice(ny, ny + 1)
+        ny = ny + 1
         self.RW_OMEGA       = slice(ny, ny + num_rws)
         ny = ny + num_rws
         self.MTB_POW        = slice(ny, ny + num_MTBs)
