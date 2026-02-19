@@ -1,4 +1,3 @@
-from pyrsistent import ny
 from argusim.simulation_manager import MultiFileLogger
 from argusim.simulation_manager.indexing import IDX
 class SimLogger(MultiFileLogger):
