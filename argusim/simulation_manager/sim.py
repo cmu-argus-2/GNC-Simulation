@@ -119,8 +119,11 @@ class Simulator():
         self.Idx["Y"]["BAT_TTE"] = slice(ny + 5, ny + 6)
         self.Idx["Y"]["BAT_TTF"] = slice(ny + 6, ny + 7)
         self.Idx["Y"]["BAT_TEMP"] = slice(ny + 7, ny + 8)
-        self.Idx["Y"]["JET_POW"] = slice(ny + 8, ny + 9)
-        self.Idx["NY"] = ny + 9
+        self.Idx["Y"]["BAT_AIN1_TEMP"] = slice(ny + 8, ny + 9)
+        self.Idx["Y"]["BAT_AIN2_TEMP"] = slice(ny + 9, ny + 10)
+        self.Idx["Y"]["BAT_DIE_TEMP"] = slice(ny + 10, ny + 11)
+        self.Idx["Y"]["JET_POW"] = slice(ny + 11, ny + 12)
+        self.Idx["NY"] = ny + 12
 
     def set_control_input(self, u):
         '''

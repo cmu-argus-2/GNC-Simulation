@@ -99,6 +99,9 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc);
  * 6 - Time to Empty (TTE) [s]
  * 7 - Time to Full (TTF) [s]
  * 8 - Battery Temperature [K]
+ * 9 - Battery Temperature AIN1 [K]
+ * 10 - Battery Temperature AIN2 [K]
+ * 11 - Battery Die Temperature [K]
  * 
  * @param state : true state vector
  * @param sc : Instance of Simulation_Parameters class holding Sensor noise characterizations

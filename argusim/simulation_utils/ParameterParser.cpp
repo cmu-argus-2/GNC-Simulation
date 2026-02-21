@@ -250,13 +250,13 @@ Simulation_Parameters::Simulation_Parameters(std::string filename, int trial_num
     ny += num_stk;
     y_idx_map["photodiode"]      = {ny, num_photodiodes};
     ny += num_photodiodes;
-    y_idx_map["power_readings"]  = {ny, num_MTBs + num_panels + 8};
+    y_idx_map["power_readings"]  = {ny, num_MTBs + num_panels + 11};
     y_idx_map["mtb_power"]       = {ny, num_MTBs};
     ny += num_MTBs;
     y_idx_map["solar_power"]     = {ny, num_panels};
     ny += num_panels;
-    y_idx_map["bat_readings"]    = {ny, 8}; 
-    ny += 8;
+    y_idx_map["bat_readings"]    = {ny, 11}; 
+    ny += 11;
     y_idx_map["jetson_power"]    = {ny, 1};
 
     // Populate State Vector

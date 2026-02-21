@@ -28,7 +28,7 @@ VectorXd ReadSensors(const VectorXd state, const VectorXd control_input, double 
                             solar power        (14x1),  
                             Power Diagnostics ((6+8)x1),
                             Jetson Power       (1x1)]*/
-    int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 8 + 1;
+    int measurement_vec_size = 6 + 6 + sc.num_stk + sc.num_photodiodes + sc.num_MTBs + sc.num_panels + 11 + 1;
 
     VectorXd measurement = VectorXd::Zero(measurement_vec_size);
 
@@ -240,7 +240,7 @@ VectorXd SunSensor(const VectorXd state, Simulation_Parameters sc)
    ---------------------------------------------------------------------------------------------------------------------------------------------- */
 VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simulation_Parameters sc)
 {
-    int reading_size = sc.y_idx_map["power_readings"].get_length(); // power consumptions for each MTB and 8 battery diagnostics
+    int reading_size = sc.y_idx_map["power_readings"].get_length(); // power consumptions for each MTB and 11 battery diagnostics
     
     VectorXd power_readings = VectorXd::Zero(reading_size);
     
@@ -255,14 +255,14 @@ VectorXd PowerReadings(const VectorXd state, const VectorXd control_input, Simul
     
     /* Get Battery State */
     VectorXd battery_readings = BatteryReadings(state, sc);
-    power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 8)) = battery_readings;
+    power_readings(Eigen::seqN(sc.num_MTBs + sc.num_panels, 11)) = battery_readings;
 
     return power_readings;
 }
 
 VectorXd BatteryReadings(const VectorXd state, Simulation_Parameters sc)
 {
-    VectorXd battery_readings = VectorXd::Zero(8);
+    VectorXd battery_readings = VectorXd::Zero(11);
    
     // Populate battery readings
     int idx_bat_soc  = sc.x_idx_map["battery_soc"].to_idx();
@@ -278,6 +278,9 @@ VectorXd BatteryReadings(const VectorXd state, Simulation_Parameters sc)
     battery_readings(5) = (state(idx_bat_cur) < 0) ? 0.01*state(idx_bat_soc)*sc.battery_capacity/(-state(idx_bat_cur)*sc.max_pack_voltage) : 1.0e10; // TTE
     battery_readings(6) = (state(idx_bat_cur) > 0) ? 0.01*(100-state(idx_bat_soc))*sc.battery_capacity/(state(idx_bat_cur)*sc.max_pack_voltage) : 1.0e10; // TTF
     battery_readings(7) = state(idx_bat_temp);
+    battery_readings(8) = state(idx_bat_temp);
+    battery_readings(9) = state(idx_bat_temp);
+    battery_readings(10) = state(idx_bat_temp);
 
     return battery_readings;
 }
