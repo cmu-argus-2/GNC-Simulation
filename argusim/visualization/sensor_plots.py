@@ -35,6 +35,9 @@ def gyro_plots(pyparams, data_dicts, state_data_dicts, filepaths):
         omega_meas = np.array([data_dicts[i]["gyro_x [deg/s]"], data_dicts[i]["gyro_y [deg/s]"], data_dicts[i]["gyro_z [deg/s]"]])
 
         # gyro_bias = true_omega[:,:-1] - omega_meas
+        max_len = min(true_omega.shape[1], omega_meas.shape[1])
+        true_omega = true_omega[:,:max_len]
+        omega_meas = omega_meas[:,:max_len]
         gyro_bias = true_omega - omega_meas
         r = 1 / (tt[1] - tt[0])
         (tau_outx, adevx, _, _) = atools.oadev(gyro_bias[0,:], rate=r, data_type="freq",taus="all") 
@@ -53,7 +56,7 @@ def gyro_plots(pyparams, data_dicts, state_data_dicts, filepaths):
     axes[0].set_ylabel(r'$\sigma_x(\tau) [ ^{\circ}/s]$')
 
     axes[1].set_xlim([tau_outy[0], tau_outy[-1]])
-    axes[1].set_ylim([min(adevx), max(adevx)])
+    axes[1].set_ylim([min(adevy), max(adevy)])
     axes[1].set_xlabel(r'Averaging time $\tau$ [s]')
     axes[1].set_ylabel(r'$\sigma_y(\tau) [ ^{\circ}/s]$')
 
