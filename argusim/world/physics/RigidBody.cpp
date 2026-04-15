@@ -183,6 +183,11 @@ VectorXd rk4(const VectorXd& x, const VectorXd& u, Simulation_Parameters SC, dou
     VectorXd x_old = x;
     VectorXd mtb_currents = x(SC.x_idx_map["mtb_currents"].to_seq());
     VectorXd mtb_volt = u(SC.u_idx_map["mtb_volt"].to_seq());
+
+    // Quantize voltages to hardware driver resolution
+    if (SC.mtb_voltage_resolution > 0.0) {
+        mtb_volt = (mtb_volt / SC.mtb_voltage_resolution).array().round() * SC.mtb_voltage_resolution;
+    }
     x_old(SC.x_idx_map["mtb_currents"].to_seq()) = SC.MTB.getCurrent(mtb_volt, mtb_currents, "first");
     VectorXd mtb_currents_half_dt = SC.MTB.getCurrent(mtb_volt, x_old(SC.x_idx_map["mtb_currents"].to_seq()), "half");
     VectorXd mtb_currents_dt = SC.MTB.getCurrent(mtb_volt, x_old(SC.x_idx_map["mtb_currents"].to_seq()), "full");

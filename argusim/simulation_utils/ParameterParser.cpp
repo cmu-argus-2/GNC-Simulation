@@ -407,6 +407,8 @@ Magnetorquer Simulation_Parameters::load_MTB(std::string filename, std::mt19937 
         mtb_working_status = params["magnetorquers"]["working_status"].as<std::vector<bool>>();
     }
 
+    mtb_voltage_resolution = params["magnetorquers"]["resolution"].as<double>();
+
     Magnetorquer magnetorquer = Magnetorquer(
                                     params["magnetorquers"]["N_mtb"].as<int>(),
                                     resistances,

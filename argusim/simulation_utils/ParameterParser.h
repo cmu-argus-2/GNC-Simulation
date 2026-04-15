@@ -70,6 +70,7 @@ class Simulation_Parameters {
     double max_voltage;
     double max_current_rating;
     double max_power;
+    double mtb_voltage_resolution; // [V] voltage resolution of the magnetorquer driver
     Magnetorquer MTB; // Magnetorquer class object
 
     /* Sensors */
