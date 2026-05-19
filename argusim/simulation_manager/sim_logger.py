@@ -56,7 +56,8 @@ class SimLogger(MultiFileLogger):
                                 + ['solar_power [W]' + str(i) for i in range(self.Idx.NPANELS)] \
                                 + ["Battery SoC [%]", "Battery Capacity [J]", "Battery Current [A]",
                                 "Battery Voltage [V]", "Battery Mid Voltage [V]", "Battery TTE [s]",
-                                "Battery TTF [s]", "Battery Temperature [K]"] + ["Jetson Power [W]"]
+                                "Battery TTF [s]", "Battery Temperature [K]", "Battery Temperature AIN_1 [K]",
+                                "Battery Temperature AIN_2 [K]", "DIE Temperature [K]"] + ["Jetson Power [W]"]
                                 # + ["rw_encoder_" + str(i) + " [rad/s]" for i in range(self.num_RWs)]
         if self.Idx.NDEPLOYS > 0:
             self.measurement_labels += ["deployment_sensor [mm]" + str(i) for i in range(self.Idx.NDEPLOYS)]

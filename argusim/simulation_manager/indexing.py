@@ -43,7 +43,7 @@ class SENSORS:
         ny = ny + num_MTBs
         self.SOL_POW        = slice(ny, ny +  num_panels)
         ny = ny+num_panels
-        self.BATTERY        = slice(ny, ny + 8)
+        self.BATTERY        = slice(ny, ny + 11)
         self.BAT_SOC        = slice(ny, ny + 1)
         self.BAT_CAP        = slice(ny + 1, ny + 2)
         self.BAT_CUR        = slice(ny + 2, ny + 3)
@@ -52,8 +52,12 @@ class SENSORS:
         self.BAT_TTE        = slice(ny + 5, ny + 6)
         self.BAT_TTF        = slice(ny + 6, ny + 7)
         self.BAT_TEMP       = slice(ny + 7, ny + 8)
-        self.JET_POW        = slice(ny + 8, ny + 9)
-        ny = ny+9
+        self.BAT_TEMP_AIN1  = slice(ny + 8, ny + 9)
+        self.BAT_TEMP_AIN2  = slice(ny + 9, ny + 10)
+        self.BAT_TEMP_DIE   = slice(ny + 10, ny + 11)
+        ny = ny + 11
+        self.JET_POW        = slice(ny, ny + 1)
+        ny = ny+1
         self.DEPLOY         = slice(ny, ny + num_deploy_sensors)
         ny = ny+num_deploy_sensors
         self.NSENSORS       = ny + num_deploy_sensors
