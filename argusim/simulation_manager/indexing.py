@@ -4,7 +4,7 @@
 
 class STATES:
     def __init__(self, num_RWs, num_MTBs):
-        self.NSTATES   = 22 + num_RWs + num_MTBs + 4
+        self.NSTATES   = 23 + num_RWs + num_MTBs + 4
         self.ECI_POS   = slice(0, 3)
         self.ECI_VEL   = slice(3, 6)
         self.TRANS     = slice(0, 6)
@@ -16,11 +16,12 @@ class STATES:
         self.I_MTB     = slice(19, 19+num_MTBs)
         self.RW_SPEED  = slice(19+num_MTBs, 19 + num_MTBs + num_RWs)
         self.GYRO_BIAS = slice(19 + num_MTBs + num_RWs,22 + num_MTBs + num_RWs)
-        self.BAT       = slice(22 + num_MTBs + num_RWs, 26 + num_MTBs + num_RWs)
-        self.BAT_SOC   = 22 + num_MTBs + num_RWs
-        self.BAT_TEMP  = 23 + num_MTBs + num_RWs
-        self.BAT_VOLT  = 24 + num_MTBs + num_RWs
-        self.BAT_CUR   = 25 + num_MTBs + num_RWs
+        self.RTC_BIAS  = slice(22 + num_MTBs + num_RWs, 23 + num_MTBs + num_RWs)
+        self.BAT       = slice(23 + num_MTBs + num_RWs, 27 + num_MTBs + num_RWs)
+        self.BAT_SOC   = 23 + num_MTBs + num_RWs
+        self.BAT_TEMP  = 24 + num_MTBs + num_RWs
+        self.BAT_VOLT  = 25 + num_MTBs + num_RWs
+        self.BAT_CUR   = 26 + num_MTBs + num_RWs
 
 
 class SENSORS:
@@ -60,7 +61,7 @@ class SENSORS:
         ny = ny+1
         self.DEPLOY         = slice(ny, ny + num_deploy_sensors)
         ny = ny+num_deploy_sensors
-        self.NSENSORS       = ny + num_deploy_sensors
+        self.NSENSORS       = ny
 
 
 class CONTROLS:
